@@ -55,6 +55,28 @@
   opacity: 0.6;
 }
 
+/* 이메일 기억하기 */
+.remember-row {
+  display: flex;
+  margin-top: -4px;
+  gap: 9px;
+  align-items: center;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  /* 체크박스만 노리다 빗나가지 않도록 글자까지 눌러도 되게 둔다. */
+  user-select: none;
+}
+
+.remember-row input {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 /* 불러오는 중 · 실패 안내 */
 .data-status {
   margin: 0;

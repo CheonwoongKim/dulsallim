@@ -3,6 +3,32 @@ import { CONFIG_ERROR, isConfigured, supabase } from "../supabase.js";
 
 let profile = null;
 
+/**
+ * 기억해 둔 이메일이 사는 곳.
+ * 이메일만 담는다. 비밀번호는 어떤 경우에도 저장하지 않는다 —
+ * 폰을 잃어버리면 가계부가 통째로 열리는 것과 같아진다.
+ */
+const SAVED_EMAIL_KEY = "dulsallim:saved-email";
+
+function readSavedEmail() {
+  try {
+    return localStorage.getItem(SAVED_EMAIL_KEY) || "";
+  } catch {
+    // 사파리 비공개 모드처럼 저장소를 못 쓰는 경우가 있다. 기억하지 못할 뿐 로그인은 된다.
+    return "";
+  }
+}
+
+/** @param {string|null} email null이면 기억을 지운다. */
+export function rememberEmail(email) {
+  try {
+    if (email) localStorage.setItem(SAVED_EMAIL_KEY, email);
+    else localStorage.removeItem(SAVED_EMAIL_KEY);
+  } catch {
+    // 저장하지 못해도 로그인 자체를 막지는 않는다.
+  }
+}
+
 /** 로그인한 사람의 프로필(표시 이름 등). 로그인 전에는 null. */
 export function getProfile() {
   return profile;
@@ -87,8 +113,15 @@ export function showLoginScreen(message = "") {
   elements.authGate.hidden = false;
   elements.appShell.hidden = true;
   elements.loginError.textContent = message;
+  // reset이 입력값을 비우므로, 기억해 둔 이메일은 그 뒤에 채운다.
   elements.loginForm.reset();
-  setTimeout(() => elements.loginEmail.focus(), 60);
+
+  const saved = readSavedEmail();
+  elements.loginEmail.value = saved;
+  elements.rememberEmail.checked = Boolean(saved);
+  // 이메일이 이미 채워져 있으면 비밀번호부터 치게 한다.
+  const first = saved ? elements.loginPassword : elements.loginEmail;
+  setTimeout(() => first.focus(), 60);
 }
 
 export function showApp() {

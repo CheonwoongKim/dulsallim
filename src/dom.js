@@ -26,6 +26,7 @@ export const elements = {
   loginForm: document.querySelector("#login-form"),
   loginEmail: document.querySelector("#login-email"),
   loginPassword: document.querySelector("#login-password"),
+  rememberEmail: document.querySelector("#remember-email"),
   loginError: document.querySelector("#login-error"),
   loginSubmit: document.querySelector("#login-submit"),
   loginSubmitLabel: document.querySelector("#login-submit-label"),

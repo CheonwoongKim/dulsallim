@@ -57,6 +57,7 @@ import { showToast } from "./ui/toast.js";
 import {
   getProfile,
   isReady,
+  rememberEmail,
   restoreSession,
   showApp,
   showConfigError,
@@ -280,6 +281,8 @@ elements.loginForm.addEventListener("submit", async (event) => {
 
   try {
     await signIn(email, password);
+    // 로그인이 된 이메일만 기억한다. 오타를 기억해 두면 다음에도 그대로 막힌다.
+    rememberEmail(elements.rememberEmail.checked ? email : null);
     await startApp();
   } catch (error) {
     elements.loginError.textContent = error.message;

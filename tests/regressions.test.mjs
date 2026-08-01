@@ -475,3 +475,37 @@ test("요약 카드와 마이페이지는 서로 다른 요소를 쓴다", () =>
   assert.match(html, /id="profile-partner-goal"/, "마이페이지 자리");
   assert.match(app, /partnerGoal: document\.querySelector\("#profile-partner-goal"\)/);
 });
+
+test("이메일만 기억하고 비밀번호는 저장하지 않는다", () => {
+  // 폰을 잃어버리면 가계부가 통째로 열리는 것과 같아진다.
+  assert.match(app, /const SAVED_EMAIL_KEY = "dulsallim:saved-email"/);
+  const remember = fn("rememberEmail");
+  assert.match(remember, /localStorage\.setItem\(SAVED_EMAIL_KEY, email\)/);
+  assert.doesNotMatch(app, /setItem\([^)]*password/i, "비밀번호를 저장하면 안 된다");
+  assert.doesNotMatch(html, /id="login-password"[^>]*value=/, "비밀번호를 마크업에 박으면 안 된다");
+});
+
+test("기억은 로그인에 성공한 이메일만 남긴다", () => {
+  // 오타를 기억해 두면 다음에도 그대로 막힌다.
+  const handler = app.match(/elements\.loginForm\.addEventListener\("submit"[\s\S]*?\n\}\);/)[0];
+  const signInAt = handler.indexOf("await signIn(");
+  const rememberAt = handler.indexOf("rememberEmail(");
+  assert.ok(signInAt > -1 && rememberAt > signInAt, "성공을 확인한 뒤에 기억해야 한다");
+  assert.match(handler, /rememberEmail\(elements\.rememberEmail\.checked \? email : null\)/,
+    "체크를 풀면 기억도 지워야 한다");
+});
+
+test("기억해 둔 이메일이 있으면 비밀번호부터 입력하게 한다", () => {
+  const show = fn("showLoginScreen");
+  // reset 이 입력값을 비우므로 순서가 중요하다.
+  assert.ok(show.indexOf("loginForm.reset()") < show.indexOf("elements.loginEmail.value = saved"),
+    "reset 뒤에 채워야 값이 남는다");
+  assert.match(show, /elements\.rememberEmail\.checked = Boolean\(saved\)/);
+  assert.match(show, /saved \? elements\.loginPassword : elements\.loginEmail/);
+});
+
+test("저장소를 못 쓰는 브라우저에서도 로그인은 된다", () => {
+  // 사파리 비공개 모드에서는 localStorage 접근 자체가 예외를 던진다.
+  assert.match(fn("readSavedEmail"), /try \{[\s\S]*catch/);
+  assert.match(fn("rememberEmail"), /try \{[\s\S]*catch/);
+});
