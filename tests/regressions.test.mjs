@@ -308,11 +308,20 @@ test("대화 시트는 헤더·입력줄이 고정되고 메시지만 스크롤�
   assert.match(html, /<div class="note-list sheet-scroll"/, "시트 끌어 닫기가 스크롤 위치를 존중하려면 sheet-scroll 이어야 한다");
 });
 
-test("새 지출의 결제자는 로그인한 사람이 기본값이다", () => {
+test("새로 적을 때 결제자는 두 폼 모두 로그인한 사람이 기본값이다", () => {
   // 두 번째 사람은 매번 결제자를 바꿔야 했다. 자기가 쓴 걸 적는 게 대부분이다.
-  const open = fn("openForm");
-  assert.match(open, /expense\?\.member \|\| getProfile\(\)\?\.id/, "수정할 때는 원래 결제자를 유지해야 한다");
-  assert.match(open, /input\[name="member"\]\[value="\$\{defaultMember\}"\]/);
-  // HTML 의 checked 는 자리 표시일 뿐이다. 실제 선택은 로그인한 사람을 따른다.
-  assert.doesNotMatch(open, /if \(expense\) \{[\s\S]*?memberRadio/, "수정할 때만 반영하면 새 기록은 첫 사람으로 남는다");
+  // 한쪽만 고치면 같은 화면에서 규칙이 갈라져 더 헷갈린다.
+  for (const [name, existing, field] of [
+    ["openForm", "expense", "member"],
+    ["showFormView", "template", "fixed-member"],
+  ]) {
+    const body = fn(name);
+    assert.match(body, new RegExp(`${existing}\\?\\.member \\|\\| getProfile\\(\\)\\?\\.id`),
+      `${name}: 고칠 때는 원래 결제자를 유지해야 한다`);
+    assert.match(body, new RegExp(`input\\[name="${field}"\\]\\[value="\\$\\{defaultMember\\}"\\]`),
+      `${name}: 기본 결제자를 실제로 선택하지 않는다`);
+    // 있을 때만 반영하면 새 기록은 HTML 의 checked(첫 사람)로 남는다.
+    assert.doesNotMatch(body, new RegExp(`if \\(${existing}\\) \\{[\\s\\S]*?radio`, "i"),
+      `${name}: 수정할 때만 반영하고 있다`);
+  }
 });

@@ -22,6 +22,7 @@ import { escapeHtml } from "../ui/escape.js";
 import { closeOpenRow, resetSwipeState } from "../ui/swipe.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
 import { showToast } from "../ui/toast.js";
+import { getProfile } from "./auth.js";
 
 let editingFixedId = null;
 
@@ -87,10 +88,10 @@ export function showFormView(template = null) {
   elements.fixedItem.value = template?.item || "";
   elements.fixedAmount.value = template ? formatMoney(template.amount) : "";
   elements.fixedCategory.value = template?.category || "housing";
-  if (template) {
-    const radio = elements.fixedForm.querySelector(`input[name="fixed-member"][value="${template.member}"]`);
-    if (radio) radio.checked = true;
-  }
+  // 지출 폼과 같은 규칙: 새로 등록하면 로그인한 사람, 고칠 때는 원래 결제자를 유지한다.
+  const defaultMember = template?.member || getProfile()?.id;
+  const radio = elements.fixedForm.querySelector(`input[name="fixed-member"][value="${defaultMember}"]`);
+  if (radio) radio.checked = true;
 
   elements.fixedDayError.textContent = "";
   elements.fixedItemError.textContent = "";
