@@ -371,8 +371,8 @@ test("마이페이지는 상대 목표를 보여 주되 고치게 하지는 않�
   const paint = fn("paintPartnerGoal");
   assert.match(paint, /member\.id !== getProfile\(\)\?\.id/);
   assert.match(paint, /님의 목표/);
-  assert.match(html, /<p class="partner-goal" id="partner-goal" hidden><\/p>/, "읽기 전용이어야 한다");
-  assert.doesNotMatch(html, /id="partner-goal"[^>]*<input/);
+  assert.match(html, /<p class="partner-goal" id="profile-partner-goal" hidden><\/p>/, "읽기 전용이어야 한다");
+  assert.doesNotMatch(html, /id="profile-partner-goal"[^>]*<input/);
 });
 
 test("목표를 비우면 목표를 쓰지 않는 것으로 저장된다", () => {
@@ -448,4 +448,21 @@ test("보이지 않는 지출의 메시지로는 목록을 다시 그리지 않�
 
 test("로그아웃하면 예약된 동기화도 취소한다", () => {
   assert.match(app, /unsubscribe\(noteChannel\);\s*\n\s*clearTimeout\(syncTimer\)/);
+});
+
+test("id는 문서 전체에서 겹치지 않는다", () => {
+  // querySelector 는 먼저 나오는 하나만 돌려준다. id가 겹치면 서로 다른 코드가
+  // 같은 요소를 덮어쓰며 값이 왔다 갔다 한다. 화면을 봐야만 알 수 있어 놓치기 쉽다.
+  const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
+  const seen = new Set();
+  const duplicated = ids.filter((id) => (seen.has(id) ? true : (seen.add(id), false)));
+  assert.deepEqual([...new Set(duplicated)], [], "중복된 id");
+});
+
+test("요약 카드와 마이페이지는 서로 다른 요소를 쓴다", () => {
+  // 둘 다 '상대의 목표'를 다루지만 보여 주는 값이 다르다 —
+  // 카드는 남은 금액, 마이페이지는 목표 금액이다. 같은 요소를 쓰면 번갈아 덮어쓴다.
+  assert.match(html, /id="partner-goal"/, "요약 카드 자리");
+  assert.match(html, /id="profile-partner-goal"/, "마이페이지 자리");
+  assert.match(app, /partnerGoal: document\.querySelector\("#profile-partner-goal"\)/);
 });

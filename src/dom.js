@@ -40,7 +40,7 @@ export const elements = {
   profilePreview: document.querySelector("#profile-preview"),
   profilePreviewName: document.querySelector("#profile-preview-name"),
   profileGoal: document.querySelector("#profile-goal"),
-  partnerGoal: document.querySelector("#partner-goal"),
+  partnerGoal: document.querySelector("#profile-partner-goal"),
   profileError: document.querySelector("#profile-error"),
   profileSubmit: document.querySelector("#profile-submit"),
   settingsPage: document.querySelector("#settings-page"),
