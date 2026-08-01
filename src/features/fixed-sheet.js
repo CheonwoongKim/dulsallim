@@ -29,11 +29,11 @@ let editingFixedId = null;
 /**
  * 반영일이 지난 고정비를 실제 지출로 만든다.
  * 만든 뒤에는 평범한 지출이라 수정·삭제가 자유롭고, 반영 기록 덕분에 지워도 되살아나지 않는다.
- * @returns {number} 새로 넣은 건수
+ * @returns {Promise<{created: number, failed: number}>}
  */
 export async function applyDueFixedCosts() {
   const due = collectDueOccurrences(getFixedTemplates(), getFixedApplied());
-  if (!due.length) return 0;
+  if (!due.length) return { created: 0, failed: 0 };
   return applyOccurrences(due);
 }
 
@@ -194,7 +194,7 @@ export async function handleFixedSubmit(event) {
 
   showListView();
   // 등록·수정 직후 반영일이 이미 지난 달이 있을 수 있다.
-  if ((await applyDueFixedCosts()) > 0) render();
+  if ((await applyDueFixedCosts()).created > 0) render();
   showToast(existing ? "고정비를 수정했어요. 이미 기록된 지출은 그대로예요" : "고정비를 등록했어요");
 }
 

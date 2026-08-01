@@ -14,6 +14,12 @@ let fixedTemplates = [];
 let fixedApplied = [];
 /** 지출 id별 대화 개수. 목록에 표시만 하므로 본문은 들고 있지 않는다. */
 let noteCounts = {};
+/**
+ * 이미 센 메시지 id.
+ * 내가 보낸 메시지는 응답으로도, 실시간 구독으로도 돌아온다. 어느 쪽이 먼저 와도
+ * 한 번만 세도록 id를 기억한다.
+ */
+let countedNoteIds = new Set();
 
 /** 어느 가구에, 누구 이름으로 쓸지. 로그인해야 정해진다. */
 let context = null;
@@ -33,6 +39,7 @@ export async function loadAll(profile) {
   fixedTemplates = data.fixedCosts;
   fixedApplied = data.applied;
   noteCounts = data.noteCounts;
+  countedNoteIds = new Set();
 }
 
 /** 이름·색을 바꾼 뒤. 지출은 그대로 두고 명부만 다시 읽는다. */
@@ -49,6 +56,7 @@ export async function resetHousehold() {
   fixedApplied = [];
   // 지출이 사라지면 달려 있던 대화도 DB에서 함께 지워진다(on delete cascade).
   noteCounts = {};
+  countedNoteIds = new Set();
 }
 
 /** 상대가 바꾼 내용을 반영할 때. 구성원·고정비는 거의 안 바뀌므로 지출만 다시 읽는다. */
@@ -68,6 +76,7 @@ export function clearData() {
   fixedTemplates = [];
   fixedApplied = [];
   noteCounts = {};
+  countedNoteIds = new Set();
   context = null;
   setMembers([]);
   memberFilter = null;
@@ -96,6 +105,9 @@ export async function editExpense(id, input) {
 export async function removeExpense(id) {
   await remote.deleteExpenseRow(id);
   expenses = expenses.filter((expense) => expense.id !== id);
+  // 지출과 함께 대화도 DB에서 사라진다. 개수만 남으면 없는 대화를 있다고 표시하게 된다.
+  const { [id]: removed, ...rest } = noteCounts;
+  noteCounts = rest;
 }
 
 /* ── 고정비 ───────────────────────────────────────────────── */
@@ -130,11 +142,12 @@ export async function deleteFixedCost(id) {
  *
  * 한 건이 실패해도 나머지는 살린다. 한 건 때문에 이번 달 고정비 전체가 안 들어오는 편이
  * 더 나쁘고, 실패한 건은 반영 기록이 남지 않아 다음에 다시 시도된다.
- * @returns {Promise<number>} 실제로 만들어진 건수
+ * @returns {Promise<{created: number, failed: number}>} 만들어진 건수와 실패한 건수
  */
 export async function applyOccurrences(occurrences) {
   const created = [];
   const appliedKeys = [];
+  let failed = 0;
 
   for (const occurrence of occurrences) {
     try {
@@ -143,13 +156,14 @@ export async function applyOccurrences(occurrences) {
       if (expense) created.push(expense);
       appliedKeys.push(occurrence.key);
     } catch {
-      // 이유는 remote가 콘솔에 남긴다. 여기서는 다음 건을 계속 시도한다.
+      // 이유는 remote가 콘솔에 남긴다. 여기서는 다음 건을 계속 시도하고, 끝나면 알린다.
+      failed += 1;
     }
   }
 
   expenses = [...expenses, ...created];
   fixedApplied = [...fixedApplied, ...appliedKeys];
-  return created.length;
+  return { created: created.length, failed };
 }
 
 /* ── 대화 ─────────────────────────────────────────────────── */
@@ -164,13 +178,19 @@ export async function loadNotes(expenseId) {
 
 export async function addNote(expenseId, body) {
   const note = await remote.insertNote(expenseId, body, context);
-  countNote(note.expenseId);
+  countNote(note);
   return note;
 }
 
-/** 실시간으로 들어온 메시지도 개수에 반영한다. 같은 값을 두 번 세지 않도록 호출부가 걸러 준다. */
-export function countNote(expenseId) {
-  noteCounts = { ...noteCounts, [expenseId]: (noteCounts[expenseId] || 0) + 1 };
+/**
+ * 메시지 하나를 개수에 반영한다. 같은 메시지를 여러 번 넣어도 한 번만 센다.
+ * @returns {boolean} 이번에 처음 센 메시지인지
+ */
+export function countNote(note) {
+  if (countedNoteIds.has(note.id)) return false;
+  countedNoteIds.add(note.id);
+  noteCounts = { ...noteCounts, [note.expenseId]: (noteCounts[note.expenseId] || 0) + 1 };
+  return true;
 }
 
 /* ── 화면 상태 ────────────────────────────────────────────── */
@@ -200,11 +220,15 @@ export function setHighlightId(id) {
   highlightId = id;
 }
 
-/** 되돌리기를 위해 잠시 들고 있는 삭제된 항목. */
+/**
+ * 되돌리기를 위해 잠시 들고 있는 삭제된 항목.
+ * 대화는 지출과 함께 DB에서 사라져 되살릴 수 없으므로, 몇 개를 잃었는지 함께 기억해 알린다.
+ * @returns {{expense: object, lostNotes: number}|null}
+ */
 export function getPendingDelete() {
   return pendingDelete;
 }
 
-export function setPendingDelete(expense) {
-  pendingDelete = expense;
+export function setPendingDelete(expense, lostNotes = 0) {
+  pendingDelete = expense ? { expense, lostNotes } : null;
 }

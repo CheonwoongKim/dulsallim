@@ -31,7 +31,7 @@ test("불러오기에 실패하면 빈 가계부 대신 이유를 보여준다",
   const start = fn("startApp");
   assert.match(start, /catch \(error\)[\s\S]*showDataGate\(error\.message, true\)/);
   assert.match(start, /return;/);
-  assert.match(app, /elements\.retryLoad\.addEventListener\("click", startApp\)/, "다시 시도할 방법이 있어야 한다");
+  assert.match(app, /elements\.retryLoad\.addEventListener\("click"/, "다시 시도할 방법이 있어야 한다");
 });
 
 test("모든 저장 경로가 실패를 사용자에게 알린다", () => {
@@ -292,11 +292,15 @@ test("대화는 남의 메시지를 화면에 그대로 넣지 않는다", () =>
   assert.match(bubble, /escapeHtml\(getMemberName\(note\.author\)\)/);
 });
 
-test("같은 메시지가 두 번 그려지지 않는다", () => {
-  // 내가 보낸 것도 실시간 구독으로 되돌아온다. id로 거르지 않으면 매번 두 줄이 된다.
+test("같은 메시지는 응답과 구독 중 어느 쪽이 먼저 와도 한 번만 센다", () => {
+  // 내가 보낸 메시지는 두 경로로 돌아온다. 순서를 가정하면 타이밍에 따라 개수가 부풀어 오른다.
+  const count = fn("countNote");
+  assert.match(count, /countedNoteIds\.has\(note\.id\)\) return false/, "id로 걸러야 순서와 무관해진다");
+  assert.match(count, /countedNoteIds\.add\(note\.id\)/);
+
   const receive = fn("receiveNote");
-  assert.match(receive, /messages\.some\(\(current\) => current\.id === note\.id\)/);
-  assert.match(receive, /!known/, "이미 아는 메시지면 개수도 다시 세면 안 된다");
+  assert.match(receive, /const isNew = countNote\(note\)/);
+  assert.match(receive, /if \(!isNew\) return/, "이미 센 메시지면 화면도 건드리지 않아야 한다");
 });
 
 test("대화를 불러오는 사이 시트가 바뀌면 늦게 온 결과를 버린다", () => {
@@ -391,4 +395,57 @@ test("요약 카드의 목표 줄은 카드를 밀어내지 않는다", () => {
   // 금액과 나란히 좁은 칸에 들어간다. 줄바꿈되면 두 카드 높이가 어긋난다.
   assert.match(css, /\.member-goal \{[^}]*white-space: nowrap/);
   assert.match(css, /\.member-goal \{[^}]*text-overflow: ellipsis/);
+});
+
+test("스크롤 잠금은 몇 겹인지 세어야 한다", () => {
+  // 전체 화면 위에 시트를 열 수 있다. 세지 않으면 시트가 닫히며 잠금을 풀어
+  // 아직 열려 있는 화면 뒤로 배경이 움직이고 원래 스크롤 위치도 잃는다.
+  const lock = fn("lockPageScroll");
+  const unlock = fn("unlockPageScroll");
+  assert.match(lock, /depth \+= 1/);
+  assert.match(lock, /if \(depth > 1\) return/, "이미 잠겼으면 위치를 다시 읽으면 안 된다(그때 scrollY는 0)");
+  assert.match(unlock, /depth = Math\.max\(0, depth - 1\)/);
+  assert.match(unlock, /if \(depth > 0\) return/, "아직 열린 게 있으면 잠금을 유지해야 한다");
+});
+
+test("대화가 달린 지출을 지우면 대화도 사라진다고 알린다", () => {
+  // 대화는 지출과 함께 DB에서 지워지고(on delete cascade) 되돌리기로도 살아나지 않는다.
+  const del = fn("deleteExpense");
+  assert.match(del, /const lostNotes = getNoteCount\(id\)/, "지우기 전에 세어야 한다");
+  assert.match(del, /지출과 대화 \$\{lostNotes\}개를 지웠어요/);
+
+  const undo = fn("undoDelete");
+  assert.match(undo, /pending\.lostNotes/);
+  assert.match(undo, /되살릴 수 없어요/, "돌아오지 않는 것을 조용히 넘기면 안 된다");
+});
+
+test("지출을 지우면 대화 개수도 함께 버린다", () => {
+  // 개수만 남으면 없는 대화를 있다고 표시하게 된다.
+  assert.match(fn("removeExpense"), /const \{ \[id\]: removed, \.\.\.rest \} = noteCounts/);
+});
+
+test("서버에 못 닿은 것만으로는 로그아웃시키지 않는다", () => {
+  // 지하철에서 앱을 열 때마다 비밀번호를 치게 할 수는 없다.
+  const restore = fn("restoreSession");
+  assert.match(restore, /if \(error\.offline\) throw error/, "세션을 버리기 전에 원인을 갈라야 한다");
+  assert.match(restore, /await supabase\.auth\.signOut\(\)/, "프로필이 정말 없으면 되돌려야 한다");
+  assert.match(fn("boot"), /catch \(error\)[\s\S]*showDataGate\(error\.message, true\)/);
+});
+
+test("고정비가 하나도 반영되지 않으면 알린다", () => {
+  // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
+  assert.match(fn("applyOccurrences"), /failed \+= 1/);
+  assert.match(fn("startApp"), /applied\.failed > 0[\s\S]{0,160}반영하지 못했어요/);
+});
+
+test("보이지 않는 지출의 메시지로는 목록을 다시 그리지 않는다", () => {
+  // 괜히 그리면 열어 둔 스와이프가 닫힌다.
+  const receive = fn("receiveNote");
+  assert.match(receive, /getExpenses\(\)\.some\(\(expense\) => expense\.id === note\.expenseId\)\) return/,
+    "우리 가구 지출이 아니면 개수도 건드리면 안 된다");
+  assert.match(receive, /elements\.list\.querySelector\([\s\S]{0,80}\) render\(\)/);
+});
+
+test("로그아웃하면 예약된 동기화도 취소한다", () => {
+  assert.match(app, /unsubscribe\(noteChannel\);\s*\n\s*clearTimeout\(syncTimer\)/);
 });

@@ -34,8 +34,3 @@ export const PALETTE = [
   { value: "#c2883f", label: "황토" },
   { value: "#8d6a91", label: "자두" },
 ];
-
-/** 아바타에 넣을 한 글자. 한국 이름은 끝 글자가 서로 겹치지 않아 구분이 쉽다. */
-export function getMemberInitial(id) {
-  return getMemberName(id).slice(-1);
-}

@@ -101,9 +101,8 @@ export async function handleNoteSubmit(event) {
   const expenseId = openExpenseId;
   elements.noteSend.disabled = true;
   try {
-    const saved = await addNote(expenseId, body.slice(0, MAX_BODY));
-    // 실시간 구독으로 같은 메시지가 되돌아오므로 id로 한 번 걸러 준다.
-    receiveNote(saved, { counted: true });
+    // 실시간 구독으로 같은 메시지가 되돌아오지만 개수는 id 기준으로 한 번만 센다.
+    receiveNote(await addNote(expenseId, body.slice(0, MAX_BODY)));
     elements.noteInput.value = "";
   } catch (error) {
     showToast(error.message);
@@ -115,18 +114,22 @@ export async function handleNoteSubmit(event) {
 
 /**
  * 상대가 남긴(또는 내가 방금 보낸) 메시지를 화면에 붙인다.
- * @param {object} note
- * @param {{counted?: boolean}} [options] 개수를 이미 셌으면 또 세지 않는다.
+ * 구독에는 가구 필터를 걸 수 없어 RLS에 기대는데, 개수까지 흐트러지지 않도록 한 겹 더 확인한다.
  */
-export function receiveNote(note, { counted = false } = {}) {
-  const known = messages.some((current) => current.id === note.id);
-  if (!counted && !known) countNote(note.expenseId);
+export function receiveNote(note) {
+  if (!getExpenses().some((expense) => expense.id === note.expenseId)) return;
 
-  if (note.expenseId === openExpenseId && !known) {
+  // 응답과 구독 중 어느 쪽이 먼저 와도 여기서 한 번만 센다.
+  const isNew = countNote(note);
+  if (!isNew) return;
+
+  if (note.expenseId === openExpenseId && !messages.some((current) => current.id === note.id)) {
     messages = [...messages, note];
     paintMessages();
     scrollToLatest();
   }
-  // 목록의 대화 개수도 함께 갱신한다.
-  if (!known) render();
+
+  // 목록에 없는 지출이면 대화 개수가 보이지 않으므로 다시 그릴 이유가 없다.
+  // 괜히 그리면 열어 둔 스와이프가 닫힌다.
+  if (elements.list.querySelector(`.expense-item[data-id="${note.expenseId}"]`)) render();
 }

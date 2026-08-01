@@ -4,6 +4,7 @@ import {
   addExpense,
   getExpenses,
   getMemberFilter,
+  getNoteCount,
   getPendingDelete,
   removeExpense,
   setHighlightId,
@@ -17,6 +18,9 @@ export async function deleteExpense(id) {
   const target = getExpenses().find((expense) => expense.id === id);
   if (!target) return;
 
+  // 대화는 지출과 함께 DB에서 사라진다. 지우기 전에 세어 둬야 몇 개를 잃었는지 말할 수 있다.
+  const lostNotes = getNoteCount(id);
+
   try {
     await removeExpense(id);
   } catch (error) {
@@ -24,24 +28,29 @@ export async function deleteExpense(id) {
     return;
   }
 
-  setPendingDelete(target);
+  setPendingDelete(target, lostNotes);
   render();
   // 토스트가 사라지면 되돌리기 대상도 함께 버린다.
-  showToast("지출을 삭제했어요", { canUndo: true, onExpire: () => setPendingDelete(null) });
+  showToast(lostNotes ? `지출과 대화 ${lostNotes}개를 지웠어요` : "지출을 삭제했어요", {
+    canUndo: true,
+    onExpire: () => setPendingDelete(null),
+  });
 }
 
 /**
  * 삭제를 되돌린다.
+ *
  * 서버에서 지운 행은 되살릴 수 없어 같은 내용으로 새로 넣는다.
- * 사용자가 보기엔 그대로 돌아오지만, 고정비에서 왔던 기록이라면 그 연결은 끊어진다.
+ * 사용자가 보기엔 그대로 돌아오지만 두 가지는 돌아오지 않는다 —
+ * 고정비에서 왔던 연결, 그리고 그 건에 달려 있던 대화다. 대화는 잃었다고 밝힌다.
  */
 export async function undoDelete() {
-  const deleted = getPendingDelete();
-  if (!deleted) return;
+  const pending = getPendingDelete();
+  if (!pending) return;
 
   let restored;
   try {
-    restored = await addExpense(deleted);
+    restored = await addExpense(pending.expense);
   } catch (error) {
     showToast(error.message);
     return;
@@ -50,6 +59,11 @@ export async function undoDelete() {
   setHighlightId(restored.id);
   setPendingDelete(null);
   render();
+
+  if (pending.lostNotes) {
+    showToast(`지출을 되돌렸어요. 대화 ${pending.lostNotes}개는 되살릴 수 없어요`);
+    return;
+  }
   hideToast();
 }
 

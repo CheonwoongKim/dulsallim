@@ -26,6 +26,11 @@ function toKoreanMessage(error) {
  * 계정은 있는데 프로필이 없으면 가구에 속하지 않은 것이라 아무 데이터도 볼 수 없다.
  * 빈 화면을 보여주느니 여기서 막고 이유를 알린다.
  */
+/** 서버에 닿지 못한 것뿐인지. 세션을 버릴지 말지가 여기서 갈린다. */
+function isOffline(error) {
+  return /failed to fetch|networkerror|load failed/i.test(error?.message || "");
+}
+
 async function loadProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
@@ -33,7 +38,14 @@ async function loadProfile(userId) {
     .eq("id", userId)
     .maybeSingle();
 
-  if (error) throw new Error(`프로필을 읽지 못했어요: ${error.message}`);
+  if (error) {
+    if (isOffline(error)) {
+      const offline = new Error("서버에 연결하지 못했어요. 네트워크를 확인해 주세요.");
+      offline.offline = true;
+      throw offline;
+    }
+    throw new Error(`프로필을 읽지 못했어요: ${error.message}`);
+  }
   if (!data) throw new Error("이 계정은 가구에 연결되어 있지 않아요. seed.sql 을 확인해 주세요.");
   return data;
 }
@@ -61,8 +73,11 @@ export async function restoreSession() {
   try {
     profile = await loadProfile(data.session.user.id);
     return profile;
-  } catch {
-    // 세션은 살아 있는데 프로필을 못 읽으면 로그인 화면으로 되돌린다.
+  } catch (error) {
+    // 잠깐 서버에 못 닿았다고 로그아웃시키면, 지하철에서 앱을 열 때마다 비밀번호를 쳐야 한다.
+    // 세션은 그대로 두고 다시 시도할 기회를 준다.
+    if (error.offline) throw error;
+    // 계정은 살아 있는데 프로필이 없다면 가구에 속하지 않은 것이다. 로그인 화면으로 되돌린다.
     await supabase.auth.signOut();
     return null;
   }

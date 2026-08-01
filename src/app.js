@@ -311,6 +311,7 @@ elements.loginForm.addEventListener("submit", async (event) => {
 elements.signOut.addEventListener("click", async () => {
   unsubscribe(channel);
   unsubscribe(noteChannel);
+  clearTimeout(syncTimer);
   channel = null;
   noteChannel = null;
   closePageNow();
@@ -386,23 +387,35 @@ async function startApp() {
   paintMembers();
 
   // 반영일이 지난 고정비를 먼저 채운 뒤 그린다.
-  const appliedCount = await applyDueFixedCosts();
+  const applied = await applyDueFixedCosts();
   render();
   watchForChanges(profile.household_id);
 
-  if (appliedCount > 0) {
-    showToast(`이번 달 고정비 ${appliedCount}건을 넣었어요`);
+  if (applied.created > 0) {
+    showToast(`이번 달 고정비 ${applied.created}건을 넣었어요`);
+  } else if (applied.failed > 0) {
+    // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
+    showToast(`고정비 ${applied.failed}건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요`);
   }
 }
 
-elements.retryLoad.addEventListener("click", startApp);
+elements.retryLoad.addEventListener("click", () => (getProfile() ? startApp() : boot()));
 
 async function boot() {
   if (!isReady()) {
     showConfigError();
     return;
   }
-  const profile = await restoreSession();
+
+  let profile = null;
+  try {
+    profile = await restoreSession();
+  } catch (error) {
+    // 세션은 그대로다. 로그인 화면으로 돌리지 않고 다시 시도할 기회만 준다.
+    showDataGate(error.message, true);
+    return;
+  }
+
   if (profile) {
     await startApp();
     return;
