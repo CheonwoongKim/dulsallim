@@ -11,3 +11,6 @@ output/
 .preview.log
 .playwright-mcp/
 .infisical.json
+.build.log
+.deploy.log
+.pull.log
