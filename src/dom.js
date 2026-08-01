@@ -10,6 +10,7 @@ const memberSlot = (slot) => ({
   name: pick(`${slot}-name`),
   count: pick(`${slot}-count`),
   total: pick(`${slot}-total`),
+  goal: pick(`${slot}-goal`),
   ratio: pick(`${slot}-ratio`),
   bar: pick(`${slot}-bar`),
 });

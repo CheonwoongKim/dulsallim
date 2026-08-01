@@ -376,3 +376,19 @@ test("목표를 비우면 목표를 쓰지 않는 것으로 저장된다", () =>
   assert.match(submit, /digits \? Number\(digits\) : null/, "빈 값은 null 이어야 한다");
   assert.match(submit, /goal !== null && goal <= 0/, "0원 목표는 DB도 거절한다");
 });
+
+test("요약 카드의 목표는 입력 폼과 같은 규칙을 따른다", () => {
+  // 같은 화면에서 규칙이 갈라지면 어느 쪽이 맞는지 알 수 없다.
+  const renderFn = fn("render");
+  assert.match(renderFn, /getSelectedMonth\(\) === toMonthKey\(new Date\(\)\)/, "이번 달에만 말해야 한다");
+  assert.match(renderFn, /summarizeGoal\(\{ monthly, memberId: share\.id, goal: getMemberGoal\(share\.id\) \}\)/);
+  assert.match(renderFn, /slot\.goal\.hidden = !goal/, "목표가 없으면 아무것도 보이지 않아야 한다");
+  // 요약은 항상 그 달 전체 기준이다. 사람 필터가 걸린 목록으로 계산하면 숫자가 흔들린다.
+  assert.doesNotMatch(renderFn, /summarizeGoal\(\{ monthly: visible/);
+});
+
+test("요약 카드의 목표 줄은 카드를 밀어내지 않는다", () => {
+  // 금액과 나란히 좁은 칸에 들어간다. 줄바꿈되면 두 카드 높이가 어긋난다.
+  assert.match(css, /\.member-goal \{[^}]*white-space: nowrap/);
+  assert.match(css, /\.member-goal \{[^}]*text-overflow: ellipsis/);
+});

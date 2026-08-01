@@ -5,8 +5,10 @@ import {
   formatMoney,
   getMonthlyExpenses,
   summarize,
+  summarizeGoal,
+  toMonthKey,
 } from "./expenses.js";
-import { getMemberName, getMembers } from "./members.js";
+import { getMemberGoal, getMemberName, getMembers } from "./members.js";
 import { getExpenses, getMemberFilter, getSelectedMonth } from "./store.js";
 import { renderList } from "./ui/ledger.js";
 
@@ -81,6 +83,9 @@ export function render() {
   animateNumber(previousTotal, stats.total);
   previousTotal = stats.total;
 
+  // 목표는 값이 하나뿐이라 지난 달을 "지금의 목표"로 판정하게 된다. 이번 달에만 말한다.
+  const isThisMonth = getSelectedMonth() === toMonthKey(new Date());
+
   elements.memberSlots.forEach((slot, index) => {
     const share = stats.perMember[index];
     if (!share) return;
@@ -89,6 +94,16 @@ export function render() {
     slot.ratio.textContent = `${share.percent}%`;
     slot.bar.style.width = `${share.percent}%`;
     slot.row.setAttribute("aria-pressed", String(memberFilter === share.id));
+
+    const goal = isThisMonth
+      ? summarizeGoal({ monthly, memberId: share.id, goal: getMemberGoal(share.id) })
+      : null;
+    slot.goal.hidden = !goal;
+    if (!goal) return;
+    slot.goal.classList.toggle("is-over", goal.over);
+    slot.goal.textContent = goal.over
+      ? `${formatMoney(-goal.remaining)}원 초과`
+      : `${formatMoney(goal.remaining)}원 남음 · ${goal.percent}%`;
   });
 
   elements.count.textContent = `(${visible.length})`;

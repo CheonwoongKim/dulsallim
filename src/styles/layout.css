@@ -298,3 +298,18 @@ main {
   font-weight: 700;
 }
 
+
+/* 요약 카드의 목표 진행. 금액이 주인공이라 한 단계 작고 옅게 둔다. */
+.member-goal {
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-goal.is-over {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
