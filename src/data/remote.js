@@ -38,25 +38,30 @@ export async function fetchMembers(householdId) {
     "구성원 불러오기",
     await supabase
       .from("profiles")
-      .select("id, display_name, avatar_color, created_at")
+      .select("id, display_name, avatar_color, monthly_goal, created_at")
       .eq("household_id", householdId)
       .order("created_at"),
   );
-  return rows.map((row) => ({ id: row.id, name: row.display_name, color: row.avatar_color }));
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.display_name,
+    color: row.avatar_color,
+    goal: row.monthly_goal,
+  }));
 }
 
 /**
  * 내 표시 이름과 색을 바꾼다.
  * 어느 행을 고치든 DB는 본인 행만, 그것도 이 두 열만 허용한다(migration-profile.sql).
  */
-export async function updateProfile(userId, { name, color }) {
+export async function updateProfile(userId, { name, color, goal }) {
   const row = unwrap(
     "프로필 수정",
     await supabase
       .from("profiles")
-      .update({ display_name: name, avatar_color: color })
+      .update({ display_name: name, avatar_color: color, monthly_goal: goal })
       .eq("id", userId)
-      .select("id, display_name, avatar_color, household_id")
+      .select("id, display_name, avatar_color, monthly_goal, household_id")
       .single(),
   );
   return row;

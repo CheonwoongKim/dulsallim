@@ -6,7 +6,13 @@ import { paintMembers, render, resetTotalAnimation } from "./render.js";
 import { clearData, getExpenses, loadAll, reloadExpenses } from "./store.js";
 import { subscribeExpenses, subscribeNotes, unsubscribe } from "./data/remote.js";
 import { deleteExpense, toggleMemberFilter, undoDelete } from "./features/expense-actions.js";
-import { closeForm, handleSubmit, openForm, syncDateDisplay } from "./features/expense-form.js";
+import {
+  closeForm,
+  handleSubmit,
+  openForm,
+  syncDateDisplay,
+  syncGoalNotice,
+} from "./features/expense-form.js";
 import {
   buildMonthGrid,
   closeMonthSheet,
@@ -37,7 +43,13 @@ import {
   startSwipe,
 } from "./ui/swipe.js";
 import { closePageNow, getOpenPage, hidePage } from "./ui/page.js";
-import { handleNameInput, handleProfileSubmit, openProfilePage, pickColor } from "./features/profile.js";
+import {
+  handleGoalInput,
+  handleNameInput,
+  handleProfileSubmit,
+  openProfilePage,
+  pickColor,
+} from "./features/profile.js";
 import { handleReset, openSettingsPage, syncResetButton } from "./features/settings.js";
 import { closeNotes, handleNoteSubmit, openNotes, receiveNote } from "./features/notes.js";
 import { showToast } from "./ui/toast.js";
@@ -132,6 +144,7 @@ elements.pages.forEach((page) => {
 });
 elements.profileForm.addEventListener("submit", handleProfileSubmit);
 elements.profileName.addEventListener("input", handleNameInput);
+elements.profileGoal.addEventListener("input", handleGoalInput);
 elements.profilePalette.addEventListener("click", (event) => {
   const swatch = event.target.closest(".swatch");
   if (swatch) pickColor(swatch.dataset.color);
@@ -185,12 +198,21 @@ elements.fixedList.addEventListener("click", (event) => {
   const removeButton = event.target.closest("[data-remove-fixed]");
   if (removeButton) removeFixedTemplate(removeButton.dataset.removeFixed);
 });
-elements.date.addEventListener("change", syncDateDisplay);
-elements.date.addEventListener("input", syncDateDisplay);
+// 금액·날짜·결제자 중 무엇이 바뀌어도 남은 목표의 기준이 달라진다.
+const syncDate = () => {
+  syncDateDisplay();
+  syncGoalNotice();
+};
+elements.date.addEventListener("change", syncDate);
+elements.date.addEventListener("input", syncDate);
+elements.form.querySelectorAll('input[name="member"]').forEach((radio) => {
+  radio.addEventListener("change", syncGoalNotice);
+});
 elements.amount.addEventListener("input", (event) => {
   const digits = event.target.value.replace(/\D/g, "").slice(0, AMOUNT_MAX_DIGITS);
   event.target.value = digits ? formatMoney(Number(digits)) : "";
   elements.amountError.textContent = "";
+  syncGoalNotice();
 });
 elements.item.addEventListener("input", () => {
   elements.itemError.textContent = "";

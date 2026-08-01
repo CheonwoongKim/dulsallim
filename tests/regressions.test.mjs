@@ -219,14 +219,24 @@ test("소스 파일은 800줄 상한을 지킨다", () => {
   }
 });
 
-test("프로필 수정 권한은 이름과 색 두 열로만 열려 있다", async () => {
+test("프로필 수정 권한은 정해진 열로만 열려 있다", async () => {
   // 테이블 전체에 update 를 주면 본인 행의 household_id 를 남의 가구로 바꿔치기할 수 있고,
   // 그러면 "같은 가구만 본다"는 RLS 판단 자체가 뚫린다.
   const { readFile } = await import("node:fs/promises");
-  for (const file of ["schema.sql", "migration-profile.sql"]) {
+  const ALLOWED = ["display_name", "avatar_color", "monthly_goal"];
+
+  for (const file of ["schema.sql", "migration-profile.sql", "migration-goal.sql"]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
-    assert.match(sql, /grant update \(display_name, avatar_color\) on profiles/, `${file}에 열 단위 권한이 없다`);
-    assert.doesNotMatch(sql, /grant update on profiles/, `${file}이 테이블 전체 수정을 열어 준다`);
+    const grants = [...sql.matchAll(/grant update\s*\(([^)]+)\)\s*on profiles/g)];
+    assert.ok(grants.length, `${file}에 열 단위 권한이 없다`);
+
+    for (const [, columns] of grants) {
+      for (const column of columns.split(",").map((c) => c.trim())) {
+        assert.ok(ALLOWED.includes(column), `${file}이 ${column} 수정을 열어 준다`);
+      }
+    }
+    // 괄호 없는 grant 는 모든 열을 연다.
+    assert.doesNotMatch(sql, /grant update\s+on profiles/, `${file}이 테이블 전체 수정을 열어 준다`);
   }
 });
 
@@ -324,4 +334,45 @@ test("새로 적을 때 결제자는 두 폼 모두 로그인한 사람이 기�
     assert.doesNotMatch(body, new RegExp(`if \\(${existing}\\) \\{[\\s\\S]*?radio`, "i"),
       `${name}: 수정할 때만 반영하고 있다`);
   }
+});
+
+test("남은 목표는 폼에서 고른 결제자를 따라간다", () => {
+  // 로그인한 사람으로 고정하면 결제자를 바꿨을 때 엉뚱한 사람의 목표를 보여 준다.
+  const sync = fn("syncGoalNotice");
+  assert.match(sync, /data\.get\("member"\)/, "결제자를 폼에서 읽어야 한다");
+  assert.match(sync, /getMemberGoal\(memberId\)/);
+  assert.doesNotMatch(sync, /getProfile\(\)/, "로그인한 사람으로 고정하면 안 된다");
+});
+
+test("남은 목표는 이번 달이 아니면 아무 말도 하지 않는다", () => {
+  // 목표는 값이 하나뿐이라 지난 달을 '지금의 목표'로 판정하게 된다.
+  const sync = fn("syncGoalNotice");
+  assert.match(sync, /date\.slice\(0, 7\) === toMonthKey\(new Date\(\)\)/);
+  assert.match(sync, /elements\.goalNotice\.hidden = true/);
+});
+
+test("수정 중인 지출은 남은 목표에서 두 번 세지 않는다", () => {
+  assert.match(fn("syncGoalNotice"), /excludeId: editingExpenseId/);
+});
+
+test("금액·날짜·결제자가 바뀌면 남은 목표를 다시 계산한다", () => {
+  // 셋 중 하나라도 빠지면 화면의 숫자가 조용히 낡는다.
+  assert.match(app, /elements\.amount\.addEventListener\("input"[\s\S]{0,260}?syncGoalNotice\(\)/);
+  assert.match(app, /syncDateDisplay\(\);\s*\n\s*syncGoalNotice\(\);/, "날짜가 바뀌면 기준 달이 달라진다");
+  assert.match(app, /input\[name="member"\][\s\S]{0,140}?addEventListener\("change", syncGoalNotice\)/);
+});
+
+test("마이페이지는 상대 목표를 보여 주되 고치게 하지는 않는다", () => {
+  // 둘이 상의해 정하는 금액이라 투명해야 하지만, 남의 프로필을 고칠 수는 없다(RLS도 막는다).
+  const paint = fn("paintPartnerGoal");
+  assert.match(paint, /member\.id !== getProfile\(\)\?\.id/);
+  assert.match(paint, /님의 목표/);
+  assert.match(html, /<p class="partner-goal" id="partner-goal" hidden><\/p>/, "읽기 전용이어야 한다");
+  assert.doesNotMatch(html, /id="partner-goal"[^>]*<input/);
+});
+
+test("목표를 비우면 목표를 쓰지 않는 것으로 저장된다", () => {
+  const submit = fn("handleProfileSubmit");
+  assert.match(submit, /digits \? Number\(digits\) : null/, "빈 값은 null 이어야 한다");
+  assert.match(submit, /goal !== null && goal <= 0/, "0원 목표는 DB도 거절한다");
 });

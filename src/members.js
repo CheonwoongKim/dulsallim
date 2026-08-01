@@ -7,7 +7,7 @@
  */
 let members = [];
 
-/** @param {Array<{id: string, name: string, color: string}>} list 가입 순서대로 */
+/** @param {Array<{id: string, name: string, color: string, goal: number|null}>} list 가입 순서대로 */
 export function setMembers(list) {
   members = list;
 }
@@ -18,6 +18,11 @@ export function getMembers() {
 
 export function getMemberName(id) {
   return members.find((member) => member.id === id)?.name || "알 수 없음";
+}
+
+/** 그 사람의 월 지출 목표. 정하지 않았으면 null. */
+export function getMemberGoal(id) {
+  return members.find((member) => member.id === id)?.goal ?? null;
 }
 
 /** 고를 수 있는 아바타 색. DB의 check 제약과 같은 목록이어야 한다. */

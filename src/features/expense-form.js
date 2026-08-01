@@ -5,14 +5,18 @@ import {
   formatMonth,
   formatMoney,
   isFutureDateKey,
+  getMonthlyExpenses,
   isValidDateKey,
+  summarizeGoal,
   toDateKey,
   toMonthKey,
 } from "../expenses.js";
+import { getMemberGoal } from "../members.js";
 import { render } from "../render.js";
 import {
   addExpense,
   editExpense,
+  getExpenses,
   getSelectedMonth,
   setHighlightId,
   setMemberFilter,
@@ -48,6 +52,42 @@ export function syncDateDisplay() {
   elements.dateDisplay.textContent = `${year}년 ${month}월 ${day}일`;
 }
 
+/**
+ * 금액칸 아래에 "이거 저장하면 얼마 남는지"를 보여 준다.
+ *
+ * 다 쓰고 나서 아는 것보다 쓰기 직전에 아는 편이 쓸모 있다.
+ * 기준은 폼에서 고른 결제자다. 로그인한 사람으로 고정하면 결제자를 바꿨을 때 숫자가 어긋난다.
+ */
+export function syncGoalNotice() {
+  const data = new FormData(elements.form);
+  const memberId = String(data.get("member") || "");
+  const date = String(data.get("date") || "");
+
+  // 목표는 값이 하나뿐이라 지난 달을 "지금의 목표"로 판정하게 된다. 틀린 말을 하느니 아무 말도 안 한다.
+  const isThisMonth = isValidDateKey(date) && date.slice(0, 7) === toMonthKey(new Date());
+  const status = isThisMonth
+    ? summarizeGoal({
+        monthly: getMonthlyExpenses(getExpenses(), date.slice(0, 7)),
+        memberId,
+        goal: getMemberGoal(memberId),
+        draft: Number(String(data.get("amount") || "").replace(/\D/g, "")) || 0,
+        excludeId: editingExpenseId,
+      })
+    : null;
+
+  if (!status) {
+    elements.goalNotice.textContent = "";
+    elements.goalNotice.hidden = true;
+    return;
+  }
+
+  elements.goalNotice.hidden = false;
+  elements.goalNotice.classList.toggle("is-over", status.over);
+  elements.goalNotice.textContent = status.over
+    ? `목표 초과 ${formatMoney(-status.remaining)}원`
+    : `남은 목표 ${formatMoney(status.remaining)}원 · ${status.percent}%`;
+}
+
 export function openForm(expense = null) {
   editingExpenseId = expense?.id || null;
   elements.form.reset();
@@ -66,6 +106,7 @@ export function openForm(expense = null) {
   elements.dateError.textContent = "";
   elements.itemError.textContent = "";
   elements.amountError.textContent = "";
+  syncGoalNotice();
   elements.form.scrollTop = 0;
   showSheet(elements.sheet);
   setTimeout(() => elements.item.focus(), FOCUS_DELAY_MS);

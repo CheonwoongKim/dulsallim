@@ -15,6 +15,7 @@ import {
   isValidMonthKey,
   nextMemberFilter,
   summarize,
+  summarizeGoal,
 } from "../src/expenses.js";
 
 const 천 = { id: "11111111-1111-1111-1111-111111111111", name: "천웅" };
@@ -187,4 +188,57 @@ test("formatShortDate는 자릿수를 유지해 세로 정렬이 맞는 표기�
   assert.equal(formatShortDate("2026-01-09"), "01.09");
   const widths = new Set(["2026-08-01", "2026-12-25", "2026-01-09"].map((d) => formatShortDate(d).length));
   assert.equal(widths.size, 1, "모든 날짜의 글자 수가 같아야 열이 흔들리지 않는다");
+});
+
+test("summarizeGoal은 목표가 없으면 아무것도 돌려주지 않는다", () => {
+  const monthly = [{ ...validExpense, amount: 10000 }];
+  assert.equal(summarizeGoal({ monthly, memberId: 천.id, goal: null }), null);
+  assert.equal(summarizeGoal({ monthly, memberId: 천.id, goal: 0 }), null);
+  assert.equal(summarizeGoal({ monthly, memberId: "", goal: 100000 }), null);
+});
+
+test("summarizeGoal은 고른 결제자의 지출만 센다", () => {
+  const monthly = [
+    { ...validExpense, id: "a", member: 천.id, amount: 30000 },
+    { ...validExpense, id: "b", member: 주.id, amount: 90000 },
+  ];
+  const mine = summarizeGoal({ monthly, memberId: 천.id, goal: 100000 });
+  assert.equal(mine.spent, 30000, "상대 지출이 섞이면 안 된다");
+  assert.equal(mine.remaining, 70000);
+  assert.equal(mine.percent, 70);
+  assert.equal(mine.over, false);
+});
+
+test("summarizeGoal은 아직 저장하지 않은 금액을 미리 반영한다", () => {
+  // 쓰기 전에 "이거 하면 얼마 남지?"에 답해야 한다.
+  const monthly = [{ ...validExpense, id: "a", member: 천.id, amount: 30000 }];
+  const result = summarizeGoal({ monthly, memberId: 천.id, goal: 100000, draft: 50000 });
+  assert.equal(result.spent, 80000);
+  assert.equal(result.remaining, 20000);
+});
+
+test("summarizeGoal은 수정 중인 지출을 두 번 세지 않는다", () => {
+  // 15,000원짜리를 20,000원으로 고치는 중이면 원래 금액은 빼야 한다.
+  const monthly = [{ ...validExpense, id: "edit-me", member: 천.id, amount: 15000 }];
+  const result = summarizeGoal({
+    monthly, memberId: 천.id, goal: 100000, draft: 20000, excludeId: "edit-me",
+  });
+  assert.equal(result.spent, 20000, "35,000원이 되면 이중 계산이다");
+  assert.equal(result.remaining, 80000);
+});
+
+test("summarizeGoal은 초과를 음수 비율 대신 표시로 알린다", () => {
+  const monthly = [{ ...validExpense, id: "a", member: 천.id, amount: 120000 }];
+  const result = summarizeGoal({ monthly, memberId: 천.id, goal: 100000 });
+  assert.equal(result.over, true);
+  assert.equal(result.remaining, -20000, "초과 금액을 알 수 있어야 한다");
+  assert.equal(result.percent, 0, "음수 %는 읽는 순간 계산이 필요해진다");
+});
+
+test("summarizeGoal은 목표를 정확히 다 썼을 때 초과가 아니다", () => {
+  const monthly = [{ ...validExpense, id: "a", member: 천.id, amount: 100000 }];
+  const result = summarizeGoal({ monthly, memberId: 천.id, goal: 100000 });
+  assert.equal(result.over, false);
+  assert.equal(result.remaining, 0);
+  assert.equal(result.percent, 0);
 });

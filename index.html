@@ -152,6 +152,17 @@
           <div class="palette" id="profile-palette" role="group" aria-label="아바타 색상"></div>
         </div>
 
+        <label class="field-group amount-field">
+          <span>월 지출 목표</span>
+          <span class="amount-input-wrap">
+            <input type="text" id="profile-goal" inputmode="numeric" autocomplete="off" placeholder="정하지 않음" />
+            <b>원</b>
+          </span>
+          <small class="field-hint">비워 두면 목표를 쓰지 않습니다.</small>
+        </label>
+
+        <p class="partner-goal" id="partner-goal" hidden></p>
+
         <small class="field-error" id="profile-error"></small>
 
         <button class="submit-button" type="submit" id="profile-submit"><span>저장</span></button>
@@ -252,6 +263,7 @@
             <b>원</b>
           </span>
           <small class="field-error" id="amount-error"></small>
+          <small class="goal-notice" id="goal-notice"></small>
         </label>
 
         <button class="submit-button" type="submit" id="expense-submit">

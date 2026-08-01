@@ -172,3 +172,19 @@
   border-color: transparent;
   color: var(--ink-soft);
 }
+
+/* 마이페이지의 목표 입력 보조 문구 */
+.field-hint {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.partner-goal {
+  margin: -6px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}

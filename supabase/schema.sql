@@ -25,6 +25,8 @@ create table if not exists profiles (
   -- 목록·요약에서 두 사람을 구분하는 색. 팔레트 밖의 값은 DB가 거절한다.
   avatar_color text not null default '#20211e'
     check (avatar_color in ('#20211e', '#f2674b', '#8da697', '#5b7fa6', '#c2883f', '#8d6a91')),
+  -- 한 달에 이만큼까지 쓰겠다는 다짐. 비어 있으면 정하지 않은 것이다.
+  monthly_goal integer check (monthly_goal is null or monthly_goal > 0),
   created_at   timestamptz not null default now()
 );
 
@@ -189,7 +191,7 @@ grant select on households, profiles to authenticated;
 
 -- 프로필 수정 권한은 열 단위로 준다. 테이블 전체에 update 를 주면 본인 행의 household_id 를
 -- 남의 가구로 바꿔치기할 수 있고, 그러면 "같은 가구" 판단 자체가 뚫린다.
-grant update (display_name, avatar_color) on profiles to authenticated;
+grant update (display_name, avatar_color, monthly_goal) on profiles to authenticated;
 
 grant select, insert, update, delete
   on fixed_costs, expenses, fixed_cost_applications, expense_notes

@@ -29,7 +29,7 @@ function toKoreanMessage(error) {
 async function loadProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_color, household_id")
+    .select("id, display_name, avatar_color, monthly_goal, household_id")
     .eq("id", userId)
     .maybeSingle();
 

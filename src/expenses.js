@@ -83,6 +83,35 @@ export function nextMemberFilter(current, member) {
 }
 
 /**
+ * 목표까지 얼마 남았는지 낸다.
+ *
+ * @param {object} input
+ * @param {Array} input.monthly 그 달 지출 전체
+ * @param {string} input.memberId 결제자. 폼에서 고른 사람을 따라간다
+ * @param {number|null} input.goal 그 사람의 월 목표. 없으면 계산하지 않는다
+ * @param {number} [input.draft] 아직 저장하지 않은 금액. 입력하는 동안 미리 반영한다
+ * @param {string|null} [input.excludeId] 수정 중인 지출. 이미 합계에 들어 있으므로 빼야 두 번 세지 않는다
+ * @returns {{spent: number, remaining: number, percent: number, over: boolean}|null}
+ */
+export function summarizeGoal({ monthly, memberId, goal, draft = 0, excludeId = null }) {
+  if (!goal || !memberId) return null;
+
+  const spent =
+    monthly
+      .filter((expense) => expense.member === memberId && expense.id !== excludeId)
+      .reduce((sum, expense) => sum + expense.amount, 0) + draft;
+  const remaining = goal - spent;
+
+  return {
+    spent,
+    remaining,
+    // 초과했을 때의 음수 비율은 읽는 순간 계산이 필요해진다. 0으로 눕히고 문구로 알린다.
+    percent: remaining > 0 ? Math.round((remaining / goal) * 100) : 0,
+    over: remaining < 0,
+  };
+}
+
+/**
  * 그 달의 합계와 사람별 몫을 낸다.
  * @param {Array} monthly 그 달 지출
  * @param {Array<{id: string, name: string}>} members 화면에 놓일 순서대로

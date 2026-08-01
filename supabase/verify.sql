@@ -91,14 +91,14 @@ with checks as (
 
   union all
 
-  -- 8) 프로필 수정 권한이 두 열로만 한정됐는가 (household_id 가 열리면 가구 격리가 뚫린다)
+  -- 8) 프로필 수정 권한이 정해진 열로만 한정됐는가 (household_id 가 열리면 가구 격리가 뚫린다)
   select
     8,
     '프로필 수정 권한',
     coalesce(string_agg(column_name, ', ' order by column_name), '없음'),
-    case when count(*) = 2 and count(*) filter (where column_name in ('display_name','avatar_color')) = 2
+    case when count(*) = 3 and count(*) filter (where column_name in ('display_name','avatar_color','monthly_goal')) = 3
          then 'OK' else 'FAIL' end,
-    'migration-profile.sql 의 revoke/grant 구문을 다시 실행하세요'
+    'migration-profile.sql 과 migration-goal.sql 의 revoke/grant 구문을 다시 실행하세요'
   from information_schema.column_privileges
   where grantee = 'authenticated' and table_name = 'profiles' and privilege_type = 'UPDATE'
 
