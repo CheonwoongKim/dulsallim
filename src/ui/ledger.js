@@ -1,0 +1,54 @@
+import { elements } from "../dom.js";
+import { escapeHtml } from "./escape.js";
+import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
+import { getMemberName } from "../members.js";
+import { getHighlightId, getMemberFilter, setHighlightId } from "../store.js";
+import { resetSwipeState } from "./swipe.js";
+
+function createExpenseRow(expense) {
+  const article = document.createElement("article");
+  const category = CATEGORIES[expense.category] || CATEGORIES.etc;
+  article.className = `expense-item swipe-row${expense.id === getHighlightId() ? " is-new" : ""}`;
+  article.dataset.id = expense.id;
+  // 액션 패널을 먼저 두고 내용면이 그 위를 덮는다. 스와이프하면 내용면이 밀려 액션이 드러난다.
+  article.innerHTML = `
+    <span class="swipe-actions">
+      <button class="swipe-action is-edit" type="button" data-edit-id="${expense.id}" aria-label="${escapeHtml(expense.item)} 수정">수정</button>
+      <button class="swipe-action is-delete" type="button" data-delete-id="${expense.id}" aria-label="${escapeHtml(expense.item)} 삭제">삭제</button>
+    </span>
+    <div class="expense-surface swipe-surface">
+      <span class="expense-date">${formatShortDate(expense.date)}</span>
+      <div class="expense-copy">
+        <strong>${escapeHtml(expense.item)}</strong>
+        <span class="expense-meta">
+          ${escapeHtml(getMemberName(expense.member))}<i></i>${category.label}
+        </span>
+      </div>
+      <strong class="expense-amount">${formatMoney(expense.amount)}원</strong>
+    </div>
+  `;
+  return article;
+}
+
+function fillEmptyState() {
+  const empty = elements.emptyTemplate.content.cloneNode(true);
+  const member = getMemberFilter();
+  if (member) {
+    empty.querySelector("h3").textContent = `${getMemberName(member)} 지출이 없어요`;
+    empty.querySelector("p").innerHTML = "이 달에는 기록이 없습니다.<br />위 카드를 다시 눌러 전체를 볼 수 있어요.";
+  }
+  return empty;
+}
+
+export function renderList(visible) {
+  resetSwipeState();
+  elements.list.replaceChildren();
+
+  if (!visible.length) {
+    elements.list.append(fillEmptyState());
+    return;
+  }
+
+  elements.list.append(...visible.map(createExpenseRow));
+  setHighlightId(null);
+}

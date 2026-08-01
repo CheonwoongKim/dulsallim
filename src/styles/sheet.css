@@ -1,0 +1,532 @@
+.sheet-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  background: rgba(22, 21, 19, 0.46);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.sheet-backdrop.is-visible {
+  opacity: 1;
+}
+
+/* 두 시트가 공유하는 껍데기. 차이는 아래에서 개별로만 덮는다. */
+.sheet {
+  position: fixed;
+  z-index: 50;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: min(100%, 620px);
+  max-width: 100vw;
+  max-height: min(92svh, 760px);
+  margin: auto;
+  padding: 13px 0 0;
+  overflow: hidden;
+  flex-direction: column;
+  border-radius: 28px 28px 0 0;
+  background: var(--white);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(105%);
+  transition: opacity 260ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sheet.is-visible {
+  opacity: 1;
+  transform: translateY(var(--drag-y, 0px));
+}
+
+/* 닫히는 동안 흘러든 탭이 안쪽 입력 요소를 건드리지 못하게 한다. */
+.sheet:not(.is-visible) {
+  pointer-events: none;
+}
+
+.sheet.is-dragging {
+  transition: none;
+}
+
+/* 월 선택 시트는 내용이 짧아 더 낮게 뜬다. */
+.month-sheet {
+  max-height: min(92svh, 640px);
+}
+
+.sheet-handle,
+.sheet-header {
+  touch-action: none;
+}
+
+.year-control {
+  display: grid;
+  padding: 0 22px 18px;
+  align-items: center;
+  flex: 0 0 auto;
+  grid-template-columns: 42px 1fr 42px;
+}
+
+.year-control strong {
+  font-size: 17px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.month-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.month-cell {
+  min-height: 54px;
+  border: 1px solid #ddd8cf;
+  border-radius: 13px;
+  background: #fcfaf5;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.month-cell.is-today {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.month-cell.is-selected {
+  border-color: var(--ink);
+  color: var(--white);
+  background: var(--ink);
+}
+
+.sheet-handle {
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 19px;
+  flex: 0 0 auto;
+  border-radius: 99px;
+  background: #d8d4cc;
+}
+
+.sheet-header {
+  display: flex;
+  margin-bottom: 27px;
+  padding: 0 22px;
+  align-items: flex-start;
+  flex: 0 0 auto;
+  justify-content: space-between;
+}
+
+.close-button {
+  margin: -5px -7px 0 0;
+}
+
+/* 시트 안에서 스크롤되는 영역(지출 폼 · 월 그리드 · 고정비). 헤더는 바깥에 고정된다. */
+.sheet-scroll {
+  display: grid;
+  min-height: 0;
+  padding: 0 22px max(24px, env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  align-content: start;
+  flex: 1 1 auto;
+}
+
+/* 키보드가 내려가며 시트가 움직이는 동안 탭이 엉뚱한 입력에 새지 않게 한다. */
+.sheet-scroll.is-settling {
+  pointer-events: none;
+}
+
+#expense-form,
+#fixed-form {
+  gap: 21px;
+}
+
+#fixed-list-view {
+  gap: 18px;
+}
+
+.fixed-list {
+  display: grid;
+  gap: 2px;
+}
+
+.fixed-list:empty::after {
+  padding: 26px 0;
+  color: var(--ink-soft);
+  content: "아직 등록한 고정비가 없어요";
+  font-size: 13px;
+  text-align: center;
+}
+
+.fixed-surface {
+  display: grid;
+  min-height: 66px;
+  padding: 13px 2px;
+  align-items: center;
+  background: var(--white);
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.fixed-item + .fixed-item {
+  border-top: 1px solid rgba(32, 33, 30, 0.07);
+}
+
+.fixed-day {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.fixed-copy {
+  min-width: 0;
+}
+
+.fixed-copy strong {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fixed-copy span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.fixed-copy span i {
+  width: 2px;
+  height: 2px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.fixed-amount {
+  font-size: 14px;
+  letter-spacing: -0.02em;
+}
+
+.fixed-hint {
+  margin: -6px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.fixed-form-actions {
+  display: grid;
+  margin-top: 4px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.day-input-wrap {
+  position: relative;
+  display: block;
+}
+
+.day-input-wrap input[type="text"] {
+  padding-right: 40px;
+}
+
+.day-input-wrap b {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  color: var(--ink-soft);
+  font-size: 15px;
+  transform: translateY(-50%);
+}
+
+.field-group {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  gap: 9px;
+}
+
+.field-group > span:not(.date-control):not(.amount-input-wrap),
+.field-group legend {
+  color: #5f5e58;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.member-picker legend {
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.member-picker .segmented-control {
+  clear: both;
+  width: 100%;
+}
+
+.field-group input[type="text"],
+.field-group select {
+  width: 100%;
+  min-width: 0;
+  height: 50px;
+  padding: 0 14px;
+  border: 1px solid #ddd8cf;
+  border-radius: 13px;
+  background: #fcfaf5;
+  font-size: 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.date-control {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 50px;
+  padding: 0 14px;
+  border: 1px solid #ddd8cf;
+  border-radius: 13px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #fcfaf5;
+  font-size: 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.date-control:hover {
+  border-color: #bdb8ae;
+}
+
+.date-control:focus-within {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(242, 103, 75, 0.11);
+}
+
+.date-control > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  pointer-events: none;
+}
+
+.date-control input[type="date"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.field-group input:hover,
+.field-group select:hover {
+  border-color: #bdb8ae;
+}
+
+.field-group input:focus,
+.field-group select:focus {
+  border-color: var(--accent);
+  outline: 0;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(242, 103, 75, 0.11);
+}
+
+.segmented-control {
+  display: grid;
+  padding: 4px;
+  border-radius: 15px;
+  background: #eeeae2;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.segmented-control label {
+  min-width: 0;
+  cursor: pointer;
+}
+
+.segmented-control input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.segmented-control label > span {
+  display: flex;
+  min-height: 48px;
+  padding: 6px 8px;
+  border-radius: 11px;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.segmented-control input:checked + span {
+  color: var(--ink);
+  background: var(--white);
+  box-shadow: 0 2px 8px rgba(35, 31, 26, 0.08);
+}
+
+.segmented-control input:focus-visible + span {
+  outline: 3px solid rgba(242, 103, 75, 0.25);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 12px;
+}
+
+.amount-field .amount-input-wrap {
+  position: relative;
+  display: block;
+}
+
+.amount-field input[type="text"] {
+  height: 50px;
+  padding-right: 48px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.amount-input-wrap b {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  color: var(--ink-soft);
+  font-size: 15px;
+  transform: translateY(-50%);
+}
+
+/* 오류가 아니라 확인만 요청하는 안내. 저장을 막지 않는다. */
+.field-notice {
+  display: none;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.field-notice:not(:empty) {
+  display: block;
+}
+
+.field-error {
+  display: none;
+  color: var(--accent-dark);
+  font-size: 11px;
+}
+
+.field-error:not(:empty) {
+  display: block;
+}
+
+.submit-button {
+  display: flex;
+  min-height: 56px;
+  margin-top: 4px;
+  padding: 0 19px;
+  border-radius: 15px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--white);
+  background: var(--accent);
+  font-weight: 800;
+  box-shadow: 0 9px 24px rgba(216, 77, 52, 0.21);
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.submit-button:hover {
+  background: var(--accent-dark);
+}
+
+.submit-button:active {
+  transform: scale(0.985);
+}
+
+.toast {
+  position: fixed;
+  z-index: 70;
+  right: 18px;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  left: 18px;
+  display: flex;
+  width: min(calc(100% - 36px), 430px);
+  min-height: 52px;
+  margin: auto;
+  padding: 10px 12px 10px 17px;
+  border-radius: 15px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--white);
+  background: var(--ink);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+  font-size: 13px;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast button {
+  min-height: 34px;
+  padding: 0 9px;
+  border: 0;
+  color: #ff9b87;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+html.sheet-open,
+body.sheet-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.sheet-open .app-shell,
+.sheet-backdrop {
+  touch-action: none;
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes item-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

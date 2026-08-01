@@ -1,0 +1,61 @@
+:root {
+  color-scheme: light;
+  --paper: #f7f3eb;
+  --paper-deep: #eee8dc;
+  --ink: #20211e;
+  --ink-soft: #6d6d65;
+  --line: rgba(32, 33, 30, 0.12);
+  --accent: #f2674b;
+  --accent-dark: #d84d34;
+  --sage: #8da697;
+  --white: #fffdf8;
+  --shadow: 0 18px 60px rgba(38, 32, 25, 0.16);
+  --font: "Gowun Dodum", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html {
+  background: #e9e5dc;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  min-height: 100svh;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(242, 103, 75, 0.25);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+}
+

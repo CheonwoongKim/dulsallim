@@ -1,0 +1,300 @@
+.app-shell {
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+}
+
+.app-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  background: var(--paper);
+}
+
+.overview-head {
+  position: relative;
+  width: min(100%, 780px);
+  margin: 0 auto;
+  padding: 24px 22px 30px;
+  animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.topbar {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  width: min(100%, 780px);
+  height: 76px;
+  margin: 0 auto;
+  padding: max(14px, env(safe-area-inset-top)) 22px 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  color: var(--ink);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  text-decoration: none;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ghost-button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.ghost-button:hover {
+  border-color: #bdb8ae;
+  background: rgba(32, 33, 30, 0.04);
+}
+
+.ghost-button.wide {
+  min-height: 56px;
+  padding: 0 22px;
+}
+
+.add-button,
+.floating-add,
+.submit-button,
+.text-button,
+.icon-button,
+.month-label {
+  border: 0;
+  cursor: pointer;
+}
+
+.add-button {
+  display: none;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  align-items: center;
+  gap: 7px;
+  color: var(--white);
+  background: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.add-button svg,
+.floating-add svg,
+.submit-button svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 780px);
+  margin: 0 auto;
+  padding: 0 22px 128px;
+}
+
+.overview {
+  animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.month-control {
+  position: relative;
+  display: flex;
+  margin: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.icon-button,
+.month-label {
+  display: grid;
+  background: transparent;
+  place-items: center;
+}
+
+.icon-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.icon-button:active {
+  background: rgba(32, 33, 30, 0.06);
+  transform: scale(0.94);
+}
+
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.month-label {
+  min-width: 120px;
+  padding: 10px 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.eyebrow {
+  margin: 0 0 9px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.overview-head > .eyebrow,
+.total-amount {
+  text-align: center;
+}
+
+.total-amount {
+  display: flex;
+  min-height: 62px;
+  margin: 0;
+  align-items: baseline;
+  justify-content: center;
+  font-size: clamp(46px, 14vw, 64px);
+  font-weight: 700;
+  letter-spacing: -0.075em;
+  line-height: 1;
+}
+
+.total-amount .currency {
+  margin-left: 7px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.member-summary {
+  display: grid;
+  padding: 22px 0 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 26px;
+}
+
+.member-row {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  /* 바깥으로 번지는 box-shadow로 강조해 레이아웃을 밀지 않는다. */
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.member-row[aria-pressed="true"] {
+  background: #ece5d8;
+  box-shadow: 0 0 0 10px #ece5d8;
+}
+
+.member-body {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.member-name {
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  place-items: center;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* 배경색은 사람마다 다르고 서버에 저장된다. 여기서는 글자색만 정한다. */
+.avatar {
+  color: var(--white);
+}
+
+.member-value {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-value strong {
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+
+.member-value span {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ratio-group {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+}
+
+.ratio-bar {
+  display: flex;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--paper-deep);
+}
+
+.ratio-bar span {
+  width: 0;
+  height: 100%;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ratio-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+}
+

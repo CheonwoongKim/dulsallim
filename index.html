@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f3eb" />
+    <meta name="description" content="우리 둘의 지출을 함께 기록하는 모바일 가계부" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet" />
+    <title>둘살림 · 우리 둘의 가계부</title>
+  </head>
+  <body>
+    <div class="auth-gate" id="auth-gate" hidden>
+      <form class="auth-card" id="login-form" novalidate>
+        <p class="eyebrow">둘이 함께 쓰는 가계부</p>
+        <h1 class="auth-title">둘살림</h1>
+
+        <label class="field-group">
+          <span>이메일</span>
+          <input type="email" id="login-email" name="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" />
+        </label>
+
+        <label class="field-group">
+          <span>비밀번호</span>
+          <input type="password" id="login-password" name="password" autocomplete="current-password" />
+        </label>
+
+        <small class="field-error" id="login-error"></small>
+
+        <button class="submit-button" type="submit" id="login-submit">
+          <span id="login-submit-label">로그인</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- 기록을 불러오는 동안, 그리고 못 불러왔을 때. 빈 가계부를 보여주면 다 지워진 줄 안다. -->
+    <div class="auth-gate" id="data-gate" hidden>
+      <div class="auth-card">
+        <p class="eyebrow">둘이 함께 쓰는 가계부</p>
+        <h1 class="auth-title">둘살림</h1>
+        <p class="data-status" id="data-status">기록을 불러오는 중…</p>
+        <button class="submit-button" type="button" id="retry-load" hidden>
+          <span>다시 시도</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="app-shell" id="app-shell" hidden>
+      <div class="app-header">
+        <header class="topbar">
+        <a class="brand" href="#" aria-label="둘살림 홈">둘살림</a>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" id="open-profile" aria-label="마이페이지">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+          </button>
+          <button class="icon-button" type="button" id="open-settings" aria-label="설정">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+          </button>
+          <button class="add-button top-add" type="button" data-open-form aria-label="지출 추가">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>지출 추가</span>
+          </button>
+        </div>
+      </header>
+
+        <div class="overview-head" role="group" aria-labelledby="month-title">
+          <div class="month-control">
+            <button class="icon-button" type="button" id="prev-month" aria-label="이전 달">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <button class="month-label" type="button" id="month-picker-trigger" aria-haspopup="dialog" aria-label="조회할 달 선택">
+              <span id="month-title"></span>
+            </button>
+            <button class="icon-button" type="button" id="next-month" aria-label="다음 달">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+
+          <p class="eyebrow">함께 쓴 금액</p>
+          <h1 class="total-amount"><span id="monthly-total">0</span><span class="currency">원</span></h1>
+        </div>
+      </div>
+
+      <main>
+        <div class="overview">
+          <div class="member-summary" aria-label="사람별 지출 합계">
+            <!-- 이름은 로그인 후 서버에서 채운다. 코드에 사람 이름을 박아 두지 않는다. -->
+            <button class="member-row" type="button" id="me-row" aria-pressed="false">
+              <span class="avatar" id="me-avatar"></span>
+              <span class="member-body">
+                <span class="member-name"><span id="me-name"></span><span class="member-count" id="me-count">(0)</span></span>
+                <span class="member-value"><strong id="me-total">0원</strong></span>
+              </span>
+            </button>
+            <button class="member-row" type="button" id="partner-row" aria-pressed="false">
+              <span class="avatar" id="partner-avatar"></span>
+              <span class="member-body">
+                <span class="member-name"><span id="partner-name"></span><span class="member-count" id="partner-count">(0)</span></span>
+                <span class="member-value"><strong id="partner-total">0원</strong></span>
+              </span>
+            </button>
+            <div class="ratio-group">
+              <div class="ratio-bar" aria-hidden="true">
+                <span id="me-bar"></span>
+                <span id="partner-bar"></span>
+              </div>
+              <div class="ratio-legend">
+                <span id="me-ratio">0%</span>
+                <span id="partner-ratio">0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section class="ledger" aria-labelledby="ledger-title">
+          <div class="section-heading">
+            <h2 id="ledger-title">지출 내역<span class="record-count" id="record-count">(0)</span><span class="ledger-filter" id="ledger-filter" hidden></span></h2>
+          </div>
+          <div id="expense-list" class="expense-list" aria-live="polite"></div>
+        </section>
+      </main>
+
+      <button class="floating-add" type="button" data-open-form aria-label="새 지출 추가">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+
+    <section class="page" id="profile-page" aria-labelledby="profile-page-title" hidden>
+      <header class="page-head">
+        <button class="icon-button" type="button" data-close-page aria-label="뒤로">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 id="profile-page-title">마이페이지</h2>
+      </header>
+
+      <form class="page-body" id="profile-form" novalidate>
+        <div class="profile-preview">
+          <span class="avatar avatar-lg" id="profile-preview"></span>
+          <strong id="profile-preview-name"></strong>
+        </div>
+
+        <label class="field-group">
+          <span>표시 이름</span>
+          <input type="text" id="profile-name" name="display-name" maxlength="12" autocomplete="off" />
+        </label>
+
+        <div class="field-group">
+          <span>아바타 색상</span>
+          <div class="palette" id="profile-palette" role="group" aria-label="아바타 색상"></div>
+        </div>
+
+        <small class="field-error" id="profile-error"></small>
+
+        <button class="submit-button" type="submit" id="profile-submit"><span>저장</span></button>
+        <button class="ghost-button wide danger-text" type="button" id="sign-out">로그아웃</button>
+      </form>
+    </section>
+
+    <section class="page" id="settings-page" aria-labelledby="settings-page-title" hidden>
+      <header class="page-head">
+        <button class="icon-button" type="button" data-close-page aria-label="뒤로">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 id="settings-page-title">설정</h2>
+      </header>
+
+      <div class="page-body">
+        <button class="menu-row" type="button" id="open-fixed-sheet" aria-haspopup="dialog">
+          <span>
+            <strong>고정비</strong>
+            <small>매월 반복되는 지출을 등록해 둡니다</small>
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+
+        <form class="danger-zone" id="reset-form" novalidate>
+          <strong>데이터 초기화</strong>
+          <p id="reset-warning"></p>
+          <label class="field-group">
+            <span>확인을 위해 <b>초기화</b>라고 입력해 주세요</span>
+            <input type="text" id="reset-confirm" autocomplete="off" autocapitalize="none" />
+          </label>
+          <small class="field-error" id="reset-error"></small>
+          <button class="submit-button danger" type="submit" id="reset-submit" disabled>
+            <span>모두 삭제</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+    <section class="sheet" id="entry-sheet" role="dialog" aria-modal="true" aria-labelledby="form-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow" id="form-eyebrow">새로운 기록</p>
+          <h2 id="form-title">어디에 썼나요?</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-form" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <form class="sheet-scroll" id="expense-form" novalidate>
+        <fieldset class="field-group member-picker">
+          <legend>누가 결제했나요?</legend>
+          <div class="segmented-control">
+            <label><input type="radio" name="member" value="" checked /><span></span></label>
+            <label><input type="radio" name="member" value="" /><span></span></label>
+          </div>
+        </fieldset>
+
+        <div class="form-row">
+          <label class="field-group">
+            <span>날짜</span>
+            <span class="date-control">
+              <span id="date-display" aria-hidden="true">날짜 선택</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg>
+              <input type="date" id="expense-date" name="date" aria-label="날짜" required />
+            </span>
+            <small class="field-error" id="date-error"></small>
+            <small class="field-notice" id="date-notice"></small>
+          </label>
+          <label class="field-group">
+            <span>분류</span>
+            <select id="expense-category" name="category">
+              <option value="food">식비</option>
+              <option value="cafe">카페</option>
+              <option value="grocery">장보기</option>
+              <option value="living">생활</option>
+              <option value="transport">교통</option>
+              <option value="housing">주거</option>
+              <option value="leisure">여가</option>
+              <option value="etc">기타</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field-group">
+          <span>지출 항목</span>
+          <input type="text" id="expense-item" name="item" maxlength="30" autocomplete="off" placeholder="예: 주말 장보기" required />
+          <small class="field-error" id="item-error"></small>
+        </label>
+
+        <label class="field-group amount-field">
+          <span>금액</span>
+          <span class="amount-input-wrap">
+            <input type="text" id="expense-amount" name="amount" inputmode="numeric" autocomplete="off" placeholder="0" required />
+            <b>원</b>
+          </span>
+          <small class="field-error" id="amount-error"></small>
+        </label>
+
+        <button class="submit-button" type="submit" id="expense-submit">
+          <span id="submit-label">지출 추가하기</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </form>
+    </section>
+
+    <section class="sheet month-sheet" id="month-sheet" role="dialog" aria-modal="true" aria-labelledby="month-sheet-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow">조회할 달</p>
+          <h2 id="month-sheet-title">언제로 가볼까요?</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-month-sheet" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="year-control">
+        <button class="icon-button" type="button" id="prev-year" aria-label="이전 해">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <strong id="year-label">2026년</strong>
+        <button class="icon-button" type="button" id="next-year" aria-label="다음 해">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <div class="sheet-scroll month-grid" id="month-grid" role="group" aria-labelledby="year-label"></div>
+    </section>
+
+    <section class="sheet" id="fixed-sheet" role="dialog" aria-modal="true" aria-labelledby="fixed-sheet-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow">매월 자동 기록</p>
+          <h2 id="fixed-sheet-title">고정비</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-fixed-sheet" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="sheet-scroll fixed-view" id="fixed-list-view">
+        <div id="fixed-list" class="fixed-list"></div>
+        <button class="submit-button" type="button" id="add-fixed">
+          <span>고정비 추가</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+
+      <form class="sheet-scroll fixed-view" id="fixed-form" novalidate hidden>
+        <p class="eyebrow" id="fixed-form-mode">새 고정비</p>
+
+        <fieldset class="field-group member-picker">
+          <legend>누가 결제하나요?</legend>
+          <div class="segmented-control">
+            <label><input type="radio" name="fixed-member" value="" checked /><span></span></label>
+            <label><input type="radio" name="fixed-member" value="" /><span></span></label>
+          </div>
+        </fieldset>
+
+        <div class="form-row">
+          <label class="field-group">
+            <span>매월 며칠</span>
+            <span class="day-input-wrap">
+              <input type="text" id="fixed-day" name="day" inputmode="numeric" autocomplete="off" placeholder="25" />
+              <b>일</b>
+            </span>
+            <small class="field-error" id="fixed-day-error"></small>
+          </label>
+          <label class="field-group">
+            <span>분류</span>
+            <select id="fixed-category" name="category">
+              <option value="food">식비</option>
+              <option value="cafe">카페</option>
+              <option value="grocery">장보기</option>
+              <option value="living">생활</option>
+              <option value="transport">교통</option>
+              <option value="housing" selected>주거</option>
+              <option value="leisure">여가</option>
+              <option value="etc">기타</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field-group">
+          <span>지출 항목</span>
+          <input type="text" id="fixed-item" name="item" maxlength="30" autocomplete="off" placeholder="예: 아파트 관리비" />
+          <small class="field-error" id="fixed-item-error"></small>
+        </label>
+
+        <label class="field-group amount-field">
+          <span>금액</span>
+          <span class="amount-input-wrap">
+            <input type="text" id="fixed-amount" name="amount" inputmode="numeric" autocomplete="off" placeholder="0" />
+            <b>원</b>
+          </span>
+          <small class="field-error" id="fixed-amount-error"></small>
+        </label>
+
+        <p class="fixed-hint" id="fixed-hint"></p>
+
+        <div class="fixed-form-actions">
+          <button class="ghost-button wide" type="button" id="cancel-fixed">취소</button>
+          <button class="submit-button" type="submit" id="fixed-submit"><span id="fixed-submit-label">고정비 저장</span></button>
+        </div>
+      </form>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+      <span id="toast-message">지출을 삭제했어요</span>
+      <button type="button" id="undo-delete">되돌리기</button>
+    </div>
+
+    <template id="empty-template">
+      <div class="empty-state">
+        <h3>첫 지출을 기록해 보세요</h3>
+        <p>누가, 어디에, 얼마를 썼는지<br />둘이 함께 차곡차곡 모아봐요.</p>
+        <button class="text-button" type="button" data-open-form>지출 기록하기 <span>→</span></button>
+      </div>
+    </template>
+
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>
