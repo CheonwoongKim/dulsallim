@@ -19,6 +19,7 @@ import {
   setSelectedMonth,
 } from "../store.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
+import { getProfile } from "./auth.js";
 import { showToast } from "../ui/toast.js";
 
 const FOCUS_DELAY_MS = 260;
@@ -58,10 +59,10 @@ export function openForm(expense = null) {
   elements.category.value = expense?.category || "food";
   elements.item.value = expense?.item || "";
   elements.amount.value = expense ? formatMoney(expense.amount) : "";
-  if (expense) {
-    const memberRadio = elements.form.querySelector(`input[name="member"][value="${expense.member}"]`);
-    if (memberRadio) memberRadio.checked = true;
-  }
+  // 새로 적을 때는 로그인한 사람이 결제자다. 대부분 자기가 쓴 걸 적으므로 매번 고르지 않아도 된다.
+  const defaultMember = expense?.member || getProfile()?.id;
+  const memberRadio = elements.form.querySelector(`input[name="member"][value="${defaultMember}"]`);
+  if (memberRadio) memberRadio.checked = true;
   elements.dateError.textContent = "";
   elements.itemError.textContent = "";
   elements.amountError.textContent = "";
