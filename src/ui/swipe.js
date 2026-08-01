@@ -3,6 +3,17 @@ import { createDragTracker } from "./drag-tracker.js";
 const OPEN_RATIO = 0.4;
 
 let openRow = null;
+/** 방금 끝난 제스처가 스와이프였는지. 스와이프 끝의 click을 탭으로 오인하지 않기 위해 둔다. */
+let didSwipe = false;
+
+export function hasOpenRow() {
+  return openRow !== null;
+}
+
+/** 손을 뗄 때 발생하는 click이 스와이프의 잔상인지 알려준다. */
+export function didJustSwipe() {
+  return didSwipe;
+}
 
 function getActionsWidth(item) {
   return item.querySelector(".swipe-actions").offsetWidth;
@@ -36,6 +47,7 @@ export function closeOpenRow() {
 
 const tracker = createDragTracker({
   onBegin(event) {
+    didSwipe = false;
     const item = event.target.closest(".swipe-row");
     // 액션 버튼 위에서 시작한 누름은 버튼의 몫이다.
     if (!item || event.target.closest(".swipe-actions")) return null;
@@ -49,6 +61,7 @@ const tracker = createDragTracker({
     if (Math.abs(dx) <= Math.abs(dy)) return false;
     if (openRow && openRow !== context.item) setRowOpen(openRow, false);
     context.item.classList.add("is-dragging");
+    didSwipe = true;
     return true;
   },
 
@@ -77,5 +90,6 @@ export const cancelSwipe = tracker.cancel;
 /** 목록을 다시 그리면 열려 있던 행의 DOM이 사라지므로 참조를 버린다. */
 export function resetSwipeState() {
   openRow = null;
+  didSwipe = false;
   tracker.reset();
 }

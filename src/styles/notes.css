@@ -1,0 +1,136 @@
+/* 헤더 고정 · 메시지만 스크롤 · 입력줄 바닥 고정 */
+#notes-sheet {
+  display: flex;
+  max-height: 82svh;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 지출 한 건에 대해 나누는 대화 */
+.note-list {
+  display: flex;
+  min-height: 180px;
+  padding: 4px 22px 12px;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.note-empty {
+  margin: auto 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.note-row {
+  display: grid;
+  max-width: 78%;
+  gap: 3px;
+  justify-items: start;
+}
+
+/* 내 말은 오른쪽으로 붙인다. 누가 한 말인지 이름을 읽지 않아도 알 수 있다. */
+.note-row.is-mine {
+  margin-left: auto;
+  justify-items: end;
+}
+
+.note-author {
+  padding: 0 4px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.note-bubble {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--paper-deep);
+  font-size: 14px;
+  line-height: 1.55;
+  /* 띄어쓰기 없는 긴 문자열이 시트를 밀어내지 않게 한다. */
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.note-row.is-mine .note-bubble {
+  border-radius: 16px 16px 4px;
+  color: var(--white);
+  background: var(--accent);
+}
+
+.note-when {
+  padding: 0 4px;
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 입력줄은 바닥에 붙어 키보드 위에 남는다 */
+.note-form {
+  display: flex;
+  padding: 10px 22px max(14px, env(safe-area-inset-bottom));
+  gap: 8px;
+  flex: 0 0 auto;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  background: var(--white);
+}
+
+.note-form input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid #ddd8cf;
+  border-radius: 999px;
+  background: #fcfaf5;
+  /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
+  font-size: 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.note-form input:focus {
+  border-color: var(--accent);
+  outline: 0;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(242, 103, 75, 0.11);
+}
+
+.note-send {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  cursor: pointer;
+  place-items: center;
+}
+
+.note-send svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: var(--white);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.note-send:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* 목록 행에 붙는 대화 표시 */
+.note-count {
+  color: var(--accent-dark);
+  font-weight: 700;
+}

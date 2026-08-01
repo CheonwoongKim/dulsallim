@@ -21,6 +21,7 @@ const SOURCE_FILES = [
   "ui/swipe.js",
   "ui/toast.js",
   "features/auth.js",
+  "features/notes.js",
   "features/profile.js",
   "features/settings.js",
   "features/expense-actions.js",
@@ -30,7 +31,7 @@ const SOURCE_FILES = [
 ];
 
 /** 캐스케이드 순서가 특이도 경합을 좌우하므로 순서를 지켜 이어 붙인다. */
-export const STYLE_FILES = ["base", "swipe", "layout", "ledger", "page", "sheet", "auth", "responsive"];
+export const STYLE_FILES = ["base", "swipe", "layout", "ledger", "page", "sheet", "notes", "auth", "responsive"];
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 

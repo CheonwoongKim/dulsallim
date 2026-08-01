@@ -2,12 +2,14 @@ import { elements } from "../dom.js";
 import { escapeHtml } from "./escape.js";
 import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
 import { getMemberName } from "../members.js";
-import { getHighlightId, getMemberFilter, setHighlightId } from "../store.js";
+import { getHighlightId, getMemberFilter, getNoteCount, setHighlightId } from "../store.js";
 import { resetSwipeState } from "./swipe.js";
 
 function createExpenseRow(expense) {
   const article = document.createElement("article");
   const category = CATEGORIES[expense.category] || CATEGORIES.etc;
+  // 상대가 남긴 말이 있다는 걸 목록에서 알 수 있어야 열어 볼 생각을 한다.
+  const notes = getNoteCount(expense.id);
   article.className = `expense-item swipe-row${expense.id === getHighlightId() ? " is-new" : ""}`;
   article.dataset.id = expense.id;
   // 액션 패널을 먼저 두고 내용면이 그 위를 덮는다. 스와이프하면 내용면이 밀려 액션이 드러난다.
@@ -21,7 +23,7 @@ function createExpenseRow(expense) {
       <div class="expense-copy">
         <strong>${escapeHtml(expense.item)}</strong>
         <span class="expense-meta">
-          ${escapeHtml(getMemberName(expense.member))}<i></i>${category.label}
+          ${escapeHtml(getMemberName(expense.member))}<i></i>${category.label}${notes ? `<i></i><span class="note-count">대화 ${notes}</span>` : ""}
         </span>
       </div>
       <strong class="expense-amount">${formatMoney(expense.amount)}원</strong>

@@ -4,7 +4,7 @@ import { elements } from "./dom.js";
 import { formatMoney } from "./expenses.js";
 import { paintMembers, render, resetTotalAnimation } from "./render.js";
 import { clearData, getExpenses, loadAll, reloadExpenses } from "./store.js";
-import { subscribeExpenses, unsubscribe } from "./data/remote.js";
+import { subscribeExpenses, subscribeNotes, unsubscribe } from "./data/remote.js";
 import { deleteExpense, toggleMemberFilter, undoDelete } from "./features/expense-actions.js";
 import { closeForm, handleSubmit, openForm, syncDateDisplay } from "./features/expense-form.js";
 import {
@@ -26,10 +26,20 @@ import {
   startSheetDrag,
   trapTab,
 } from "./ui/sheet.js";
-import { cancelSwipe, closeOpenRow, endSwipe, moveSwipe, setRowOpen, startSwipe } from "./ui/swipe.js";
+import {
+  cancelSwipe,
+  closeOpenRow,
+  didJustSwipe,
+  endSwipe,
+  hasOpenRow,
+  moveSwipe,
+  setRowOpen,
+  startSwipe,
+} from "./ui/swipe.js";
 import { closePageNow, getOpenPage, hidePage } from "./ui/page.js";
 import { handleNameInput, handleProfileSubmit, openProfilePage, pickColor } from "./features/profile.js";
 import { handleReset, openSettingsPage, syncResetButton } from "./features/settings.js";
+import { closeNotes, handleNoteSubmit, openNotes, receiveNote } from "./features/notes.js";
 import { showToast } from "./ui/toast.js";
 import {
   getProfile,
@@ -58,6 +68,7 @@ function closeActiveSheet() {
   if (!elements.sheet.hidden) closeForm();
   if (!elements.monthSheet.hidden) closeMonthSheet();
   if (!elements.fixedSheet.hidden) closeFixedSheet();
+  if (!elements.notesSheet.hidden) closeNotes();
 }
 
 /* ── 상단: 사람 필터 · 월 이동 ─────────────────────────────── */
@@ -128,6 +139,15 @@ elements.profilePalette.addEventListener("click", (event) => {
 elements.resetForm.addEventListener("submit", handleReset);
 elements.resetConfirm.addEventListener("input", syncResetButton);
 
+/* ── 대화 ─────────────────────────────────────────────────── */
+
+elements.noteForm.addEventListener("submit", handleNoteSubmit);
+elements.closeNotes.addEventListener("click", closeNotes);
+elements.closeNotes.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  closeNotes();
+});
+
 /* ── 고정비 ───────────────────────────────────────────────── */
 
 elements.openFixedSheet.addEventListener("click", openFixedSheet);
@@ -195,7 +215,16 @@ elements.list.addEventListener("click", (event) => {
     deleteExpense(deleteButton.dataset.deleteId);
     return;
   }
-  closeOpenRow();
+  // 스와이프 끝에도 click이 따라온다. 이걸 먼저 걸러야 한다.
+  // 아래 두 갈래보다 뒤에 두면 방금 스와이프로 연 행이 이 click에 곧바로 닫힌다.
+  if (didJustSwipe()) return;
+  // 열려 있는 행이 있으면 이번 탭은 그걸 닫는 데 쓴다.
+  if (hasOpenRow()) {
+    closeOpenRow();
+    return;
+  }
+  const row = event.target.closest(".expense-item");
+  if (row) openNotes(row.dataset.id);
 });
 elements.list.addEventListener("pointerdown", startSwipe);
 elements.list.addEventListener("pointermove", moveSwipe);
@@ -259,7 +288,9 @@ elements.loginForm.addEventListener("submit", async (event) => {
 
 elements.signOut.addEventListener("click", async () => {
   unsubscribe(channel);
+  unsubscribe(noteChannel);
   channel = null;
+  noteChannel = null;
   closePageNow();
   clearData();
   // 사본만 비우면 화면에는 앞사람 기록이 그대로 남는다. 지운 상태로 한 번 그려서 흔적을 없앤다.
@@ -277,6 +308,7 @@ const SYNC_DEBOUNCE_MS = 400;
 
 let wired = false;
 let channel = null;
+let noteChannel = null;
 let syncTimer = null;
 
 function showDataGate(message, canRetry = false) {
@@ -299,6 +331,9 @@ function wireOnce() {
 /** 상대가 기록하면 내 화면도 따라 바뀐다. 내 변경도 여기로 돌아오지만 결과는 같다. */
 function watchForChanges(householdId) {
   unsubscribe(channel);
+  unsubscribe(noteChannel);
+  // 상대가 남긴 말은 목록의 개수와 열려 있는 대화 양쪽에 바로 반영된다.
+  noteChannel = subscribeNotes(receiveNote);
   channel = subscribeExpenses(householdId, () => {
     clearTimeout(syncTimer);
     syncTimer = setTimeout(async () => {

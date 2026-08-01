@@ -5,6 +5,7 @@ import {
   fromTemplate,
   toAppliedKey,
   toExpense,
+  toNote,
   toTemplate,
 } from "./rows.js";
 
@@ -102,15 +103,73 @@ async function fetchFixedCosts(householdId) {
   return rows.map(toTemplate);
 }
 
-/** 시작에 필요한 네 가지를 동시에 읽는다. 순서대로 기다리면 첫 화면이 네 배 느려진다. */
+/** 시작에 필요한 것을 한꺼번에 읽는다. 순서대로 기다리면 첫 화면이 그만큼 느려진다. */
 export async function fetchAll(householdId) {
-  const [members, expenses, fixedCosts, applied] = await Promise.all([
+  const [members, expenses, fixedCosts, applied, noteCounts] = await Promise.all([
     fetchMembers(householdId),
     fetchExpenses(householdId),
     fetchFixedCosts(householdId),
     fetchApplied(),
+    fetchNoteCounts(),
   ]);
-  return { members, expenses, fixedCosts, applied };
+  return { members, expenses, fixedCosts, applied, noteCounts };
+}
+
+/**
+ * 어느 지출에 말이 몇 개 달렸는지.
+ * 목록에 표시만 할 것이라 본문은 필요 없다. 지출 id만 받아 세면 전송량이 훨씬 적다.
+ * @returns {Promise<Record<string, number>>} 지출 id별 개수
+ */
+export async function fetchNoteCounts() {
+  const rows = unwrap(
+    "대화 개수 불러오기",
+    await supabase.from("expense_notes").select("expense_id"),
+  );
+  return rows.reduce((counts, row) => {
+    counts[row.expense_id] = (counts[row.expense_id] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+/** 한 지출의 대화 전체. 오래된 것부터 읽어야 위에서 아래로 자연스럽다. */
+export async function fetchNotes(expenseId) {
+  const rows = unwrap(
+    "대화 불러오기",
+    await supabase
+      .from("expense_notes")
+      .select("*")
+      .eq("expense_id", expenseId)
+      .order("created_at"),
+  );
+  return rows.map(toNote);
+}
+
+export async function insertNote(expenseId, body, { userId }) {
+  const row = unwrap(
+    "메시지 보내기",
+    await supabase
+      .from("expense_notes")
+      .insert({ expense_id: expenseId, author_id: userId, body })
+      .select()
+      .single(),
+  );
+  return toNote(row);
+}
+
+/**
+ * 상대가 남긴 메시지를 바로 받는다.
+ * expense_notes 에는 household_id 가 없어 서버 필터를 걸 수 없지만,
+ * RLS 가 같은 가구의 행만 흘려보내므로 남의 대화는 애초에 오지 않는다.
+ */
+export function subscribeNotes(onInsert) {
+  return supabase
+    .channel("expense-notes")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "expense_notes" },
+      (payload) => onInsert(toNote(payload.new)),
+    )
+    .subscribe();
 }
 
 /* ── 지출 쓰기 ────────────────────────────────────────────── */

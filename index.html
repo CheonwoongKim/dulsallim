@@ -286,6 +286,29 @@
       <div class="sheet-scroll month-grid" id="month-grid" role="group" aria-labelledby="year-label"></div>
     </section>
 
+    <section class="sheet" id="notes-sheet" role="dialog" aria-modal="true" aria-labelledby="notes-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow" id="notes-eyebrow"></p>
+          <h2 id="notes-title"></h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-notes" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="note-list sheet-scroll" id="note-list" aria-live="polite"></div>
+
+      <form class="note-form" id="note-form" novalidate>
+        <input type="text" id="note-input" maxlength="500" autocomplete="off"
+               placeholder="이 지출에 대해 남기기" aria-label="메시지" />
+        <button class="note-send" type="submit" id="note-send" aria-label="보내기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+    </section>
+
     <section class="sheet" id="fixed-sheet" role="dialog" aria-modal="true" aria-labelledby="fixed-sheet-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">

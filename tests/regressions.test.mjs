@@ -147,7 +147,7 @@ test("고정비는 반영 표시를 먼저 찍어 두 폰이 같은 달을 두 �
 });
 
 test("고정비 시트도 다른 시트와 같은 처리를 받는다", () => {
-  assert.match(app, /SHEETS = \[elements\.sheet, elements\.monthSheet, elements\.fixedSheet\]/);
+  assert.match(app, /SHEETS = \[[^\]]*elements\.fixedSheet[^\]]*\]/, "고정비 시트가 공통 배선 목록에 있어야 한다");
   assert.match(fn("closeActiveSheet"), /closeFixedSheet\(\)/);
   assert.match(app, /elements\.closeFixedSheet\.addEventListener\("pointerdown"/);
   assert.match(html, /<section class="sheet" id="fixed-sheet"[^>]*aria-modal="true"/);
@@ -177,13 +177,19 @@ test("두 목록이 같은 스와이프 구현을 공유한다", () => {
   // 선택자가 갈라지면 한쪽만 고쳐지는 버그가 생긴다.
   assert.match(app, /closest\("\.swipe-row"\)/);
   assert.match(app, /querySelectorAll\("\.swipe-surface, \.swipe-actions"\)/);
-  assert.doesNotMatch(app, /closest\("\.expense-item"\)/, "스와이프 로직이 지출 목록에만 묶이면 안 된다");
 
   for (const marker of ['expense-item swipe-row', 'fixed-item swipe-row']) {
     assert.ok(app.includes(marker), `${marker} 행이 스와이프 대상이어야 한다`);
   }
   assert.match(app, /elements\.fixedList\.addEventListener\("pointerdown", startSwipe\)/);
   assert.match(app, /elements\.list\.addEventListener\("pointerdown", startSwipe\)/);
+});
+
+test("스와이프 구현 자체는 어떤 목록인지 몰라야 한다", async () => {
+  // 지출 목록 전용 선택자가 스며들면 고정비 목록에서 조용히 동작이 갈라진다.
+  const { readFile } = await import("node:fs/promises");
+  const swipe = await readFile(new URL("../src/ui/swipe.js", import.meta.url), "utf8");
+  assert.doesNotMatch(swipe, /expense-item|fixed-item/, "스와이프가 특정 목록에 묶여 있다");
 });
 
 test("스와이프 기계 CSS는 한곳에만 있다", () => {
@@ -254,4 +260,50 @@ test("전체 화면은 시트보다 아래에 깔린다", () => {
   const pageZ = Number(css.match(/\.page \{[^}]*z-index:\s*(\d+)/)[1]);
   const backdropZ = Number(css.match(/\.sheet-backdrop \{[^}]*z-index:\s*(\d+)/)[1]);
   assert.ok(pageZ < backdropZ, `page(${pageZ})가 시트 배경(${backdropZ})보다 위에 있으면 고정비를 열 수 없다`);
+});
+
+test("스와이프 끝의 click은 대화를 열지 않는다", () => {
+  // 손을 뗄 때 click이 따라온다. 이걸 탭으로 오인하면 쓸어넘길 때마다 대화가 열린다.
+  const handler = app.match(/elements\.list\.addEventListener\("click"[\s\S]*?\n\}\);/)[0];
+  const guardAt = handler.indexOf("didJustSwipe()");
+  const closeAt = handler.indexOf("hasOpenRow()");
+  const openAt = handler.indexOf("openNotes(");
+  assert.ok(guardAt > -1, "스와이프 판별이 없다");
+  // 순서가 어긋나면 방금 스와이프로 연 행이 뒤따르는 click에 곧바로 닫힌다.
+  assert.ok(guardAt < closeAt, "스와이프 판별이 행 닫기보다 앞에 있어야 한다");
+  assert.ok(guardAt < openAt, "스와이프 판별이 대화 열기보다 앞에 있어야 한다");
+  assert.match(handler, /hasOpenRow\(\)[\s\S]{0,80}closeOpenRow\(\);\s*return;/, "행이 열려 있으면 그 탭은 닫는 데 쓴다");
+});
+
+test("대화는 남의 메시지를 화면에 그대로 넣지 않는다", () => {
+  // 상대가 보낸 본문은 우리가 만든 값이 아니다. HTML로 해석되면 스크립트가 실행된다.
+  const bubble = fn("createBubble");
+  assert.match(bubble, /escapeHtml\(note\.body\)/, "본문을 그대로 넣으면 안 된다");
+  assert.match(bubble, /escapeHtml\(getMemberName\(note\.author\)\)/);
+});
+
+test("같은 메시지가 두 번 그려지지 않는다", () => {
+  // 내가 보낸 것도 실시간 구독으로 되돌아온다. id로 거르지 않으면 매번 두 줄이 된다.
+  const receive = fn("receiveNote");
+  assert.match(receive, /messages\.some\(\(current\) => current\.id === note\.id\)/);
+  assert.match(receive, /!known/, "이미 아는 메시지면 개수도 다시 세면 안 된다");
+});
+
+test("대화를 불러오는 사이 시트가 바뀌면 늦게 온 결과를 버린다", () => {
+  // 느린 응답이 뒤늦게 도착해 다른 지출의 대화를 덮어쓰면 안 된다.
+  const open = fn("openNotes");
+  assert.equal((open.match(/if \(openExpenseId !== expenseId\) return;/g) || []).length, 2,
+    "성공·실패 두 경로 모두에서 확인해야 한다");
+});
+
+test("대화 입력도 iOS 자동 확대를 막는다", () => {
+  const match = css.match(/\.note-form input \{[\s\S]*?font-size:\s*(\d+)px/);
+  assert.ok(match, "입력 폰트 규칙을 찾지 못했습니다");
+  assert.ok(Number(match[1]) >= 16, `${match[1]}px (16px 미만이면 iOS가 확대함)`);
+});
+
+test("대화 시트는 헤더·입력줄이 고정되고 메시지만 스크롤한다", () => {
+  assert.match(css, /#notes-sheet \{[^}]*overflow: hidden/, "시트 자체가 스크롤되면 헤더가 함께 밀린다");
+  assert.match(css, /\.note-list \{[^}]*overflow-y: auto/);
+  assert.match(html, /<div class="note-list sheet-scroll"/, "시트 끌어 닫기가 스크롤 위치를 존중하려면 sheet-scroll 이어야 한다");
 });

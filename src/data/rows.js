@@ -73,6 +73,16 @@ export function toAppliedKey(row) {
   return appliedKey(row.fixed_cost_id, toMonthKey(row.month));
 }
 
+export function toNote(row) {
+  return {
+    id: row.id,
+    expenseId: row.expense_id,
+    author: row.author_id,
+    body: row.body,
+    createdAt: row.created_at,
+  };
+}
+
 export function fromOccurrence(occurrence) {
   return {
     fixed_cost_id: occurrence.template.id,

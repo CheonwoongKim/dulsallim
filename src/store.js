@@ -12,6 +12,8 @@ import * as remote from "./data/remote.js";
 let expenses = [];
 let fixedTemplates = [];
 let fixedApplied = [];
+/** 지출 id별 대화 개수. 목록에 표시만 하므로 본문은 들고 있지 않는다. */
+let noteCounts = {};
 
 /** 어느 가구에, 누구 이름으로 쓸지. 로그인해야 정해진다. */
 let context = null;
@@ -30,6 +32,7 @@ export async function loadAll(profile) {
   expenses = data.expenses;
   fixedTemplates = data.fixedCosts;
   fixedApplied = data.applied;
+  noteCounts = data.noteCounts;
 }
 
 /** 이름·색을 바꾼 뒤. 지출은 그대로 두고 명부만 다시 읽는다. */
@@ -44,6 +47,8 @@ export async function resetHousehold() {
   expenses = [];
   fixedTemplates = [];
   fixedApplied = [];
+  // 지출이 사라지면 달려 있던 대화도 DB에서 함께 지워진다(on delete cascade).
+  noteCounts = {};
 }
 
 /** 상대가 바꾼 내용을 반영할 때. 구성원·고정비는 거의 안 바뀌므로 지출만 다시 읽는다. */
@@ -62,6 +67,7 @@ export function clearData() {
   expenses = [];
   fixedTemplates = [];
   fixedApplied = [];
+  noteCounts = {};
   context = null;
   setMembers([]);
   memberFilter = null;
@@ -144,6 +150,27 @@ export async function applyOccurrences(occurrences) {
   expenses = [...expenses, ...created];
   fixedApplied = [...fixedApplied, ...appliedKeys];
   return created.length;
+}
+
+/* ── 대화 ─────────────────────────────────────────────────── */
+
+export function getNoteCount(expenseId) {
+  return noteCounts[expenseId] || 0;
+}
+
+export async function loadNotes(expenseId) {
+  return remote.fetchNotes(expenseId);
+}
+
+export async function addNote(expenseId, body) {
+  const note = await remote.insertNote(expenseId, body, context);
+  countNote(note.expenseId);
+  return note;
+}
+
+/** 실시간으로 들어온 메시지도 개수에 반영한다. 같은 값을 두 번 세지 않도록 호출부가 걸러 준다. */
+export function countNote(expenseId) {
+  noteCounts = { ...noteCounts, [expenseId]: (noteCounts[expenseId] || 0) + 1 };
 }
 
 /* ── 화면 상태 ────────────────────────────────────────────── */
