@@ -25,6 +25,7 @@ import {
 import {
   SHEETS,
   beginSettle,
+  closeOnPress,
   endSheetDrag,
   keepFocusInSheet,
   moveSheetDrag,
@@ -94,7 +95,7 @@ elements.nextMonth.addEventListener("click", () => shiftMonth(1));
 /* ── 월 선택 시트 ─────────────────────────────────────────── */
 
 elements.monthTrigger.addEventListener("click", openMonthSheet);
-elements.closeMonthSheet.addEventListener("click", closeMonthSheet);
+closeOnPress(elements.closeMonthSheet, closeMonthSheet);
 elements.prevYear.addEventListener("click", () => shiftPickerYear(-1));
 elements.nextYear.addEventListener("click", () => shiftPickerYear(1));
 elements.monthGrid.addEventListener("click", (event) => {
@@ -123,17 +124,7 @@ elements.form.addEventListener("submit", handleSubmit);
     beginSettle(form);
   });
 });
-// 닫기는 눌린 순간(pointerdown)에 확정한다. click은 손을 뗄 때 좌표를 다시 히트테스트하므로
-// 키보드가 내려가며 시트가 움직이면 아래에 있던 분류·날짜 입력이 대신 눌린다.
-elements.closeForm.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-  closeForm();
-});
-elements.closeForm.addEventListener("click", closeForm);
-elements.closeMonthSheet.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-  closeMonthSheet();
-});
+closeOnPress(elements.closeForm, closeForm);
 
 /* ── 마이페이지 · 설정 ────────────────────────────────────── */
 
@@ -155,20 +146,12 @@ elements.resetConfirm.addEventListener("input", syncResetButton);
 /* ── 대화 ─────────────────────────────────────────────────── */
 
 elements.noteForm.addEventListener("submit", handleNoteSubmit);
-elements.closeNotes.addEventListener("click", closeNotes);
-elements.closeNotes.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-  closeNotes();
-});
+closeOnPress(elements.closeNotes, closeNotes);
 
 /* ── 고정비 ───────────────────────────────────────────────── */
 
 elements.openFixedSheet.addEventListener("click", openFixedSheet);
-elements.closeFixedSheet.addEventListener("click", closeFixedSheet);
-elements.closeFixedSheet.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-  closeFixedSheet();
-});
+closeOnPress(elements.closeFixedSheet, closeFixedSheet);
 elements.addFixed.addEventListener("click", () => showFormView());
 elements.cancelFixed.addEventListener("click", openFixedSheet);
 elements.fixedForm.addEventListener("submit", handleFixedSubmit);

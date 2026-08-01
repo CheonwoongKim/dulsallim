@@ -92,11 +92,20 @@ test("서비스워커는 성공한 동일 출처 응답만 캐시한다", () => 
   assert.match(sw, /\.catch\(\(\) => \{\}\)/, "cache.put 실패가 unhandled rejection이 되면 안 된다");
 });
 
-test("닫기 버튼은 레이아웃이 흔들리기 전에 눌린 지점에서 동작한다", () => {
-  // click은 손을 뗄 때 좌표를 다시 히트테스트하므로, 키보드가 내려가며 시트가 움직이면 엉뚱한 요소가 눌린다.
-  assert.match(app, /elements\.closeForm\.addEventListener\("pointerdown"/);
-  assert.match(app, /elements\.closeMonthSheet\.addEventListener\("pointerdown"/);
-  assert.match(app, /elements\.closeForm\.addEventListener\("click"/, "키보드 사용자를 위해 click도 유지해야 한다");
+test("닫기 버튼은 누른 순간 닫고, 뒤따르는 click은 삼킨다", () => {
+  // click은 손을 뗄 때 좌표를 다시 히트테스트한다. 그때 시트는 이미 내려가 있어
+  // 그 자리의 다른 것(요약 카드, 목록 행)이 대신 눌린다.
+  const helper = fn("closeOnPress");
+  assert.match(helper, /addEventListener\("pointerdown"/);
+  assert.match(helper, /swallowNextClick = true/, "닫기만 하고 click을 막지 않으면 뒤 요소가 눌린다");
+  assert.match(helper, /addEventListener\("click", close\)/, "키보드 사용자는 click만 보낸다");
+  assert.match(app, /document\.addEventListener\(\s*"click",[\s\S]{0,220}?stopPropagation\(\)[\s\S]{0,40}?true,/,
+    "삼키려면 캡처 단계에서 잡아야 한다");
+
+  // 네 개의 닫기 버튼이 모두 같은 처리를 받아야 한다. 하나만 빠지면 그 시트에서만 재발한다.
+  for (const button of ["closeForm", "closeMonthSheet", "closeNotes", "closeFixedSheet"]) {
+    assert.match(app, new RegExp(`closeOnPress\\(elements\\.${button},`), `${button}이 공통 처리를 받지 않는다`);
+  }
 });
 
 test("닫기 버튼 누름은 시트 드래그로 오인되지 않는다", () => {
@@ -149,7 +158,7 @@ test("고정비는 반영 표시를 먼저 찍어 두 폰이 같은 달을 두 �
 test("고정비 시트도 다른 시트와 같은 처리를 받는다", () => {
   assert.match(app, /SHEETS = \[[^\]]*elements\.fixedSheet[^\]]*\]/, "고정비 시트가 공통 배선 목록에 있어야 한다");
   assert.match(fn("closeActiveSheet"), /closeFixedSheet\(\)/);
-  assert.match(app, /elements\.closeFixedSheet\.addEventListener\("pointerdown"/);
+  assert.match(app, /closeOnPress\(elements\.closeFixedSheet, closeFixedSheet\)/);
   assert.match(html, /<section class="sheet" id="fixed-sheet"[^>]*aria-modal="true"/);
 });
 

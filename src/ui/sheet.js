@@ -13,6 +13,9 @@ export const SHEETS = [elements.sheet, elements.monthSheet, elements.fixedSheet,
 
 let lastFocusedElement = null;
 let closeTimer = null;
+let swallowTimer = null;
+/** 닫기 누름 직후 따라오는 click 한 번을 삼킬지. */
+let swallowNextClick = false;
 let formSettleTimer = null;
 let dismiss = () => {};
 
@@ -20,6 +23,41 @@ let dismiss = () => {};
 export function setDismissHandler(handler) {
   dismiss = handler;
 }
+
+/**
+ * 닫기 버튼을 누르면 그 순간 닫고, 뒤이어 오는 click 한 번을 삼킨다.
+ *
+ * click은 손을 뗄 때 좌표를 다시 히트테스트한다. 그때 시트는 이미 내려가 있어
+ * 그 자리에 있던 다른 것(요약 카드, 목록 행)이 대신 눌린다.
+ * 닫기를 pointerup까지 미루면 키보드가 내려가며 시트가 흔들려 또 다른 오탭이 생기므로,
+ * 누르는 순간 닫되 뒤따르는 click만 막는 쪽을 택한다.
+ */
+export function closeOnPress(button, close) {
+  button.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    swallowNextClick = true;
+    clearTimeout(swallowTimer);
+    // 손을 아주 오래 짚고 있다 떼는 경우까지 막아 두지는 않는다. 안전장치로만 둔다.
+    swallowTimer = setTimeout(() => {
+      swallowNextClick = false;
+    }, 1200);
+    close();
+  });
+  // 키보드나 보조기술은 pointerdown 없이 click만 보낸다.
+  button.addEventListener("click", close);
+}
+
+document.addEventListener(
+  "click",
+  (event) => {
+    if (!swallowNextClick) return;
+    swallowNextClick = false;
+    clearTimeout(swallowTimer);
+    event.preventDefault();
+    event.stopPropagation();
+  },
+  true,
+);
 
 export function showSheet(sheet) {
   clearTimeout(closeTimer);
