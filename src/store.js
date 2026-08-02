@@ -176,10 +176,15 @@ export async function loadNotes(expenseId) {
   return remote.fetchNotes(expenseId);
 }
 
+/**
+ * 메시지를 보낸다. 세는 일은 하지 않는다.
+ *
+ * 보낸 메시지는 응답과 실시간 구독 두 경로로 돌아온다. 여기서도 세면
+ * 먼저 도착한 쪽이 "이미 아는 메시지"가 되어, 화면에 붙는 단계가 통째로 건너뛰어진다.
+ * 세는 곳과 그리는 곳을 한 군데(receiveNote)로 모아 둔다.
+ */
 export async function addNote(expenseId, body) {
-  const note = await remote.insertNote(expenseId, body, context);
-  countNote(note);
-  return note;
+  return remote.insertNote(expenseId, body, context);
 }
 
 /**

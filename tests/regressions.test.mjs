@@ -543,3 +543,15 @@ test("기타는 언제나 마지막이다", () => {
     assert.equal(keys[keys.length - 1], "etc");
   }
 });
+
+test("보낸 메시지는 시트를 다시 열지 않아도 바로 보인다", () => {
+  // 보낸 메시지는 응답과 실시간 구독 두 경로로 돌아온다.
+  // 양쪽에서 세면 먼저 도착한 쪽이 '이미 아는 메시지'가 되어 화면에 붙는 단계가 통째로 건너뛰어진다.
+  const add = fn("addNote");
+  assert.doesNotMatch(add, /countNote/, "보내는 쪽에서 세면 그리는 단계가 건너뛰어진다");
+
+  // 세는 곳은 receiveNote 하나뿐이어야 한다(정의 자리는 뺀다).
+  const callSites = [...app.matchAll(/countNote\(/g)].length - 1;
+  assert.equal(callSites, 1, `countNote 를 부르는 곳이 ${callSites}곳 — 하나여야 한다`);
+  assert.match(fn("receiveNote"), /const isNew = countNote\(note\)/);
+});
