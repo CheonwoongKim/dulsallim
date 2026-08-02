@@ -509,3 +509,37 @@ test("저장소를 못 쓰는 브라우저에서도 로그인은 된다", () => 
   assert.match(fn("readSavedEmail"), /try \{[\s\S]*catch/);
   assert.match(fn("rememberEmail"), /try \{[\s\S]*catch/);
 });
+
+test("분류 목록은 화면·마크업·DB 세 곳이 정확히 같다", async () => {
+  // 한 곳만 늘리면 고를 수는 있는데 저장이 거절되거나(DB 누락),
+  // 저장된 값을 화면이 '기타'로 뭉개 버린다(JS 누락).
+  const { readFile } = await import("node:fs/promises");
+  const { CATEGORIES } = await import("../src/expenses.js");
+  const keys = Object.keys(CATEGORIES);
+
+  for (const file of ["schema.sql", "migration-categories.sql"]) {
+    const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
+    const allowed = sql
+      .match(/is_valid_category[\s\S]*?select value in \(([\s\S]*?)\)/)[1]
+      .match(/'([a-z_]+)'/g)
+      .map((quoted) => quoted.slice(1, -1));
+    assert.deepEqual(allowed, keys, `${file}의 허용 목록이 CATEGORIES와 다르다`);
+  }
+
+  // 지출 폼과 고정비 폼 두 곳 모두
+  const selects = [...html.matchAll(/<select[^>]*name="category"[^>]*>([\s\S]*?)<\/select>/g)];
+  assert.equal(selects.length, 2, "분류 선택 상자는 지출 폼과 고정비 폼 두 곳이다");
+  for (const [, body] of selects) {
+    const options = [...body.matchAll(/<option value="([^"]+)"[^>]*>([^<]+)<\/option>/g)];
+    assert.deepEqual(options.map((o) => o[1]), keys, "선택지 값이 CATEGORIES와 다르다");
+    assert.deepEqual(options.map((o) => o[2]), keys.map((k) => CATEGORIES[k].label), "선택지 이름이 다르다");
+  }
+});
+
+test("기타는 언제나 마지막이다", () => {
+  // 목록에서 '기타'가 중간에 끼면 고를 때 눈이 한 번 더 멈춘다.
+  for (const [, body] of html.matchAll(/<select[^>]*name="category"[^>]*>([\s\S]*?)<\/select>/g)) {
+    const keys = [...body.matchAll(/<option value="([^"]+)"/g)].map((m) => m[1]);
+    assert.equal(keys[keys.length - 1], "etc");
+  }
+});

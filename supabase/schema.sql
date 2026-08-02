@@ -40,7 +40,11 @@ returns boolean
 language sql
 immutable
 as $$
-  select value in ('food', 'cafe', 'grocery', 'living', 'transport', 'housing', 'leisure', 'etc')
+  select value in (
+    'food', 'cafe', 'grocery', 'living', 'transport', 'housing', 'leisure',
+    'medical', 'pet',
+    'etc'
+  )
 $$;
 
 -- ── 고정비 템플릿 ───────────────────────────────────────────────

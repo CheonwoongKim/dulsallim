@@ -9,6 +9,8 @@ export const CATEGORIES = {
   transport: { label: "교통" },
   housing: { label: "주거" },
   leisure: { label: "여가" },
+  medical: { label: "의료" },
+  pet: { label: "반려견" },
   etc: { label: "기타" },
 };
 
