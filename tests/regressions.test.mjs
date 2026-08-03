@@ -1058,3 +1058,11 @@ test("범례는 한 줄로 흐른다", () => {
   assert.match(css, /\.trend-row \{[^}]*display: contents/);
   assert.match(css, /\.trend-legend \{[^}]*flex-wrap: wrap/, "자리가 모자라면 넘어갈 수는 있어야 한다");
 });
+
+test("월 이동 줄은 스스로 아래 여백을 갖지 않는다", () => {
+  // 기본값을 갖고 있으면 새로 쓰는 곳마다 0으로 되돌려야 하고, 한 번 빠뜨리면
+  // 그 화면만 훌쩍 벌어진다. 추이 시트에서 실제로 38px 이 그대로 남아 있었다.
+  const 기본 = css.match(/\n\.month-control \{[^}]*\}/)[0];
+  assert.doesNotMatch(기본, /margin-bottom|margin:\s*[^;]*\d+px/, "여백은 쓰는 자리가 정한다");
+  assert.match(css, /\.overview-head \.month-control \{[^}]*margin-bottom/, "본 화면에서만 띄운다");
+});

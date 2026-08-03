@@ -118,10 +118,18 @@ main {
 .month-control {
   position: relative;
   display: flex;
-  margin: 0 0 38px;
+  /* 아래 여백은 두지 않는다. 얼마나 띄울지는 이걸 쓰는 자리가 정한다.
+     기본값을 갖고 있으면 새로 쓰는 곳마다 0으로 되돌리는 일을 반복하게 되고,
+     한 번 빠뜨리면 그 화면만 훌쩍 벌어진다. (추이 시트에서 실제로 그랬다) */
+  margin: 0;
   align-items: center;
   justify-content: center;
   gap: 5px;
+}
+
+/* 본 화면은 아래에 큰 금액과 요약 카드가 이어져 숨 쉴 자리가 필요하다. */
+.overview-head .month-control {
+  margin-bottom: 38px;
 }
 
 .icon-button,

@@ -14,9 +14,10 @@ const VIEW = { width: 320, height: 180 };
  * 좌우 여백을 같게 둔다.
  * 세로 축 숫자를 왼쪽에 세우면 그 자리만큼(38 남짓) 격자가 오른쪽으로 밀려,
  * 왼쪽만 휑하게 비어 그림이 가운데에 있지 않은 것처럼 보인다.
- * 숫자는 격자 "위"에 얹고 선은 폭을 다 쓰게 한다.
+ * 위쪽도 마찬가지다 — 축 숫자를 없앤 뒤로는 띄울 이유가 없어, 꼭대기 점이
+ * 잘리지 않을 만큼만 남긴다.
  */
-const PAD = { left: 6, right: 6, top: 16, bottom: 22 };
+const PAD = { left: 6, right: 6, top: 6, bottom: 22 };
 const PLOT = {
   width: VIEW.width - PAD.left - PAD.right,
   height: VIEW.height - PAD.top - PAD.bottom,

@@ -1,9 +1,4 @@
 /* 분석 페이지 */
-#analysis-page .month-control {
-  /* 본 화면의 월 이동은 아래에 큰 금액이 오지만, 여기는 바로 필터가 붙는다. */
-  margin: 0;
-}
-
 #analysis-page .month-label {
   font-size: 19px;
   font-weight: 700;
