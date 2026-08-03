@@ -10,11 +10,13 @@ const SOURCE_FILES = [
   "data/rows.js",
   "data/remote.js",
   "expenses.js",
+  "calendar.js",
   "supabase.js",
   "fixed-costs.js",
   "ui/drag-tracker.js",
   "ui/escape.js",
   "ui/page.js",
+  "ui/calendar-grid.js",
   "ui/ledger.js",
   "ui/scroll-lock.js",
   "ui/sheet.js",
@@ -31,7 +33,7 @@ const SOURCE_FILES = [
 ];
 
 /** 캐스케이드 순서가 특이도 경합을 좌우하므로 순서를 지켜 이어 붙인다. */
-export const STYLE_FILES = ["base", "swipe", "layout", "ledger", "page", "sheet", "notes", "auth", "responsive"];
+export const STYLE_FILES = ["base", "swipe", "layout", "ledger", "calendar", "page", "sheet", "notes", "auth", "responsive"];
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 

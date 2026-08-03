@@ -585,3 +585,46 @@ test("복제는 지출 목록에만 있다", async () => {
   assert.match(await read("ui/ledger.js"), /data-copy-id/, "지출 행에는 있어야 한다");
   assert.doesNotMatch(await read("features/fixed-sheet.js"), /data-copy|복제/, "고정비 행에는 없어야 한다");
 });
+
+test("캘린더 숫자는 사람 필터까지만 반영한다", () => {
+  // 날짜까지 걸러 넘기면 고른 날 하나만 숫자가 남고 나머지 칸이 전부 빈다.
+  const renderFn = fn("render");
+  assert.match(renderFn, /renderCalendar\(\{[^}]*monthly: byMember/);
+  assert.doesNotMatch(renderFn, /renderCalendar\(\{[^}]*monthly: visible/);
+});
+
+test("달을 옮기면 날짜 필터가 풀린다", () => {
+  // 8월 3일을 고른 채 9월로 넘어가면 아무것도 안 보인다.
+  assert.match(fn("setSelectedMonth"), /dateFilter = null/);
+});
+
+test("목록으로 돌아가면 날짜 필터가 풀린다", () => {
+  // 캘린더에서 고른 날인데 캘린더가 사라지면 무엇 때문에 걸린 필터인지 알 수 없다.
+  assert.match(fn("toggleView"), /mode === "list"\) setDateFilter\(null\)/);
+});
+
+test("사람과 날짜 필터는 함께 걸릴 수 있다", () => {
+  const renderFn = fn("render");
+  assert.match(renderFn, /labels\.join\(" · "\)/, "둘 다 걸리면 이어 붙여 보여야 한다");
+  assert.match(renderFn, /filterByDate\(byMember, dateFilter\)/, "사람 필터 위에 날짜를 더 건다");
+});
+
+test("캘린더만 볼 때는 아래 목록을 접는다", () => {
+  // 날을 고르지 않았는데 그 달 전체가 아래 늘어서면 화면이 끝없이 길어진다.
+  assert.match(fn("render"), /elements\.list\.hidden = calendarMode && !dateFilter/);
+});
+
+test("캘린더는 그 달이 아닌 칸을 누를 수 없게 둔다", () => {
+  // 옆 달 날짜를 흐리게 보여주면 잘못 눌러 엉뚱한 달로 필터가 걸린다.
+  const grid = fn("renderCalendar");
+  assert.match(grid, /if \(!date\) \{[\s\S]{0,160}?is-blank/);
+  assert.match(app, /closest\("\.calendar-cell\[data-date\]"\)/, "빈 칸은 애초에 선택자에 안 걸린다");
+});
+
+test("빈 화면 문구는 무엇 때문에 비었는지 알려준다", () => {
+  // 어디를 눌러 풀어야 하는지 모르면 갇힌 것처럼 느껴진다.
+  const empty = fn("fillEmptyState");
+  assert.match(empty, /if \(!member && !date\) return empty/, "필터가 없으면 기본 문구 그대로");
+  assert.match(empty, /날짜를 다시 눌러/, "날짜로 걸렸으면 날짜를 풀라고 해야 한다");
+  assert.match(empty, /위 카드를 다시 눌러/, "사람으로 걸렸으면 카드를 풀라고 해야 한다");
+});

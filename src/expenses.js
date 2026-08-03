@@ -61,6 +61,12 @@ export function formatMonth(monthKey) {
   return `${year}년 ${month}월`;
 }
 
+/** 필터 표시줄에 쓰는 날짜. 예: `8월 3일` */
+export function formatDayLabel(dateKey) {
+  const [, month, day] = dateKey.split("-").map(Number);
+  return `${month}월 ${day}일`;
+}
+
 /** 목록 왼쪽 열에 들어갈 짧은 날짜 표기. 자릿수를 맞춰 세로로 정렬된다. 예: `08.01` */
 export function formatShortDate(dateKey) {
   return dateKey.slice(5).replace("-", ".");
@@ -82,6 +88,18 @@ export function filterByMember(monthly, member) {
 export function nextMemberFilter(current, member) {
   if (!member) return null;
   return current === member ? null : member;
+}
+
+/** date가 null이면 전체를 그대로 돌려준다(필터 해제). */
+export function filterByDate(monthly, date) {
+  if (!date) return monthly;
+  return monthly.filter((expense) => expense.date === date);
+}
+
+/** 캘린더에서 같은 날을 다시 누르면 해제된다. */
+export function nextDateFilter(current, date) {
+  if (!date) return null;
+  return current === date ? null : date;
 }
 
 /**

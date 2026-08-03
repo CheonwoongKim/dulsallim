@@ -8,7 +8,9 @@ import { subscribeExpenses, subscribeNotes, unsubscribe } from "./data/remote.js
 import {
   copyExpense,
   deleteExpense,
+  toggleDateFilter,
   toggleMemberFilter,
+  toggleView,
   undoDelete,
 } from "./features/expense-actions.js";
 import {
@@ -97,6 +99,16 @@ elements.memberSlots.forEach(({ row }) => {
 });
 elements.prevMonth.addEventListener("click", () => shiftMonth(-1));
 elements.nextMonth.addEventListener("click", () => shiftMonth(1));
+
+/* ── 목록 / 캘린더 ────────────────────────────────────────── */
+
+elements.viewToggle.forEach((button) => {
+  button.addEventListener("click", () => toggleView(button.dataset.view));
+});
+elements.calendar.addEventListener("click", (event) => {
+  const cell = event.target.closest(".calendar-cell[data-date]");
+  if (cell) toggleDateFilter(cell.dataset.date);
+});
 
 /* ── 월 선택 시트 ─────────────────────────────────────────── */
 

@@ -26,6 +26,9 @@ let context = null;
 
 let selectedMonth = toMonthKey(new Date());
 let memberFilter = null;
+let dateFilter = null;
+/** "list" 또는 "calendar". 같은 달을 다르게 보는 것뿐이라 서버와는 무관하다. */
+let viewMode = "list";
 let highlightId = null;
 let pendingDelete = null;
 
@@ -80,6 +83,7 @@ export function clearData() {
   context = null;
   setMembers([]);
   memberFilter = null;
+  dateFilter = null;
   highlightId = null;
   pendingDelete = null;
 }
@@ -206,6 +210,8 @@ export function getSelectedMonth() {
 
 export function setSelectedMonth(monthKey) {
   selectedMonth = monthKey;
+  // 8월 3일을 고른 채 9월로 넘어가면 아무것도 안 보인다. 달이 바뀌면 날짜 필터를 푼다.
+  dateFilter = null;
 }
 
 export function getMemberFilter() {
@@ -214,6 +220,22 @@ export function getMemberFilter() {
 
 export function setMemberFilter(member) {
   memberFilter = member;
+}
+
+export function getDateFilter() {
+  return dateFilter;
+}
+
+export function setDateFilter(date) {
+  dateFilter = date;
+}
+
+export function getViewMode() {
+  return viewMode;
+}
+
+export function setViewMode(mode) {
+  viewMode = mode;
 }
 
 /** 방금 추가·복원된 항목. 목록에서 한 번만 강조하고 비운다. */

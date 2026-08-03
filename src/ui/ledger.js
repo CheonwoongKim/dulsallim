@@ -1,8 +1,14 @@
 import { elements } from "../dom.js";
 import { escapeHtml } from "./escape.js";
-import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
+import { CATEGORIES, formatDayLabel, formatMoney, formatShortDate } from "../expenses.js";
 import { getMemberName } from "../members.js";
-import { getHighlightId, getMemberFilter, getNoteCount, setHighlightId } from "../store.js";
+import {
+  getDateFilter,
+  getHighlightId,
+  getMemberFilter,
+  getNoteCount,
+  setHighlightId,
+} from "../store.js";
 import { resetSwipeState } from "./swipe.js";
 
 function createExpenseRow(expense) {
@@ -33,13 +39,19 @@ function createExpenseRow(expense) {
   return article;
 }
 
+/** 무엇 때문에 비었는지에 따라 문구가 달라야 한다. 그래야 어디를 눌러 풀지 알 수 있다. */
 function fillEmptyState() {
   const empty = elements.emptyTemplate.content.cloneNode(true);
   const member = getMemberFilter();
-  if (member) {
-    empty.querySelector("h3").textContent = `${getMemberName(member)} 지출이 없어요`;
-    empty.querySelector("p").innerHTML = "이 달에는 기록이 없습니다.<br />위 카드를 다시 눌러 전체를 볼 수 있어요.";
-  }
+  const date = getDateFilter();
+  if (!member && !date) return empty;
+
+  const who = member ? `${getMemberName(member)} ` : "";
+  const when = date ? formatDayLabel(date) : "이 달";
+  empty.querySelector("h3").textContent = `${who}지출이 없어요`;
+  empty.querySelector("p").innerHTML = date
+    ? `${when}에는 기록이 없습니다.<br />날짜를 다시 눌러 전체를 볼 수 있어요.`
+    : "이 달에는 기록이 없습니다.<br />위 카드를 다시 눌러 전체를 볼 수 있어요.";
   return empty;
 }
 

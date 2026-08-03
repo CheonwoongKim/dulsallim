@@ -1,6 +1,8 @@
 import { elements } from "./dom.js";
 import {
+  filterByDate,
   filterByMember,
+  formatDayLabel,
   formatMonth,
   formatMoney,
   getMonthlyExpenses,
@@ -9,7 +11,14 @@ import {
   toMonthKey,
 } from "./expenses.js";
 import { getMemberGoal, getMemberName, getMembers } from "./members.js";
-import { getExpenses, getMemberFilter, getSelectedMonth } from "./store.js";
+import { renderCalendar } from "./ui/calendar-grid.js";
+import {
+  getDateFilter,
+  getExpenses,
+  getMemberFilter,
+  getSelectedMonth,
+  getViewMode,
+} from "./store.js";
 import { renderList } from "./ui/ledger.js";
 
 const COUNT_UP_MS = 520;
@@ -77,7 +86,10 @@ export function render() {
   const monthly = getMonthlyExpenses(getExpenses(), getSelectedMonth());
   const stats = summarize(monthly, getMembers());
   const memberFilter = getMemberFilter();
-  const visible = filterByMember(monthly, memberFilter);
+  // 캘린더 숫자는 사람 필터까지만 반영한다. 날짜까지 걸러 넘기면 고른 날 하나만 남고 나머지가 빈다.
+  const byMember = filterByMember(monthly, memberFilter);
+  const dateFilter = getDateFilter();
+  const visible = filterByDate(byMember, dateFilter);
 
   elements.monthTitle.textContent = formatMonth(getSelectedMonth());
   animateNumber(previousTotal, stats.total);
@@ -106,9 +118,26 @@ export function render() {
       : `${formatMoney(goal.remaining)}원 남음 · ${goal.percent}%`;
   });
 
-  elements.count.textContent = `(${visible.length})`;
-  elements.ledgerFilter.textContent = memberFilter ? ` · ${getMemberName(memberFilter)}` : "";
-  elements.ledgerFilter.hidden = !memberFilter;
+  const calendarMode = getViewMode() === "calendar";
+  elements.calendar.hidden = !calendarMode;
+  elements.viewToggle.forEach((button) => {
+    button.setAttribute("aria-pressed", String((button.dataset.view === "calendar") === calendarMode));
+  });
+  if (calendarMode) {
+    renderCalendar({ monthKey: getSelectedMonth(), monthly: byMember, selected: dateFilter });
+  }
 
-  renderList(visible);
+  elements.count.textContent = `(${visible.length})`;
+
+  // 사람과 날짜를 함께 걸 수 있다. 걸린 것만 이어 붙인다.
+  const labels = [
+    memberFilter ? getMemberName(memberFilter) : null,
+    dateFilter ? formatDayLabel(dateFilter) : null,
+  ].filter(Boolean);
+  elements.ledgerFilter.textContent = labels.length ? ` · ${labels.join(" · ")}` : "";
+  elements.ledgerFilter.hidden = !labels.length;
+
+  // 캘린더만 보고 있을 때는 아래 목록을 접어 둔다. 날을 고르면 그날 것만 펼친다.
+  elements.list.hidden = calendarMode && !dateFilter;
+  if (!elements.list.hidden) renderList(visible);
 }

@@ -64,6 +64,8 @@ export const elements = {
   ledgerFilter: document.querySelector("#ledger-filter"),
   count: document.querySelector("#record-count"),
   list: document.querySelector("#expense-list"),
+  calendar: document.querySelector("#expense-calendar"),
+  viewToggle: document.querySelectorAll(".view-toggle button"),
   emptyTemplate: document.querySelector("#empty-template"),
   backdrop: document.querySelector("#sheet-backdrop"),
   sheet: document.querySelector("#entry-sheet"),
