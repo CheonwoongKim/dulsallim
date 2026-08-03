@@ -56,6 +56,7 @@
 | 3 | `supabase/migration-categories.sql` | 반려견·의료 분류 |
 | 4 | `supabase/migration-nag.sql` | 소비 잔소리 |
 | 5 | `supabase/migration-hardening.sql` | 대화 작성자 검사, 초기화·고정비 반영 트랜잭션 |
+| 6 | `supabase/migration-fixed-sync.sql` | 고정비 변경을 상대 기기에도 바로 반영 |
 
 대시보드에서 **가입은 반드시 꺼 두세요**
 (Project Settings → Authentication → User Signups → Allow new users to sign up).

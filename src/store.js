@@ -67,13 +67,20 @@ export async function resetHousehold() {
   countedNoteIds = new Set();
 }
 
-/** 상대가 바꾼 내용을 반영할 때. 구성원·고정비는 거의 안 바뀌므로 지출만 다시 읽는다. */
-export async function reloadExpenses() {
+/**
+ * 상대가 바꾼 내용을 반영할 때.
+ *
+ * 고정비까지 다시 읽는다. 상대가 데이터를 초기화하면 고정비도 함께 지워지는데,
+ * 지출만 읽으면 목록에는 지운 고정비가 그대로 남아 반영을 시도하다 실패한다.
+ * 이름·색 같은 구성원 정보는 화면 곳곳에 박혀 있어 여기서 건드리지 않는다(마이페이지가 맡는다).
+ */
+export async function reloadHousehold() {
   const session = context;
   if (!session) return;
-  const [nextExpenses, nextApplied] = await Promise.all([
+  const [nextExpenses, nextApplied, nextTemplates] = await Promise.all([
     remote.fetchExpenses(session.householdId),
     remote.fetchApplied(),
+    remote.fetchFixedCosts(session.householdId),
   ]);
   /*
    * 다녀오는 사이에 로그아웃했거나 다른 사람이 로그인했을 수 있다.
@@ -83,6 +90,7 @@ export async function reloadExpenses() {
   if (context !== session) return;
   expenses = nextExpenses;
   fixedApplied = nextApplied;
+  fixedTemplates = nextTemplates;
 }
 
 /** 로그아웃. 다음 사람이 앞사람 기록을 보지 않도록 사본을 비운다. */

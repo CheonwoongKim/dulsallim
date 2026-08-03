@@ -218,3 +218,14 @@ export async function removeFixedTemplate(id) {
   // 이미 만들어진 지출은 그대로 둔다. 지난 달 기록을 지우면 가계부가 어긋난다.
   showToast("고정비를 삭제했어요. 이미 기록된 지출은 그대로예요");
 }
+
+/**
+ * 상대가 고정비를 바꿨을 때. 열어 둔 목록만 지금 것으로 맞춘다.
+ *
+ * 폼을 쓰는 중이면 건드리지 않는다 — 적던 내용이 사라진다.
+ * 그 사이 상대가 지운 고정비를 저장하려 하면 서버가 막고 까닭을 알려 준다.
+ */
+export function refreshFixedSheet() {
+  if (elements.fixedSheet.hidden || !elements.fixedForm.hidden) return;
+  renderFixedList();
+}

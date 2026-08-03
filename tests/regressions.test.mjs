@@ -1013,7 +1013,7 @@ test("아직 모르는 지출의 메시지는 버리지 않고 맡아 둔다", (
   assert.match(fn("receiveNote"), /pending\.set/, "모르는 지출이면 맡아 둬야 한다");
   assert.match(app, /export function flushPendingNotes/);
   // 다시 읽은 "뒤", 그리기 "전"이어야 개수가 맞는다.
-  assert.match(app, /await reloadExpenses\(\);[\s\S]{0,200}?flushPendingNotes\(\);[\s\S]{0,80}?render\(\);/);
+  assert.match(app, /await reloadHousehold\(\);[\s\S]{0,200}?flushPendingNotes\(\);[\s\S]{0,80}?render\(\);/);
 });
 
 test("서버 함수는 비로그인이 부를 수 없다", async () => {
@@ -1430,4 +1430,38 @@ test("고정비를 채우기 전에 구독을 건다", () => {
     start.indexOf("watchForChanges") < start.indexOf("applyDueFixedCosts"),
     "구독이 고정비 반영보다 뒤에 있다",
   );
+});
+
+test("상대가 초기화하면 내 고정비 목록도 비워진다", () => {
+  /*
+   * reset_household() 는 fixed_costs 와 expenses 를 함께 지운다.
+   * 지출만 다시 읽으면 목록에는 지운 고정비가 그대로 남고,
+   * 그 목록으로 반영을 시도하면 서버가 "고정비를 찾을 수 없습니다"로 막는다.
+   */
+  assert.match(fn("reloadHousehold"), /remote\.fetchFixedCosts\(session\.householdId\)/);
+  assert.match(fn("reloadHousehold"), /fixedTemplates = nextTemplates/);
+  // 실시간 대상에 fixed_costs 가 없으면 삭제 사실 자체가 상대에게 오지 않는다.
+  assert.match(fn("subscribeHousehold"), /table: "fixed_costs"/);
+  assert.match(fn("subscribeHousehold"), /table: "expenses"/);
+  // render 는 고정비 목록을 그리지 않는다. 열어 둔 채라면 따로 맞춰야 한다.
+  assert.match(app, /refreshFixedSheet\(\)/);
+});
+
+test("고정비 목록을 맞출 때 쓰던 폼은 건드리지 않는다", () => {
+  // 적던 내용이 사라지면 안 된다. 그 사이 지워진 고정비면 저장할 때 서버가 막고 까닭을 알려 준다.
+  assert.match(fn("refreshFixedSheet"), /elements\.fixedSheet\.hidden \|\| !elements\.fixedForm\.hidden/);
+});
+
+test("실시간 대상에 세 표가 모두 들어 있다", async () => {
+  // 빠져도 앱은 조용히 돌아간다. 어긋난 것을 알아채려면 verify.sql 이 짚어 줘야 한다.
+  const { readFile } = await import("node:fs/promises");
+  const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
+  const verify = await readFile(new URL("../supabase/verify.sql", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../supabase/migration-fixed-sync.sql", import.meta.url), "utf8");
+  for (const table of ["expenses", "expense_notes", "fixed_costs"]) {
+    assert.match(schema, new RegExp(`add table ${table};`), `schema.sql 에 ${table} 이 빠졌다`);
+  }
+  // 이미 쓰고 있는 프로젝트는 schema.sql 을 다시 돌리지 않는다. 따라잡을 파일이 따로 있어야 한다.
+  assert.match(migration, /alter publication supabase_realtime add table fixed_costs;/);
+  assert.match(verify, /pubname = 'supabase_realtime'[\s\S]{0,200}fixed_costs/);
 });

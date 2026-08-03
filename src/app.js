@@ -3,8 +3,8 @@ import "./style.css";
 import { elements } from "./dom.js";
 import { formatMoney } from "./expenses.js";
 import { paintMembers, render, resetTotalAnimation } from "./render.js";
-import { clearData, getExpenses, loadAll, reloadExpenses } from "./store.js";
-import { subscribeExpenses, subscribeNotes, unsubscribe } from "./data/remote.js";
+import { clearData, getExpenses, loadAll, reloadHousehold } from "./store.js";
+import { subscribeHousehold, subscribeNotes, unsubscribe } from "./data/remote.js";
 import {
   copyExpense,
   deleteExpense,
@@ -108,6 +108,7 @@ import {
   editFixedTemplate,
   handleFixedSubmit,
   openFixedSheet,
+  refreshFixedSheet,
   removeFixedTemplate,
   showFormView,
   updateFixedHint,
@@ -448,14 +449,16 @@ function watchForChanges(householdId) {
   unsubscribe(noteChannel);
   // 상대가 남긴 말은 목록의 개수와 열려 있는 대화 양쪽에 바로 반영된다.
   noteChannel = subscribeNotes(receiveNote);
-  channel = subscribeExpenses(householdId, () => {
+  channel = subscribeHousehold(householdId, () => {
     clearTimeout(syncTimer);
     syncTimer = setTimeout(async () => {
       try {
-        await reloadExpenses();
+        await reloadHousehold();
         // 지출보다 먼저 도착해 맡겨 뒀던 메시지를 이제 붙인다. 그려지기 전이어야 개수가 맞는다.
         flushPendingNotes();
         render();
+        // 고정비 목록은 render 가 그리지 않는다. 열어 둔 채라면 여기서 맞춘다.
+        refreshFixedSheet();
       } catch {
         // 실패해도 지금 보이는 화면은 그대로 둔다. 다음 변경 때 다시 시도된다.
       }

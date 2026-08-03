@@ -190,6 +190,21 @@ with checks as (
   where grantee in ('authenticated', 'anon')
     and table_schema = 'public'
     and table_name = 'nag_fires'
+
+  union all
+
+  -- 15) 상대 기기에 바로 전해져야 하는 표가 실시간 대상에 들어 있는가
+  -- 빠지면 조용히 어긋난다 — 한쪽이 초기화해도 상대 화면에는 지운 고정비가 남는다.
+  select
+    15,
+    '실시간 대상',
+    count(*)::text || ' / 3 등록',
+    case when count(*) = 3 then 'OK' else 'FAIL' end,
+    'migration-fixed-sync.sql 을 실행하세요'
+  from pg_publication_tables
+  where pubname = 'supabase_realtime'
+    and schemaname = 'public'
+    and tablename in ('expenses', 'expense_notes', 'fixed_costs')
 )
 
 select status, item, detail, hint

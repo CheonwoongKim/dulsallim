@@ -431,4 +431,12 @@ begin
   ) then
     alter publication supabase_realtime add table expenses;
   end if;
+
+  -- 고정비도 넣는다. 빠지면 한쪽이 초기화해도 상대 화면에 지운 고정비가 남는다.
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'fixed_costs'
+  ) then
+    alter publication supabase_realtime add table fixed_costs;
+  end if;
 end $$;
