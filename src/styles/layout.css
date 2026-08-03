@@ -112,7 +112,49 @@ main {
 }
 
 .overview {
+  /*
+   * 접힐 때 사용자별 현황을 통째로 접는다.
+   *
+   * 그냥 스크롤로 올려 보내면 문서 길이에 따라 반쯤 걸린 채 멈춘다. 사람 필터를 걸어
+   * 목록이 짧아진 달에서는 더 이상 내려갈 데가 없어, 이름과 금액은 머리에 가리고
+   * 맨 아랫줄만 남아 카드가 잘려 보였다. 전부 보이거나 전부 접히거나 둘 중 하나로 둔다.
+   *
+   * 높이를 0 으로 바꾸는 대신 그리드 줄을 1fr → 0fr 로 접는다. height: auto 는
+   * 애니메이션되지 않는데, 이 칸의 높이는 목표 표시 유무에 따라 달라져 px 로 못 박을 수 없다.
+   */
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 260ms ease, opacity 160ms ease;
   animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.overview > .member-summary {
+  min-height: 0;
+  overflow: hidden;
+  transition: padding 260ms ease;
+}
+
+/*
+ * 안쪽 여백도 함께 접는다.
+ * 테두리 기준(border-box)에서는 높이가 안쪽 여백 밑으로 내려가지 않아,
+ * 줄을 0fr 로 접어도 위아래 여백 46px 이 그대로 남는다.
+ */
+.is-condensed .overview > .member-summary {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.is-condensed .overview {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  /* 접힌 동안에는 사람 필터를 누를 수 없다. 맨 위로 올리면 다시 나온다. */
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview {
+    transition: none;
+  }
 }
 
 .month-control {

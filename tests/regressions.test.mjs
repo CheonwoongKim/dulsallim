@@ -1297,3 +1297,17 @@ test("키보드가 오르내리는 순간에는 시트 안 입력을 막는다",
   assert.match(app, /visualViewport\?\.addEventListener\("resize"/);
   assert.match(app, /getOpenSheet\(\)\?\.querySelector\("\.sheet-scroll"\)[\s\S]{0,80}beginSettle/);
 });
+
+test("접히면 사용자별 현황도 함께 접는다", () => {
+  // 스크롤로만 올려 보내면 문서 길이에 따라 반쯤 걸린 채 멈춘다. 사람 필터를 걸어
+  // 목록이 짧아진 달에서는 더 내려갈 데가 없어 이름과 금액이 머리에 가리고
+  // 맨 아랫줄만 남았다 — 카드가 잘려 보이는 정체다.
+  // 전부 보이거나 전부 접히거나, 둘 중 하나여야 한다.
+  assert.match(css, /\.is-condensed \.overview \{[^}]*grid-template-rows: 0fr/);
+  assert.match(css, /\n\.overview \{[^}]*grid-template-rows: 1fr/);
+  // height: auto 는 애니메이션되지 않고, 이 칸 높이는 목표 표시 유무로 달라져 px 로 못 박는다.
+  assert.doesNotMatch(css, /\.is-condensed \.overview \{[^}]*height: 0/);
+  assert.match(css, /\.overview > \.member-summary \{[^}]*overflow: hidden/);
+  // 테두리 기준에서는 높이가 안쪽 여백 밑으로 안 내려간다. 여백도 함께 접어야 0 이 된다.
+  assert.match(css, /\.is-condensed \.overview > \.member-summary \{[^}]*padding-top: 0/);
+});
