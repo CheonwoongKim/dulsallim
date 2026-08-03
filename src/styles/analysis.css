@@ -55,31 +55,44 @@
   letter-spacing: -0.05em;
 }
 
-/* 지난달·작년 비교 */
+/* 지난달·작년 비교. 누르면 아래 분류별 막대에 그 달이 함께 그려진다. */
 .compare-list {
   display: grid;
-  margin: 0;
-  padding: 16px 18px;
+  padding: 6px;
   border-radius: 16px;
-  gap: 10px;
+  gap: 2px;
   background: var(--white);
   border: 1px solid var(--line);
 }
 
-.compare-list > div {
+.compare-list button {
   display: flex;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 11px;
   gap: 12px;
   align-items: baseline;
   justify-content: space-between;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 160ms ease;
 }
 
-.compare-list dt {
+.compare-list button[aria-pressed="true"] {
+  background: var(--paper-deep);
+}
+
+.compare-list button:disabled {
+  cursor: default;
+}
+
+.compare-name {
   color: var(--ink-soft);
   font-size: 13px;
 }
 
-.compare-list dd {
-  margin: 0;
+.compare-value {
   color: var(--ink-soft);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
@@ -88,11 +101,13 @@
 }
 
 /* 더 썼으면 눈에 띄게, 덜 썼으면 차분하게. */
-.compare-list dd.is-up {
+.compare-value.is-up,
+.analysis-percent.is-up {
   color: var(--accent-dark);
 }
 
-.compare-list dd.is-down {
+.compare-value.is-down,
+.analysis-percent.is-down {
   color: var(--sage);
 }
 
@@ -171,6 +186,17 @@
   color: var(--ink-soft);
   font-size: 12px;
   font-weight: 700;
+}
+
+/* 비교 켬: 막대 두 줄이 한 칸에 들어간다. */
+.analysis-pair {
+  display: grid;
+  gap: 3px;
+}
+
+/* 비교 달은 뒤로 물러나 보이게. 같은 색이라 어느 분류의 짝인지 바로 읽힌다. */
+.analysis-bar.is-other i {
+  opacity: 0.35;
 }
 
 .analysis-empty {

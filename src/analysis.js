@@ -75,3 +75,33 @@ export function sumByCategory(monthly) {
     }))
     .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
 }
+
+/**
+ * 두 달의 분류별 지출을 나란히 놓는다.
+ *
+ * 이번 달에 없고 비교 달에만 있는 분류도 줄을 만든다 — 쓰던 걸 안 쓰게 된 것도 변화다.
+ * 정렬은 두 달 중 큰 금액 기준. 이번 달 금액만 보면 "지난달 50만 쓰다 이번 달 0원"처럼
+ * 가장 큰 변화가 맨 아래로 가라앉는다.
+ *
+ * @param {Array} current sumByCategory 결과 (이번 달)
+ * @param {Array} other   sumByCategory 결과 (비교 달)
+ */
+export function compareCategories(current, other) {
+  const known = new Map();
+  for (const row of [...current, ...other]) {
+    if (!known.has(row.key)) known.set(row.key, { label: row.label, color: row.color });
+  }
+  const amount = (rows, key) => rows.find((row) => row.key === key)?.total || 0;
+
+  return [...known.entries()]
+    .map(([key, { label, color }]) => {
+      const total = amount(current, key);
+      const otherTotal = amount(other, key);
+      return { key, label, color, total, otherTotal, diff: total - otherTotal };
+    })
+    .sort(
+      (a, b) =>
+        Math.max(b.total, b.otherTotal) - Math.max(a.total, a.otherTotal) ||
+        a.label.localeCompare(b.label),
+    );
+}

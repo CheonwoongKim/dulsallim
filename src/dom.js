@@ -46,6 +46,8 @@ export const elements = {
   analysisMembers: document.querySelector("#analysis-members"),
   analysisScope: document.querySelector("#analysis-scope"),
   analysisAmount: document.querySelector("#analysis-amount"),
+  compareList: document.querySelector(".compare-list"),
+  compareButtons: document.querySelectorAll(".compare-list button"),
   comparePrevious: document.querySelector("#compare-previous"),
   compareLastYear: document.querySelector("#compare-last-year"),
   analysisList: document.querySelector("#analysis-list"),

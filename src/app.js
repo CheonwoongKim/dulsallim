@@ -59,7 +59,7 @@ import {
   pickColor,
 } from "./features/profile.js";
 import { handleReset, openSettingsPage, syncResetButton } from "./features/settings.js";
-import { openAnalysisPage, shiftAnalysisMonth } from "./features/analysis.js";
+import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "./features/analysis.js";
 import { closeNotes, handleNoteSubmit, openNotes, receiveNote } from "./features/notes.js";
 import { showToast } from "./ui/toast.js";
 import {
@@ -155,6 +155,13 @@ elements.analysisPrev.addEventListener("click", () => {
 elements.analysisNext.addEventListener("click", () => {
   shiftAnalysisMonth(1);
   render();
+});
+elements.compareList.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-compare]");
+  if (button && !button.disabled) {
+    toggleCompare(button.dataset.compare);
+    render();
+  }
 });
 elements.analysisMembers.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-member]");

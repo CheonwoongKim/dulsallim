@@ -215,10 +215,16 @@
           <strong id="analysis-amount">0원</strong>
         </div>
 
-        <dl class="compare-list">
-          <div><dt>지난달</dt><dd id="compare-previous"></dd></div>
-          <div><dt>작년 같은 달</dt><dd id="compare-last-year"></dd></div>
-        </dl>
+        <div class="compare-list" role="group" aria-label="무엇과 비교할지">
+          <button type="button" data-compare="previous" aria-pressed="false">
+            <span class="compare-name">지난달</span>
+            <span class="compare-value" id="compare-previous"></span>
+          </button>
+          <button type="button" data-compare="lastYear" aria-pressed="false">
+            <span class="compare-name">작년 같은 달</span>
+            <span class="compare-value" id="compare-last-year"></span>
+          </button>
+        </div>
 
         <div class="analysis-categories">
           <p class="eyebrow">분류별</p>

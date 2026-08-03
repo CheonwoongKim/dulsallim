@@ -701,8 +701,8 @@ test("분석 막대는 줄마다 같은 길이를 쓴다", () => {
 
 test("막대 길이는 옆에 적힌 %와 같은 것을 가리킨다", () => {
   // 1등 분류 기준으로 그리면 47%인데 꽉 찬 막대가 되어 '거의 다 식비'로 읽힌다.
-  const paint = fn("paintAnalysis");
-  assert.match(paint, /width:\$\{\(category\.total \/ compared\.total\) \* 100\}%/);
+  const paint = fn("paintShares");
+  assert.match(paint, /width:\$\{\(category\.total \/ total\) \* 100\}%/);
   assert.doesNotMatch(paint, /categories\[0\]\.total/, "1등을 기준으로 삼으면 안 된다");
   // 회색 트랙이 100% 자리를 지켜야 비교 대상이 생긴다.
   assert.match(css, /\.analysis-bar \{[^}]*background: var\(--paper-deep\)/);
@@ -716,4 +716,36 @@ test("비중을 나타내는 막대는 화면이 달라도 같은 두께다", ()
   const 본화면 = css.match(/\.ratio-bar \{[^}]*?height:\s*(\d+)px/);
   assert.ok(분석 && 본화면, "두 막대의 height 규칙을 찾지 못했다");
   assert.equal(분석[1], 본화면[1], `분석 ${분석[1]}px vs 본 화면 ${본화면[1]}px`);
+});
+
+test("비교 막대 둘은 같은 자로 잰다", () => {
+  // 각자 자기 달의 비중으로 그리면 같은 금액을 써도 총액이 큰 달의 막대가 짧아져
+  // "줄였다"로 읽힌다. 길이 차이가 곧 금액 차이여야 한다.
+  const paint = fn("paintCompared");
+  assert.match(paint, /const scale = Math\.max\([\s\S]{0,120}?row\.total, row\.otherTotal/);
+  // 두 막대가 같은 fill\(\)을 지나며 같은 scale 로 나뉜다.
+  assert.match(paint, /amount \/ scale/);
+  assert.match(paint, /fill\(row\.total, row\.color\)/);
+  assert.match(paint, /fill\(row\.otherTotal, row\.color\)/);
+  assert.doesNotMatch(paint, /compared\.total/, "각 달 총액으로 나누면 비중 비교가 되어 버린다");
+});
+
+test("비교를 켜면 오른쪽 숫자도 증감으로 바뀐다", () => {
+  // 같은 자로 잰 막대 옆에 비중(%)이 남아 있으면 둘이 다른 말을 한다.
+  const paint = fn("paintCompared");
+  assert.match(paint, /row\.diff > 0 \? "\+" : "−"/);
+  assert.doesNotMatch(paint, /category\.percent|row\.percent/, "비교 중에는 비중을 쓰지 않는다");
+  // 비교를 끄면 원래대로 비중을 보여준다.
+  assert.match(fn("paintShares"), /category\.percent/);
+});
+
+test("견줄 기록이 없는 달은 고를 수 없다", () => {
+  const picker = fn("paintComparePicker");
+  assert.match(picker, /button\.disabled = !가능\[mode\]/);
+  assert.match(app, /button && !button\.disabled/, "막힌 버튼을 눌러도 켜지면 안 된다");
+});
+
+test("0원인 분류에는 막대를 그리지 않는다", () => {
+  // 최소 굵기 8px 이 0에까지 적용되면 안 썼는데 쓴 것처럼 보인다.
+  assert.match(fn("paintCompared"), /amount \? `<i style="width:.*?" : ""/s);
 });

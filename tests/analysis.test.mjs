@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   comparableDay,
+  compareCategories,
   compareMonth,
   sumByCategory,
   sumMonth,
@@ -143,4 +144,34 @@ test("분류를 다 더하면 머리의 큰 숫자와 같다", () => {
   const 분류 = sumByCategory(untilDay(지출, 머리.maxDay));
   assert.equal(분류.reduce((sum, c) => sum + c.total, 0), 머리.total);
   assert.equal(분류.length, 2, "오늘 이후 분류는 줄도 생기면 안 된다");
+});
+
+test("compareCategories는 두 달을 나란히 놓는다", () => {
+  const 이번 = sumByCategory([mk("2026-08-01", 300000, "food"), mk("2026-08-02", 45000, "cafe")]);
+  const 지난 = sumByCategory([mk("2026-07-01", 220000, "food"), mk("2026-07-02", 120000, "transport")]);
+  const 결과 = compareCategories(이번, 지난);
+
+  assert.deepEqual(결과.map((r) => r.key), ["food", "transport", "cafe"], "두 달 중 큰 금액 순");
+  assert.deepEqual(결과.find((r) => r.key === "food"), {
+    key: "food", label: "식비", color: "#e0704f", total: 300000, otherTotal: 220000, diff: 80000,
+  });
+});
+
+test("이번 달에 없어진 분류도 줄을 만든다", () => {
+  // 쓰던 걸 안 쓰게 된 것도 변화다. 빠지면 그 사실이 화면에서 사라진다.
+  const 결과 = compareCategories(
+    sumByCategory([mk("2026-08-01", 10000, "food")]),
+    sumByCategory([mk("2026-07-01", 500000, "housing")]),
+  );
+  const 사라진 = 결과.find((r) => r.key === "housing");
+  assert.ok(사라진, "지난달에만 있던 분류가 빠졌다");
+  assert.equal(사라진.total, 0);
+  assert.equal(사라진.diff, -500000);
+  assert.equal(결과[0].key, "housing", "가장 큰 변화가 맨 위로 와야 한다");
+});
+
+test("비교 달이 비어 있으면 이번 달만 남는다", () => {
+  const 결과 = compareCategories(sumByCategory([mk("2026-08-01", 10000, "pet")]), []);
+  assert.equal(결과.length, 1);
+  assert.equal(결과[0].diff, 10000);
 });
