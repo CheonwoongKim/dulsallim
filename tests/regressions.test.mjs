@@ -1311,3 +1311,12 @@ test("접히면 사용자별 현황도 함께 접는다", () => {
   // 테두리 기준에서는 높이가 안쪽 여백 밑으로 안 내려간다. 여백도 함께 접어야 0 이 된다.
   assert.match(css, /\.is-condensed \.overview > \.member-summary \{[^}]*padding-top: 0/);
 });
+
+test("사람을 고른 강조가 잘리지 않는다", () => {
+  // 강조는 10px 바깥으로 번지는 box-shadow 다. 접기용 overflow: hidden 이 그대로면
+  // 그 번짐이 잘려 모서리가 각지고 잘린 것처럼 보인다.
+  const 번짐 = Number(css.match(/aria-pressed="true"\]\s*\{[^}]*box-shadow: 0 0 0 (\d+)px/)[1]);
+  const 넓힘 = Number(css.match(/\.overview > \.member-summary \{[^}]*padding-inline: (\d+)px/)[1]);
+  assert.ok(넓힘 >= 번짐, `잘리는 상자를 ${번짐}px 만큼은 넓혀야 한다 (지금 ${넓힘}px)`);
+  assert.match(css, /\.overview > \.member-summary \{[^}]*margin-inline: -\d+px/, "넓힌 만큼 자리는 되돌린다");
+});

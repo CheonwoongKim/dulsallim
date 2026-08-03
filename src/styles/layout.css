@@ -128,8 +128,16 @@ main {
   animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/*
+ * overflow: hidden 은 접을 때 필요하다(줄이 0fr 로 줄어도 내용이 삐져나오면 안 된다).
+ * 그런데 사람을 고르면 강조가 10px 바깥으로 번지는 box-shadow 로 그려져서,
+ * 그대로 두면 그 번짐이 잘려 모서리가 각지고 잘린 것처럼 보인다.
+ * 잘리는 상자를 번짐만큼 넓히고 같은 크기의 바깥 여백으로 되돌린다 — 자리는 그대로다.
+ */
 .overview > .member-summary {
   min-height: 0;
+  margin-inline: -10px;
+  padding-inline: 10px;
   overflow: hidden;
   transition: padding 260ms ease;
 }
