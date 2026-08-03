@@ -1270,3 +1270,9 @@ test("건수 표시는 제목의 좁은 자간을 물려받지 않는다", () =>
   // 괄호처럼 오른쪽 끝까지 획이 닿는 글자는 그 1px 이 깎여 "(13'" 처럼 보일 수 있다.
   assert.match(css, /\.section-heading h2 \{[^}]*\}[\s\S]*?\.record-count \{[^}]*letter-spacing: normal/);
 });
+
+test("붙어 있는 제목은 제대로 관리되는 레이어에 올린다", () => {
+  // iOS 에서 sticky 요소의 그림판이 예전 크기로 남아, 달을 옮겨 건수가 넓어지면
+  // "(13)" 의 닫는 괄호가 네모나게 잘렸다. 스크롤하면 다시 그려져 멀쩡해졌다.
+  assert.match(css, /\.section-heading \{[^}]*will-change: transform/);
+});
