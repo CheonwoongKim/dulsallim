@@ -50,9 +50,23 @@ export async function fetchMembers(householdId) {
   }));
 }
 
+/** 잔소리를 잠시 멈추거나 다시 켠다. 심어 둔 문구는 그대로 남는다. */
+export async function setNagEnabled(userId, enabled) {
+  const row = unwrap(
+    "설정 저장",
+    await supabase
+      .from("profiles")
+      .update({ nag_enabled: enabled })
+      .eq("id", userId)
+      .select("id, display_name, avatar_color, monthly_goal, nag_enabled, household_id")
+      .single(),
+  );
+  return row;
+}
+
 /**
- * 내 표시 이름과 색을 바꾼다.
- * 어느 행을 고치든 DB는 본인 행만, 그것도 이 두 열만 허용한다(migration-profile.sql).
+ * 내 표시 이름·색·목표를 바꾼다.
+ * 어느 행을 고치든 DB는 본인 행만, 그것도 정해진 열만 허용한다(migration-profile.sql).
  */
 export async function updateProfile(userId, { name, color, goal }) {
   const row = unwrap(
@@ -61,7 +75,7 @@ export async function updateProfile(userId, { name, color, goal }) {
       .from("profiles")
       .update({ display_name: name, avatar_color: color, monthly_goal: goal })
       .eq("id", userId)
-      .select("id, display_name, avatar_color, monthly_goal, household_id")
+      .select("id, display_name, avatar_color, monthly_goal, nag_enabled, household_id")
       .single(),
   );
   return row;
@@ -262,6 +276,47 @@ export async function applyOccurrence(occurrence, context) {
       .eq("month", claim.month);
     throw error;
   }
+}
+
+/* ── 소비 잔소리 ──────────────────────────────────────────── */
+
+/** 내가 쓴 것만 온다. 대상이 미리 읽지 못하도록 DB가 막는다. */
+export async function fetchNags() {
+  const rows = unwrap(
+    "잔소리 불러오기",
+    await supabase.from("nags").select("*").order("percent"),
+  );
+  return rows.map((row) => ({ id: row.id, percent: row.percent, body: row.body }));
+}
+
+export async function insertNag({ percent, body, targetId }, { householdId, userId }) {
+  unwrap(
+    "잔소리 저장",
+    await supabase
+      .from("nags")
+      .insert({ household_id: householdId, author_id: userId, target_id: targetId, percent, body }),
+  );
+}
+
+export async function updateNag(id, { percent, body }) {
+  unwrap("잔소리 수정", await supabase.from("nags").update({ percent, body }).eq("id", id));
+}
+
+export async function deleteNag(id) {
+  unwrap("잔소리 삭제", await supabase.from("nags").delete().eq("id", id));
+}
+
+/**
+ * 방금 기록한 지출이 목표 구간을 넘겼는지 서버가 판단하고, 넘겼으면 서버가 말을 적는다.
+ *
+ * 화면에서 계산하지 않는 이유가 둘 있다.
+ *   · 문구는 쓴 사람만 읽을 수 있다. 대상의 폰이 미리 가져올 수 없어야 한다
+ *   · 두 폰이 같은 순간에 계산해도 한 번만 울려야 한다
+ */
+export async function fireNags(expenseId) {
+  const { error } = await supabase.rpc("fire_nags", { p_expense_id: expenseId });
+  // 울리지 못해도 지출은 이미 저장됐다. 기록만 남기고 넘어간다.
+  if (error) console.error("잔소리 확인 실패:", error);
 }
 
 /* ── 실시간 ───────────────────────────────────────────────── */

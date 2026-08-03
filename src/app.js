@@ -59,6 +59,14 @@ import {
   pickColor,
 } from "./features/profile.js";
 import { handleReset, openSettingsPage, syncResetButton } from "./features/settings.js";
+import {
+  cancelEdit,
+  editNag,
+  handleNagSubmit,
+  openNagPage,
+  removeNag,
+  toggleNagEnabled,
+} from "./features/nag.js";
 import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "./features/analysis.js";
 import { closeNotes, handleNoteSubmit, openNotes, receiveNote } from "./features/notes.js";
 import { showToast } from "./ui/toast.js";
@@ -179,6 +187,26 @@ elements.profileGoal.addEventListener("input", handleGoalInput);
 elements.profilePalette.addEventListener("click", (event) => {
   const swatch = event.target.closest(".swatch");
   if (swatch) pickColor(swatch.dataset.color);
+});
+elements.openNag.addEventListener("click", openNagPage);
+elements.nagEnabled.addEventListener("change", (event) => toggleNagEnabled(event.target.checked));
+elements.nagForm.addEventListener("submit", handleNagSubmit);
+elements.nagCancel.addEventListener("click", cancelEdit);
+elements.nagPercent.addEventListener("input", (event) => {
+  event.target.value = event.target.value.replace(/\D/g, "").slice(0, 3);
+  elements.nagError.textContent = "";
+});
+elements.nagBody.addEventListener("input", () => {
+  elements.nagError.textContent = "";
+});
+elements.nagList.addEventListener("click", (event) => {
+  const edit = event.target.closest("[data-edit-nag]");
+  if (edit) {
+    editNag(edit.dataset.editNag);
+    return;
+  }
+  const remove = event.target.closest("[data-remove-nag]");
+  if (remove) removeNag(remove.dataset.removeNag);
 });
 elements.resetForm.addEventListener("submit", handleReset);
 elements.resetConfirm.addEventListener("input", syncResetButton);

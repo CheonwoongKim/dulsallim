@@ -96,9 +96,10 @@ with checks as (
     8,
     '프로필 수정 권한',
     coalesce(string_agg(column_name, ', ' order by column_name), '없음'),
-    case when count(*) = 3 and count(*) filter (where column_name in ('display_name','avatar_color','monthly_goal')) = 3
+    case when count(*) = 4
+          and count(*) filter (where column_name in ('display_name','avatar_color','monthly_goal','nag_enabled')) = 4
          then 'OK' else 'FAIL' end,
-    'migration-profile.sql 과 migration-goal.sql 의 revoke/grant 구문을 다시 실행하세요'
+    'migration-*.sql 의 revoke/grant 구문을 다시 실행하세요'
   from information_schema.column_privileges
   where grantee = 'authenticated' and table_name = 'profiles' and privilege_type = 'UPDATE'
 

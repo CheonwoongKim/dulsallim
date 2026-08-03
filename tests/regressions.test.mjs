@@ -232,9 +232,9 @@ test("프로필 수정 권한은 정해진 열로만 열려 있다", async () =>
   // 테이블 전체에 update 를 주면 본인 행의 household_id 를 남의 가구로 바꿔치기할 수 있고,
   // 그러면 "같은 가구만 본다"는 RLS 판단 자체가 뚫린다.
   const { readFile } = await import("node:fs/promises");
-  const ALLOWED = ["display_name", "avatar_color", "monthly_goal"];
+  const ALLOWED = ["display_name", "avatar_color", "monthly_goal", "nag_enabled"];
 
-  for (const file of ["schema.sql", "migration-profile.sql", "migration-goal.sql"]) {
+  for (const file of ["schema.sql", "migration-profile.sql", "migration-goal.sql", "migration-nag.sql"]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
     const grants = [...sql.matchAll(/grant update\s*\(([^)]+)\)\s*on profiles/g)];
     assert.ok(grants.length, `${file}에 열 단위 권한이 없다`);
@@ -758,4 +758,61 @@ test("비교를 고를 수 있다는 것이 눈에 보인다", () => {
 
   // 고를 게 있는데 아직 안 골랐을 때만 안내한다.
   assert.match(fn("paintComparePicker"), /elements\.compareHint\.hidden = !고를수있음 \|\| Boolean\(active\)/);
+});
+
+test("잔소리 문구는 쓴 사람만 읽을 수 있다", async () => {
+  // 대상이 미리 읽으면 잔소리가 아니다. 같은 가구라고 열어 주면 안 된다.
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  assert.match(sql, /create policy nags_own on nags\s*\n\s*for all using \(author_id = auth\.uid\(\)\)/);
+  assert.doesNotMatch(sql, /on nags[\s\S]*?using \(household_id = current_household_id\(\)\)/,
+    "가구 전체에 열면 대상이 읽을 수 있다");
+});
+
+test("잔소리는 서버가 판단하고 서버가 적는다", async () => {
+  // 화면에서 계산하려면 대상의 폰이 문구를 먼저 읽어야 한다. 그 순간 숨긴 뜻이 사라진다.
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  assert.match(sql, /create or replace function fire_nags[\s\S]*?security definer/);
+  assert.match(sql, /household_id = current_household_id\(\)/, "남의 가구 지출로는 부를 수 없어야 한다");
+  assert.match(fn("addExpense"), /remote\.fireNags\(created\.id\)/);
+});
+
+test("잔소리는 한 달에 구간마다 한 번만 울린다", async () => {
+  // 없으면 80%를 넘긴 뒤 지출할 때마다 매번 붙는다.
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  assert.match(sql, /primary key \(target_id, month, percent\)/);
+  assert.match(sql, /on conflict \(target_id, month, percent\) do nothing/);
+  // 40%에서 85%로 뛰면 50·70·80을 모두 지난 것으로 표시하고, 말은 가장 높은 하나만 한다.
+  assert.match(sql, /n\.percent <= v_ratio/);
+  assert.match(sql, /select max\(percent\) into v_top from newly/);
+  assert.match(sql, /where target_id = v_paid_by and percent = v_top/);
+});
+
+test("잔소리는 이번 달 지출에만 울린다", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  assert.match(sql, /if v_month <> date_trunc\('month', current_date\)::date then return; end if;/);
+});
+
+test("울린 기록은 화면이 직접 손댈 수 없다", async () => {
+  // 지웠다 다시 울리게 만들 수 있으면 한 번만 울린다는 약속이 깨진다.
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  assert.match(sql, /revoke all on nag_fires from authenticated, anon/);
+  assert.doesNotMatch(sql, /create policy[^;]*on nag_fires/, "정책을 두면 함수 밖에서도 손댈 수 있다");
+});
+
+test("잔소리는 다섯 개까지, 같은 구간에 둘을 둘 수 없다", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  assert.match(sql, /unique index[^;]*nags \(author_id, percent\)/);
+  assert.match(app, /const MAX_NAGS = 5/);
+  assert.match(fn("showAddForm"), /elements\.nagForm\.hidden = nags\.length >= MAX_NAGS/);
+});
+
+test("잔소리 스위치는 저장에 실패하면 되돌아간다", () => {
+  // 켠 줄 알았는데 안 켜져 있으면 안 된다.
+  assert.match(fn("toggleNagEnabled"), /catch \(error\)[\s\S]*elements\.nagEnabled\.checked = !enabled/);
 });

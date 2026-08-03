@@ -26,6 +26,7 @@ const SOURCE_FILES = [
   "features/auth.js",
   "features/notes.js",
   "features/analysis.js",
+  "features/nag.js",
   "features/profile.js",
   "features/settings.js",
   "features/expense-actions.js",

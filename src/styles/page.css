@@ -188,3 +188,109 @@
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+
+/* 소비 잔소리 */
+.nag-target {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.switch-row {
+  display: flex;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--white);
+  cursor: pointer;
+}
+
+.switch-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.switch-row strong {
+  font-size: 14px;
+}
+
+.switch-row small {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.switch-row input {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.nag-list {
+  display: grid;
+  gap: 8px;
+}
+
+.nag-item {
+  display: grid;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  gap: 4px 10px;
+  align-items: center;
+  background: var(--white);
+  grid-template-columns: auto 1fr;
+}
+
+.nag-percent {
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--paper-deep);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.nag-item .nag-body {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nag-actions {
+  display: flex;
+  gap: 14px;
+  grid-column: 1 / -1;
+}
+
+.nag-actions button {
+  padding: 0;
+  border: 0;
+  color: var(--ink-soft);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nag-form {
+  display: grid;
+  margin-top: 6px;
+  gap: 14px;
+}
+
+.nag-empty {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}

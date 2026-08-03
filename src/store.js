@@ -94,9 +94,15 @@ export function getExpenses() {
   return expenses;
 }
 
+export function getContext() {
+  return context;
+}
+
 export async function addExpense(input) {
   const created = await remote.insertExpense(input, context);
   expenses = [...expenses, created];
+  // 목표 구간을 넘겼는지는 서버가 판단하고 서버가 적는다. 실패해도 지출은 이미 저장됐다.
+  remote.fireNags(created.id);
   return created;
 }
 

@@ -236,6 +236,49 @@
       </div>
     </section>
 
+    <section class="page" id="nag-page" aria-labelledby="nag-page-title" hidden>
+      <header class="page-head">
+        <button class="icon-button" type="button" data-close-page aria-label="뒤로">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 id="nag-page-title">소비 잔소리</h2>
+      </header>
+
+      <div class="page-body">
+        <p class="nag-target" id="nag-target"></p>
+
+        <label class="switch-row">
+          <span>
+            <strong>잔소리 켜기</strong>
+            <small>끄면 심어 둔 말은 그대로 두고 잠시 멈춥니다</small>
+          </span>
+          <input type="checkbox" id="nag-enabled" />
+        </label>
+
+        <div id="nag-list" class="nag-list"></div>
+
+        <form class="nag-form" id="nag-form" novalidate>
+          <p class="eyebrow" id="nag-form-mode">새 잔소리</p>
+          <div class="form-row">
+            <label class="field-group">
+              <span>구간</span>
+              <span class="day-input-wrap">
+                <input type="text" id="nag-percent" inputmode="numeric" autocomplete="off" placeholder="70" />
+                <b>%</b>
+              </span>
+            </label>
+          </div>
+          <label class="field-group">
+            <span>메시지</span>
+            <input type="text" id="nag-body" maxlength="60" autocomplete="off" placeholder="예: 슬슬 속도 조절?" />
+          </label>
+          <small class="field-error" id="nag-error"></small>
+          <button class="submit-button" type="submit" id="nag-submit"><span id="nag-submit-label">추가</span></button>
+          <button class="ghost-button wide" type="button" id="nag-cancel" hidden>취소</button>
+        </form>
+      </div>
+    </section>
+
     <section class="page" id="settings-page" aria-labelledby="settings-page-title" hidden>
       <header class="page-head">
         <button class="icon-button" type="button" data-close-page aria-label="뒤로">
@@ -249,6 +292,14 @@
           <span>
             <strong>고정비</strong>
             <small>매월 반복되는 지출을 등록해 둡니다</small>
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+
+        <button class="menu-row" type="button" id="open-nag">
+          <span>
+            <strong>소비 잔소리</strong>
+            <small id="nag-summary">상대가 목표를 넘길 때 남길 말</small>
           </span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
