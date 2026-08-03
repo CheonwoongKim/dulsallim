@@ -9,15 +9,28 @@
 }
 
 .view-toggle button {
-  padding: 5px 11px;
+  display: grid;
+  /* 아이콘만 남으면 누를 자리가 좁아진다. 손가락이 닿을 만큼은 유지한다. */
+  width: 38px;
+  height: 30px;
   border: 0;
   border-radius: 999px;
   color: var(--ink-soft);
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
+  place-items: center;
   transition: background 160ms ease, color 160ms ease;
+}
+
+.view-toggle svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  /* 점으로 찍은 목록 표식이 동그랗게 보이려면 둥근 끝이 필요하다. */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .view-toggle button[aria-pressed="true"] {

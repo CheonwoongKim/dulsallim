@@ -628,3 +628,21 @@ test("빈 화면 문구는 무엇 때문에 비었는지 알려준다", () => {
   assert.match(empty, /날짜를 다시 눌러/, "날짜로 걸렸으면 날짜를 풀라고 해야 한다");
   assert.match(empty, /위 카드를 다시 눌러/, "사람으로 걸렸으면 카드를 풀라고 해야 한다");
 });
+
+test("아이콘만 있는 버튼에는 읽어 줄 이름이 붙는다", () => {
+  // 글자가 사라지면 화면 낭독기에는 아무것도 안 들린다.
+  const toggle = html.match(/<div class="view-toggle"[\s\S]*?<\/div>/)[0];
+  for (const [, button] of toggle.matchAll(/<button([^>]*)>/g)) {
+    assert.match(button, /aria-label="[^"]+"/, `이름 없는 버튼: ${button}`);
+    assert.match(button, /aria-pressed="(true|false)"/, "고른 쪽을 알려야 한다");
+  }
+  assert.match(toggle, /aria-label="목록으로 보기"/);
+  assert.match(toggle, /aria-label="캘린더로 보기"/);
+});
+
+test("전환 버튼은 손가락이 닿을 만큼 크다", () => {
+  // 글자를 아이콘으로 바꾸면 누를 자리가 같이 줄어든다.
+  const width = Number(css.match(/\.view-toggle button \{[^}]*width:\s*(\d+)px/)[1]);
+  const height = Number(css.match(/\.view-toggle button \{[^}]*height:\s*(\d+)px/)[1]);
+  assert.ok(width >= 36 && height >= 28, `${width}×${height}px — 너무 작다`);
+});

@@ -126,8 +126,12 @@
           <div class="section-heading">
             <h2 id="ledger-title">지출 내역<span class="record-count" id="record-count">(0)</span><span class="ledger-filter" id="ledger-filter" hidden></span></h2>
             <div class="view-toggle" role="group" aria-label="보기 방식">
-              <button type="button" data-view="list" aria-pressed="true">목록</button>
-              <button type="button" data-view="calendar" aria-pressed="false">캘린더</button>
+              <button type="button" data-view="list" aria-pressed="true" aria-label="목록으로 보기">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>
+              </button>
+              <button type="button" data-view="calendar" aria-pressed="false" aria-label="캘린더로 보기">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg>
+              </button>
             </div>
           </div>
           <div id="expense-calendar" class="calendar" aria-label="날짜별 지출" hidden></div>
