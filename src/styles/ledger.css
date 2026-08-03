@@ -153,3 +153,16 @@
   transform: translateY(2px) scale(0.98);
 }
 
+
+/*
+ * 목록을 훑는 동안에도 "몇 건 중 어디"인지 알 수 있게, 그리고 목록/캘린더 전환이
+ * 늘 닿는 자리에 있게 붙여 둔다. 머리 높이는 접힘에 따라 달라져 JS가 재서 알려 준다.
+ */
+.section-heading {
+  position: sticky;
+  z-index: 10;
+  top: var(--header-h, 0px);
+  padding: 6px 0 4px;
+  margin-bottom: 6px;
+  background: var(--paper);
+}

@@ -87,6 +87,7 @@ import {
   openNotes,
   receiveNote,
 } from "./features/notes.js";
+import { watchScroll } from "./ui/condense.js";
 import { showToast } from "./ui/toast.js";
 import {
   getProfile,
@@ -478,6 +479,7 @@ async function startApp() {
   elements.dataGate.hidden = true;
   showApp();
   wireOnce();
+  watchScroll();
   paintMembers();
 
   // 반영일이 지난 고정비를 먼저 채운 뒤 그린다.

@@ -14,6 +14,7 @@ import { getMemberGoal, getMemberName, getMembers } from "./members.js";
 import { renderCalendar } from "./ui/calendar-grid.js";
 import { paintAnalysis } from "./features/analysis.js";
 import { refreshTrend } from "./features/trend.js";
+import { recheckCondense } from "./ui/condense.js";
 import {
   getDateFilter,
   getExpenses,
@@ -144,6 +145,8 @@ export function render() {
   if (!elements.list.hidden) renderList(visible);
 
   // 분석을 열어 둔 채 달이나 사람을 바꿀 수 있다. 같은 자리에서 함께 맞춘다.
+  // 목록이 짧아졌으면 접어 둘 이유가 없어진다.
+  recheckCondense();
   if (!elements.analysisPage.hidden) paintAnalysis();
   if (!elements.trendSheet.hidden) refreshTrend();
 }

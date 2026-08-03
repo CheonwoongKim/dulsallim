@@ -1170,3 +1170,54 @@ test("README 기능 목록이 실제 화면과 어긋나지 않는다", async ()
     assert.ok(기능.includes(낱말), `README 기능 목록에 "${낱말}" 안내가 없다`);
   }
 });
+
+/* ── 스크롤하면 머리를 접는다 ─────────────────────────────────── */
+
+test("접는 지점과 펴는 지점이 다르다", () => {
+  // 같으면 경계에서 폈다 접었다를 반복한다. 접히면 문서가 짧아지므로 더 잘 터진다.
+  const 접기 = Number(app.match(/const CONDENSE_AT = (\d+)/)[1]);
+  const 펴기 = Number(app.match(/const EXPAND_AT = (\d+)/)[1]);
+  assert.ok(펴기 < 접기, `펴는 지점 ${펴기} 이 접는 지점 ${접기} 보다 낮아야 한다`);
+});
+
+test("접고도 스크롤할 여유가 있을 때만 접는다", () => {
+  // 짧은 화면에서 접으면 문서가 스크롤 위치보다 짧아져 브라우저가 되돌리고,
+  // 그러면 펴는 지점 아래로 내려가 다시 펴진다. 그 반복이 깜빡임이다.
+  assert.match(fn("onScroll"), /roomToCondense\(\)/);
+  assert.match(fn("roomToCondense"), /scrollHeight - window\.innerHeight > MIN_SCROLLABLE/);
+});
+
+test("접어도 달 이동은 남긴다", () => {
+  // 월 라벨은 달 선택 시트를 여는 버튼이기도 하다. 감추면 달을 바꾸려고 스크롤을 도로 올려야 한다.
+  assert.doesNotMatch(css, /\.is-condensed[^{]*\.month-control \{[^}]*display: none/);
+  assert.match(css, /\.is-condensed \.eyebrow \{[^}]*display: none/, "설명 문구는 접을 때 없어도 된다");
+});
+
+test("머리 높이는 접히는 동안에도 따라 잰다", () => {
+  // 클래스를 바꾼 직후 한 번만 재면 애니메이션 도중의 값을 잡아,
+  // 지출 내역 제목이 머리보다 아래에 붙어 빈 띠가 생긴다(실제로 194px 을 쟀다).
+  assert.match(app, /new ResizeObserver\(syncHeaderHeight\)\.observe\(elements\.appHeader\)/);
+  assert.match(css, /\.section-heading \{[^}]*top: var\(--header-h/);
+});
+
+test("스크롤 감시는 화면을 붙잡지 않는다", () => {
+  assert.match(fn("watchScroll"), /"scroll", onScroll, \{ passive: true \}/);
+});
+
+test("검사에서 빠진 소스 파일이 없다", async () => {
+  // helpers/source.mjs 의 목록은 손으로 관리한다. 새 파일을 빠뜨리면 그 파일을 겨냥한
+  // 검사가 통째로 조용히 통과한다 — 실패하지 않으니 알아채기가 어렵다.
+  // (추이 그래프와 접힘에서 두 번 겪었다)
+  const { readdir } = await import("node:fs/promises");
+  const 실제 = [];
+  const 훑기 = async (dir, prefix = "") => {
+    for (const entry of await readdir(new URL(`../src/${dir}`, import.meta.url), { withFileTypes: true })) {
+      if (entry.isDirectory()) await 훑기(`${dir}${entry.name}/`, `${prefix}${entry.name}/`);
+      else if (entry.name.endsWith(".js")) 실제.push(`src/${prefix}${entry.name}`);
+    }
+  };
+  await 훑기("");
+
+  const 빠진것 = 실제.filter((path) => !Object.hasOwn(sourceLineCounts, path));
+  assert.deepEqual(빠진것, [], `helpers/source.mjs 에 등록되지 않은 파일: ${빠진것.join(", ")}`);
+});

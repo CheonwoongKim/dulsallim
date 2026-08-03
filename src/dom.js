@@ -115,6 +115,7 @@ export const elements = {
   viewToggle: document.querySelectorAll(".view-toggle button"),
   emptyTemplate: document.querySelector("#empty-template"),
   backdrop: document.querySelector("#sheet-backdrop"),
+  appHeader: document.querySelector(".app-header"),
   sheet: document.querySelector("#entry-sheet"),
   form: document.querySelector("#expense-form"),
   formEyebrow: document.querySelector("#form-eyebrow"),

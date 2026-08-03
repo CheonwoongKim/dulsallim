@@ -331,3 +331,56 @@ main {
   color: var(--accent-dark);
   font-weight: 700;
 }
+
+/* ── 스크롤하면 머리를 접는다 ─────────────────────────────────
+   작은 폰에서 상단바와 총액이 화면의 45%를 먹어 목록이 다섯 줄밖에 안 보인다.
+   스크롤은 "목록을 보겠다"는 뜻이므로 그때는 한 줄로 줄여 자리를 내준다.
+   월 이동은 남긴다 — 월 라벨이 달 선택 시트를 여는 버튼이기도 하다. */
+
+.app-header,
+.overview-head,
+.total-amount,
+.month-label {
+  transition: height 180ms ease, padding 180ms ease, font-size 180ms ease;
+}
+
+.is-condensed .overview-head {
+  display: flex;
+  padding: 0 22px 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  /* 접힐 때 다시 떠오르는 연출이 겹치면 어지럽다. 처음 열 때만 쓰는 애니메이션이다. */
+  animation: none;
+}
+
+/* 총액 위 설명은 접었을 때 없어도 안다 — 큰 숫자 하나뿐이다. */
+.is-condensed .eyebrow {
+  display: none;
+}
+
+.is-condensed .total-amount {
+  min-height: 0;
+  font-size: 24px;
+  letter-spacing: -0.05em;
+}
+
+.is-condensed .month-control {
+  margin-bottom: 0;
+}
+
+.is-condensed .month-label {
+  min-width: 0;
+  padding: 4px 4px;
+  font-size: 14px;
+}
+
+/* 접히는 동안 글자 크기가 뛰는 게 보이면 산만하다. 애니메이션을 줄여 달라는 설정은 따른다. */
+@media (prefers-reduced-motion: reduce) {
+  .app-header,
+  .overview-head,
+  .total-amount,
+  .month-label {
+    transition: none;
+  }
+}
