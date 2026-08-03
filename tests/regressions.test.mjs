@@ -1018,3 +1018,11 @@ test("추이 금액 단위는 캘린더와 같은 자를 쓴다", () => {
   // 같은 앱에서 한쪽은 46.3만, 다른 쪽은 463,000원이면 크기 비교가 눈으로 안 된다.
   assert.match(app, /import \{ formatCompactMoney \} from "\.\.\/calendar\.js"/);
 });
+
+test("추이 그래프의 좌우 여백은 같다", () => {
+  // 세로 축 숫자를 왼쪽에 세우면 그 자리만큼 격자가 밀려 왼쪽만 휑해 보인다.
+  // 숫자는 격자 위에 얹고, 선은 폭을 다 쓰게 한다.
+  assert.match(app, /PAD = \{ left: (\d+), right: \1,/, "좌우 여백이 달라졌다");
+  assert.match(fn("drawGrid"), /text-anchor="start"/, "숫자는 격자 위 왼쪽 맞춤이다");
+  assert.doesNotMatch(fn("drawGrid"), /PAD\.left - /, "숫자를 격자 왼쪽 밖으로 빼면 안 된다");
+});

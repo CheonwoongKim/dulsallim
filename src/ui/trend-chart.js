@@ -10,7 +10,13 @@ import { escapeHtml } from "./escape.js";
 
 /* 좌표계. 실제 크기는 CSS가 정하고, 이 안에서는 언제나 이 눈금으로 계산한다. */
 const VIEW = { width: 320, height: 180 };
-const PAD = { left: 38, right: 8, top: 10, bottom: 22 };
+/*
+ * 좌우 여백을 같게 둔다.
+ * 세로 축 숫자를 왼쪽에 세우면 그 자리만큼(38 남짓) 격자가 오른쪽으로 밀려,
+ * 왼쪽만 휑하게 비어 그림이 가운데에 있지 않은 것처럼 보인다.
+ * 숫자는 격자 "위"에 얹고 선은 폭을 다 쓰게 한다.
+ */
+const PAD = { left: 6, right: 6, top: 16, bottom: 22 };
 const PLOT = {
   width: VIEW.width - PAD.left - PAD.right,
   height: VIEW.height - PAD.top - PAD.bottom,
@@ -19,6 +25,8 @@ const LAST_MONTH_INDEX = 11;
 /** 점 반지름. 진행 중인 달은 속을 비우고 조금 키워 "아직 안 끝났다"고 알린다. */
 const DOT_R = 2.6;
 const DOT_R_PROVISIONAL = 3.4;
+/** 눈금 숫자를 그 선에서 얼마나 띄울지. */
+const AXIS_GAP = 3;
 
 const x = (index) => PAD.left + (index / LAST_MONTH_INDEX) * PLOT.width;
 const y = (value, max) => PAD.top + (1 - value / max) * PLOT.height;
@@ -87,14 +95,18 @@ function drawGoal(line, max) {
   return `<line class="trend-goal" x1="${PAD.left}" y1="${at}" x2="${PAD.left + PLOT.width}" y2="${at}" stroke="${line.color}" />`;
 }
 
-/** 0·절반·꼭대기 세 줄만 긋는다. 폰에서 그 이상은 선이 글자를 덮는다. */
+/**
+ * 0·절반·꼭대기 세 줄만 긋는다. 폰에서 그 이상은 선이 글자를 덮는다.
+ * 숫자는 각 줄 바로 위에 왼쪽 맞춤으로 얹는다. 이 함수를 맨 먼저 그려
+ * 선과 점이 숫자 위를 지나가게 한다 — 가려야 할 것은 숫자 쪽이다.
+ */
 function drawGrid(max) {
   return [0, max / 2, max]
     .map((value) => {
       const at = round(y(value, max));
       return (
         `<line class="trend-grid" x1="${PAD.left}" y1="${at}" x2="${PAD.left + PLOT.width}" y2="${at}" />` +
-        `<text class="trend-axis" x="${PAD.left - 5}" y="${at + 3}" text-anchor="end">${
+        `<text class="trend-axis" x="${PAD.left}" y="${round(at - AXIS_GAP)}" text-anchor="start">${
           value ? escapeHtml(formatCompactMoney(value)) : "0"
         }</text>`
       );
