@@ -115,16 +115,18 @@
 }
 
 .trend-legend {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
   margin: 0;
   font-size: 13px;
   color: var(--ink-soft);
 }
 
+/* 사람끼리 묶은 것은 뜻을 위한 것이고 줄을 나누라는 뜻은 아니다.
+   contents 로 두면 넷이 한 줄에 흐르되 자리가 모자라면 알아서 넘어간다. */
 .trend-row {
-  display: flex;
-  gap: 16px;
+  display: contents;
 }
 
 /* 목표선 표시. 그래프의 점선과 같은 모양이라 설명 없이도 이어진다.

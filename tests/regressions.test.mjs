@@ -1052,3 +1052,9 @@ test("범례의 목표 표시는 그래프의 점선과 같은 모양이다", ()
   assert.match(fn("drawLegend"), /repeating-linear-gradient/);
   assert.doesNotMatch(css, /\.trend-key i\.is-goal \{[^}]*background-image/);
 });
+
+test("범례는 한 줄로 흐른다", () => {
+  // 사람마다 줄을 나누면 넉 줄짜리 표처럼 보여 그래프보다 무거워진다.
+  assert.match(css, /\.trend-row \{[^}]*display: contents/);
+  assert.match(css, /\.trend-legend \{[^}]*flex-wrap: wrap/, "자리가 모자라면 넘어갈 수는 있어야 한다");
+});
