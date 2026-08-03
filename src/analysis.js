@@ -67,6 +67,7 @@ export function sumByCategory(monthly) {
     .map(([key, amount]) => ({
       key,
       label: (CATEGORIES[key] || CATEGORIES.etc).label,
+      color: (CATEGORIES[key] || CATEGORIES.etc).color,
       total: amount,
       percent: total ? Math.round((amount / total) * 100) : 0,
     }))

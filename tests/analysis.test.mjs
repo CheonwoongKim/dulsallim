@@ -101,3 +101,20 @@ test("분류 비중은 합이 100%에 가깝다", () => {
 test("빈 달은 빈 목록을 준다", () => {
   assert.deepEqual(sumByCategory([]), []);
 });
+
+test("분류마다 서로 다른 색이 있다", async () => {
+  // 같은 색이 둘이면 막대를 나눠 놓은 뜻이 없다.
+  const { CATEGORIES } = await import("../src/expenses.js");
+  const colors = Object.values(CATEGORIES).map((c) => c.color);
+  assert.equal(colors.filter(Boolean).length, colors.length, "색이 빠진 분류가 있다");
+  assert.equal(new Set(colors).size, colors.length, `겹치는 색: ${colors.join(", ")}`);
+  for (const color of colors) assert.match(color, /^#[0-9a-f]{6}$/);
+});
+
+test("분류별 결과에 색이 함께 온다", () => {
+  const [first] = sumByCategory([mk("2026-08-01", 1000, "pet")]);
+  assert.equal(first.color, "#c2883f");
+  // 모르는 분류는 기타 색으로 받는다. 화면이 색 없이 그려지면 안 된다.
+  const [unknown] = sumByCategory([mk("2026-08-01", 1000, "없는분류")]);
+  assert.equal(unknown.color, "#9a958c");
+});

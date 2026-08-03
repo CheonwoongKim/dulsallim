@@ -1,17 +1,24 @@
 export const MIN_YEAR = 2000;
 export const MAX_YEAR = 2100;
 
+/**
+ * 분류 목록. DB의 is_valid_category 와 index.html 의 선택지가 이 열쇠말과 정확히 같아야 한다.
+ *
+ * color 는 분석 화면의 막대에만 쓴다. 종이 같은 배경에 얹히므로 채도를 낮추고,
+ * 막대가 8px로 얇아 색끼리 붙어도 구분되도록 색상환에서 넓게 벌려 골랐다.
+ */
 export const CATEGORIES = {
-  food: { label: "식비" },
-  cafe: { label: "카페" },
-  grocery: { label: "장보기" },
-  living: { label: "생활" },
-  transport: { label: "교통" },
-  housing: { label: "주거" },
-  leisure: { label: "여가" },
-  medical: { label: "의료" },
-  pet: { label: "반려견" },
-  etc: { label: "기타" },
+  food: { label: "식비", color: "#e0704f" },
+  cafe: { label: "카페", color: "#8c5e3c" },
+  grocery: { label: "장보기", color: "#7f9a52" },
+  living: { label: "생활", color: "#5b7fa6" },
+  transport: { label: "교통", color: "#3f8f8c" },
+  housing: { label: "주거", color: "#4a4a44" },
+  leisure: { label: "여가", color: "#8d6a91" },
+  medical: { label: "의료", color: "#c2607a" },
+  pet: { label: "반려견", color: "#c2883f" },
+  // 어디에도 안 들어가는 것들이라 색도 중립으로 둔다.
+  etc: { label: "기타", color: "#9a958c" },
 };
 
 export function toMonthKey(date) {

@@ -104,7 +104,7 @@
 
 #analysis-list {
   display: grid;
-  gap: 12px;
+  gap: 18px;
 }
 
 .analysis-row {
@@ -133,7 +133,7 @@
   display: block;
   height: 100%;
   border-radius: 99px;
-  background: var(--ink);
+  /* 색은 분류마다 다르므로 분석 화면이 직접 넣는다. */
 }
 
 .analysis-value {
