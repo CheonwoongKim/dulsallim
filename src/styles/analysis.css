@@ -133,6 +133,7 @@
   white-space: nowrap;
 }
 
+/* 회색 부분이 그 달 전체(100%)다. 색이 그 분류의 몫이라 막대와 옆의 %가 같은 것을 가리킨다. */
 .analysis-bar {
   overflow: hidden;
   height: 8px;
@@ -143,6 +144,8 @@
 .analysis-bar i {
   display: block;
   height: 100%;
+  /* 2%짜리는 4px도 안 돼 색이 있는지조차 안 보인다. 눈에 걸릴 만큼은 남긴다. */
+  min-width: 8px;
   border-radius: 99px;
   /* 색은 분류마다 다르므로 분석 화면이 직접 넣는다. */
 }

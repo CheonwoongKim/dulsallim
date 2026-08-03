@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { compareMonth, sumByCategory } from "../analysis.js";
+import { compareMonth, sumByCategory, untilDay } from "../analysis.js";
 import {
   filterByMember,
   formatMonth,
@@ -70,18 +70,18 @@ export function paintAnalysis() {
   paintCompare(elements.comparePrevious, compared.previous);
   paintCompare(elements.compareLastYear, compared.lastYear);
 
-  const categories = sumByCategory(getMonthlyExpenses(mine, monthKey));
+  // 머리의 큰 숫자와 같은 범위를 본다. 범위가 다르면 분류를 다 더해도 위 숫자와 안 맞는다.
+  const categories = sumByCategory(untilDay(getMonthlyExpenses(mine, monthKey), compared.maxDay));
   if (!categories.length) {
     elements.analysisList.innerHTML = `<p class="analysis-empty">이 달에는 기록이 없어요.</p>`;
     return;
   }
-  const top = categories[0].total;
   elements.analysisList.innerHTML = categories
     .map(
       (category) => `
       <div class="analysis-row">
         <span class="analysis-name">${escapeHtml(category.label)}</span>
-        <span class="analysis-bar"><i style="width:${Math.max(2, (category.total / top) * 100)}%;background:${category.color}"></i></span>
+        <span class="analysis-bar"><i style="width:${(category.total / compared.total) * 100}%;background:${category.color}"></i></span>
         <span class="analysis-amount">${formatMoney(category.total)}원</span>
         <span class="analysis-percent">${category.percent}%</span>
       </div>`,

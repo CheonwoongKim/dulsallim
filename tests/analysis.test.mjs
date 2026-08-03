@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { comparableDay, compareMonth, sumByCategory, sumMonth } from "../src/analysis.js";
+import {
+  comparableDay,
+  compareMonth,
+  sumByCategory,
+  sumMonth,
+  untilDay,
+} from "../src/analysis.js";
 
 const 천 = "11111111-1111-1111-1111-111111111111";
 const mk = (date, amount, category = "food") => ({ id: date + amount, date, amount, category, member: 천 });
@@ -117,4 +123,24 @@ test("분류별 결과에 색이 함께 온다", () => {
   // 모르는 분류는 기타 색으로 받는다. 화면이 색 없이 그려지면 안 된다.
   const [unknown] = sumByCategory([mk("2026-08-01", 1000, "없는분류")]);
   assert.equal(unknown.color, "#9a958c");
+});
+
+test("untilDay는 그 날짜까지만 남긴다", () => {
+  const 지출 = [mk("2026-08-01", 1000), mk("2026-08-03", 2000), mk("2026-08-25", 9000)];
+  assert.equal(untilDay(지출, 3).length, 2);
+  assert.equal(untilDay(지출, null).length, 3, "null이면 자르지 않는다");
+});
+
+test("분류를 다 더하면 머리의 큰 숫자와 같다", () => {
+  // 범위가 어긋나면 사용자가 더해 보고 다른 숫자를 얻는다.
+  const 오늘 = new Date(2026, 7, 3);
+  const 지출 = [
+    mk("2026-08-01", 100000, "food"),
+    mk("2026-08-03", 27000, "cafe"),
+    mk("2026-08-25", 500000, "housing"), // 오늘 이후 — 양쪽 모두에서 빠져야 한다
+  ];
+  const 머리 = compareMonth(지출, "2026-08", 오늘);
+  const 분류 = sumByCategory(untilDay(지출, 머리.maxDay));
+  assert.equal(분류.reduce((sum, c) => sum + c.total, 0), 머리.total);
+  assert.equal(분류.length, 2, "오늘 이후 분류는 줄도 생기면 안 된다");
 });

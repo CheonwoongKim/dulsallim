@@ -12,14 +12,16 @@ export function comparableDay(monthKey, today = new Date()) {
   return monthKey === toMonthKey(today) ? today.getDate() : null;
 }
 
+/** maxDay가 있으면 그 날짜까지만 남긴다. null이면 그대로 돌려준다. */
+export function untilDay(expenses, maxDay) {
+  if (maxDay === null) return expenses;
+  return expenses.filter((expense) => Number(expense.date.slice(8)) <= maxDay);
+}
+
 /** 그 달 합계. maxDay를 주면 그 날짜까지만 센다. */
 export function sumMonth(expenses, monthKey, maxDay = null) {
-  return expenses
-    .filter((expense) => {
-      if (!expense.date.startsWith(monthKey)) return false;
-      return maxDay === null || Number(expense.date.slice(8)) <= maxDay;
-    })
-    .reduce((sum, expense) => sum + expense.amount, 0);
+  const monthly = expenses.filter((expense) => expense.date.startsWith(monthKey));
+  return untilDay(monthly, maxDay).reduce((sum, expense) => sum + expense.amount, 0);
 }
 
 /**

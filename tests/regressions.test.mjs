@@ -698,3 +698,14 @@ test("분석 막대는 줄마다 같은 길이를 쓴다", () => {
   assert.match(app, /class="analysis-amount"/);
   assert.match(app, /class="analysis-percent"/);
 });
+
+test("막대 길이는 옆에 적힌 %와 같은 것을 가리킨다", () => {
+  // 1등 분류 기준으로 그리면 47%인데 꽉 찬 막대가 되어 '거의 다 식비'로 읽힌다.
+  const paint = fn("paintAnalysis");
+  assert.match(paint, /width:\$\{\(category\.total \/ compared\.total\) \* 100\}%/);
+  assert.doesNotMatch(paint, /categories\[0\]\.total/, "1등을 기준으로 삼으면 안 된다");
+  // 회색 트랙이 100% 자리를 지켜야 비교 대상이 생긴다.
+  assert.match(css, /\.analysis-bar \{[^}]*background: var\(--paper-deep\)/);
+  const floor = Number(css.match(/\.analysis-bar i \{[^}]*min-width:\s*(\d+)px/)[1]);
+  assert.ok(floor >= 8, `min-width ${floor}px — 작은 분류가 안 보인다`);
+});
