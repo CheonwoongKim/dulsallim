@@ -31,19 +31,6 @@
   font-size: 20px;
 }
 
-/*
- * 개수만 자간을 풀어 준다.
- *
- * 제목의 -0.055em 은 한글을 조여 보이려는 것인데, 자간은 마지막 글자 뒤에도 붙어
- * 그만큼 진행폭이 안쪽으로 당겨진다. 20px 에서 1.1px 이다.
- * 괄호처럼 오른쪽 끝까지 획이 닿는 글자는 렌더러에 따라 그 1px 이 깎여 보인다.
- * 숫자와 괄호에는 조일 이유도 없으니 여기서만 푼다.
- */
-.record-count {
-  padding-right: 2px;
-  letter-spacing: normal;
-}
-
 .expense-list {
   min-height: 160px;
 }

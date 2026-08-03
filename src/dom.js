@@ -110,6 +110,7 @@ export const elements = {
   monthGrid: document.querySelector("#month-grid"),
   ledgerFilter: document.querySelector("#ledger-filter"),
   sectionHeading: document.querySelector(".section-heading"),
+  ledgerTitle: document.querySelector("#ledger-title"),
   count: document.querySelector("#record-count"),
   list: document.querySelector("#expense-list"),
   calendar: document.querySelector("#expense-calendar"),

@@ -129,7 +129,7 @@ test("사람별 필터는 목록에만 적용되고 상단 요약은 그 달 전
   assert.match(renderFn, /const stats = summarize\(monthly, getMembers\(\)\)/, "요약은 필터 이전 목록으로 계산해야 한다");
   assert.match(renderFn, /filterByMember\(monthly, memberFilter\)/);
   assert.match(renderFn, /renderList\(visible\)/);
-  assert.match(renderFn, /setRecordCount\(`\(\$\{visible\.length\}\)`\)/, "건수는 필터된 목록 기준");
+  assert.match(renderFn, /elements\.count\.textContent = `\(\$\{visible\.length\}\)`/, "건수는 필터된 목록 기준");
   assert.doesNotMatch(renderFn, /summarize\(visible\)/, "요약을 필터된 목록으로 계산하면 합계가 흔들린다");
 });
 
@@ -1265,18 +1265,20 @@ test("붙어 있는 제목 아래로 목록이 비치지 않는다", () => {
   assert.match(css, /\.is-condensed \.section-heading::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
 });
 
-test("건수 표시는 제목의 좁은 자간을 물려받지 않는다", () => {
-  // 자간이 음수면 마지막 글자 뒤에도 그만큼 붙어 진행폭이 안쪽으로 당겨진다.
-  // 괄호처럼 오른쪽 끝까지 획이 닿는 글자는 그 1px 이 깎여 "(13'" 처럼 보일 수 있다.
-  assert.match(css, /\.section-heading h2 \{[^}]*\}[\s\S]*?\.record-count \{[^}]*letter-spacing: normal/);
-});
-
-test("건수가 바뀌면 붙어 있는 제목을 다시 그리게 한다", () => {
+test("제목 글자가 바뀌면 붙어 있는 제목을 다시 그리게 한다", () => {
   // 제목은 붙어 있어 iOS 가 따로 떼어 그리는데, 안의 글자가 바뀌어도 그 그림이
   // 갱신되지 않는 일이 있다. "(9)" 가 "(13)" 이 되면 넓어진 만큼이 네모나게 잘려
   // 닫는 괄호가 반쯤 사라져 보였다. 스크롤하면 멀쩡해지는 것도 그래서다.
-  assert.match(fn("setRecordCount"), /textContent === text\) return/, "안 바뀌었으면 건드리지 않는다");
-  assert.match(fn("setRecordCount"), /display = "none"[\s\S]*?offsetHeight[\s\S]*?display = ""/);
+  assert.match(fn("repaintLedgerTitle"), /display = "none"[\s\S]*?offsetHeight[\s\S]*?display = ""/);
+  assert.match(fn("repaintLedgerTitle"), /title === paintedTitle\) return/, "안 바뀌었으면 건드리지 않는다");
+
+  // 건수만 보면 모자란다 — 제목에는 고른 사람 이름도 붙어서, 건수가 그대로여도
+  // 필터를 바꾸면 글자 폭이 달라진다. 제목 전체를 봐야 한다.
+  assert.match(fn("repaintLedgerTitle"), /elements\.ledgerTitle\?\.textContent/);
+  const renderFn = fn("render");
+  const 필터 = renderFn.indexOf("ledgerFilter.hidden");
+  const 다시그리기 = renderFn.indexOf("repaintLedgerTitle()");
+  assert.ok(다시그리기 > 필터, "건수와 필터를 모두 적은 뒤에 봐야 한다");
 });
 
 test("키보드가 오르내리는 순간에는 시트 안 입력을 막는다", () => {
