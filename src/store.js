@@ -35,8 +35,10 @@ let pendingDelete = null;
 /* ── 불러오기 ─────────────────────────────────────────────── */
 
 export async function loadAll(profile) {
-  context = { householdId: profile.household_id, userId: profile.id };
+  const session = { householdId: profile.household_id, userId: profile.id };
+  context = session;
   const data = await remote.fetchAll(profile.household_id);
+  if (context !== session) return;
   setMembers(data.members);
   expenses = data.expenses;
   fixedTemplates = data.fixedCosts;
@@ -47,8 +49,11 @@ export async function loadAll(profile) {
 
 /** 이름·색을 바꾼 뒤. 지출은 그대로 두고 명부만 다시 읽는다. */
 export async function reloadMembers() {
-  if (!context) return;
-  setMembers(await remote.fetchMembers(context.householdId));
+  const session = context;
+  if (!session) return;
+  const members = await remote.fetchMembers(session.householdId);
+  if (context !== session) return;
+  setMembers(members);
 }
 
 /** 가구의 모든 기록을 지운다. 되돌릴 수 없다. */
@@ -64,11 +69,18 @@ export async function resetHousehold() {
 
 /** 상대가 바꾼 내용을 반영할 때. 구성원·고정비는 거의 안 바뀌므로 지출만 다시 읽는다. */
 export async function reloadExpenses() {
-  if (!context) return;
+  const session = context;
+  if (!session) return;
   const [nextExpenses, nextApplied] = await Promise.all([
-    remote.fetchExpenses(context.householdId),
+    remote.fetchExpenses(session.householdId),
     remote.fetchApplied(),
   ]);
+  /*
+   * 다녀오는 사이에 로그아웃했거나 다른 사람이 로그인했을 수 있다.
+   * 그대로 쓰면 지금 보고 있는 사람 화면에 앞사람 기록이 얹힌다.
+   * context 는 loadAll 이 매번 새로 만드는 객체라, 같은 가구여도 다른 세션이면 걸러진다.
+   */
+  if (context !== session) return;
   expenses = nextExpenses;
   fixedApplied = nextApplied;
 }
@@ -84,6 +96,9 @@ export function clearData() {
   setMembers([]);
   memberFilter = null;
   dateFilter = null;
+  // 보던 달과 보기 방식도 앞사람의 것이다. 남기면 다음 사람이 2000년 캘린더로 시작한다.
+  selectedMonth = toMonthKey(new Date());
+  viewMode = "list";
   highlightId = null;
   pendingDelete = null;
 }
@@ -149,6 +164,25 @@ export async function deleteFixedCost(id) {
   fixedTemplates = fixedTemplates.filter((template) => template.id !== id);
 }
 
+/** 한 건 넣기. 실패는 여기서 삼키고 null 로 알린다 — 나머지는 계속 시도해야 한다. */
+async function applyOne(occurrence) {
+  try {
+    return { key: occurrence.key, expense: await remote.applyOccurrence(occurrence) };
+  } catch {
+    // 이유는 remote가 콘솔에 남긴다. 여기서는 실패했다는 사실만 올려 보낸다.
+    return null;
+  }
+}
+
+/**
+ * 한 번에 이만큼만 함께 보낸다.
+ *
+ * 한 건씩 줄 세워 기다리면 오래 안 열었을 때가 문제다. 고정비 10개가 열두 달 밀리면
+ * 백스무 번을 차례로 기다려, 첫 화면이 뜨기까지 몇 초가 걸린다.
+ * 그렇다고 전부 한꺼번에 던지면 서버를 두드리는 꼴이라 중간을 잡는다.
+ */
+const APPLY_BATCH = 6;
+
 /**
  * 반영일이 지난 고정비를 지출로 만든다.
  *
@@ -161,19 +195,20 @@ export async function applyOccurrences(occurrences) {
   const appliedKeys = [];
   let failed = 0;
 
-  for (const occurrence of occurrences) {
-    try {
-      const expense = await remote.applyOccurrence(occurrence);
-      // null이면 상대 폰이 먼저 넣은 것이다. 기록만 남기고 넘어간다.
-      if (expense) {
-        created.push(expense);
-        // 월세처럼 큰 고정비 하나로 구간을 넘기는 일이 잦다. 직접 적은 지출만 볼 이유가 없다.
-        remote.fireNags(expense.id);
+  for (let from = 0; from < occurrences.length; from += APPLY_BATCH) {
+    const batch = await Promise.all(occurrences.slice(from, from + APPLY_BATCH).map(applyOne));
+    for (const result of batch) {
+      if (!result) {
+        failed += 1;
+        continue;
       }
-      appliedKeys.push(occurrence.key);
-    } catch {
-      // 이유는 remote가 콘솔에 남긴다. 여기서는 다음 건을 계속 시도하고, 끝나면 알린다.
-      failed += 1;
+      // expense 가 null 이면 상대 폰이 먼저 넣은 것이다. 기록만 남기고 넘어간다.
+      if (result.expense) {
+        created.push(result.expense);
+        // 월세처럼 큰 고정비 하나로 구간을 넘기는 일이 잦다. 직접 적은 지출만 볼 이유가 없다.
+        remote.fireNags(result.expense.id);
+      }
+      appliedKeys.push(result.key);
     }
   }
 

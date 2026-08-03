@@ -10,6 +10,7 @@ const SOURCE_FILES = [
   "data/rows.js",
   "data/remote.js",
   "expenses.js",
+  "money.js",
   "calendar.js",
   "trend.js",
   "analysis.js",

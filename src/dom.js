@@ -22,6 +22,7 @@ export const elements = {
   dataStatus: document.querySelector("#data-status"),
   retryLoad: document.querySelector("#retry-load"),
   appShell: document.querySelector("#app-shell"),
+  overview: document.querySelector(".overview"),
   authGate: document.querySelector("#auth-gate"),
   loginForm: document.querySelector("#login-form"),
   loginEmail: document.querySelector("#login-email"),

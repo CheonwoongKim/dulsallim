@@ -12,6 +12,7 @@ import {
   toMonthKey,
 } from "../expenses.js";
 import { getMemberGoal } from "../members.js";
+import { isValidAmount, readAmount } from "../money.js";
 import { render } from "../render.js";
 import {
   addExpense,
@@ -70,7 +71,7 @@ export function syncGoalNotice() {
         monthly: getMonthlyExpenses(getExpenses(), date.slice(0, 7)),
         memberId,
         goal: getMemberGoal(memberId),
-        draft: Number(String(data.get("amount") || "").replace(/\D/g, "")) || 0,
+        draft: readAmount(data.get("amount")),
         excludeId: editingExpenseId,
       })
     : null;
@@ -132,7 +133,7 @@ function readForm() {
     member: String(data.get("member")),
     category: String(data.get("category")),
     item: String(data.get("item") || "").trim(),
-    amount: Number(String(data.get("amount") || "").replace(/\D/g, "")),
+    amount: readAmount(data.get("amount")),
   };
 }
 
@@ -152,7 +153,7 @@ function validateExpenseInput({ date, item, amount }) {
     elements.itemError.textContent = "지출 항목을 입력해 주세요.";
     firstInvalidField = firstInvalidField || elements.item;
   }
-  if (!Number.isSafeInteger(amount) || amount <= 0) {
+  if (!isValidAmount(amount)) {
     elements.amountError.textContent = "1원 이상의 금액을 입력해 주세요.";
     firstInvalidField = firstInvalidField || elements.amount;
   }

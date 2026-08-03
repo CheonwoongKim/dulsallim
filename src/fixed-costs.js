@@ -1,6 +1,5 @@
 import { shiftMonthKey, toDateKey, toMonthKey } from "./expenses.js";
 
-export { shiftMonthKey };
 
 export const MIN_DAY = 1;
 export const MAX_DAY = 31;
@@ -77,5 +76,18 @@ export function nextOccurrenceDate(template, applied, today = new Date()) {
     if (!appliedSet.has(key) && monthKey >= template.startMonth && date > toDateKey(today)) return date;
     monthKey = shiftMonthKey(monthKey, 1);
   }
+  return null;
+}
+
+/**
+ * 고정비 반영 결과를 알릴 한 줄. 알릴 것이 없으면 null.
+ *
+ * 성공과 실패는 함께 일어날 수 있다. 성공만 알리면 빠진 고정비를 모른 채 지나가고,
+ * 사용자는 이번 달 합계가 왜 적은지 알 방법이 없다.
+ */
+export function describeApplied({ created, failed }) {
+  if (created && failed) return `고정비 ${created}건을 넣었고 ${failed}건은 반영하지 못했어요`;
+  if (created) return `이번 달 고정비 ${created}건을 넣었어요`;
+  if (failed) return `고정비 ${failed}건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요`;
   return null;
 }

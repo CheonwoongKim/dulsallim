@@ -8,9 +8,10 @@ import {
   firstApplicableMonth,
   isValidDay,
   nextOccurrenceDate,
+  describeApplied,
   resolveOccurrenceDate,
-  shiftMonthKey,
 } from "../src/fixed-costs.js";
+import { shiftMonthKey } from "../src/expenses.js";
 
 const template = {
   id: "t1",

@@ -161,7 +161,7 @@ export function keepFocusInSheet(event) {
  */
 const settleTimers = new WeakMap();
 
-export function beginSettle(scroller) {
+function beginSettle(scroller) {
   // 타이머를 하나로 쓰면 두 폼이 잇달아 굳을 때 뒤엣것이 앞엣것의 해제를 취소한다.
   // 그러면 앞 폼은 pointer-events: none 인 채로 영영 남아 입력이 아예 안 된다.
   clearTimeout(settleTimers.get(scroller));

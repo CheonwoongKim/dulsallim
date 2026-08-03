@@ -4,7 +4,7 @@ import { getMembers } from "../members.js";
 import { deleteNag, fetchNags, insertNag, setNagEnabled, updateNag } from "../data/remote.js";
 import { getContext } from "../store.js";
 import { escapeHtml } from "../ui/escape.js";
-import { hidePage, showPage } from "../ui/page.js";
+import { showPage } from "../ui/page.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
 import { showToast } from "../ui/toast.js";
 import { getProfile, updateCurrentProfile } from "./auth.js";
@@ -111,6 +111,8 @@ export async function openNagPage() {
   const target = getTarget();
   paintTarget(target);
   elements.nagEnabled.checked = getProfile()?.nag_enabled !== false;
+  // 앞사람이 심어 둔 말이 남아 있으면 "다 채웠어요" 판정이 그 개수로 이뤄진다.
+  nags = [];
   elements.nagList.innerHTML = `<p class="nag-empty">불러오는 중…</p>`;
   showPage(elements.nagPage);
 
@@ -187,4 +189,3 @@ export async function removeNag(id) {
   paintSummary(getTarget());
 }
 
-export { hidePage as closeNagPage };

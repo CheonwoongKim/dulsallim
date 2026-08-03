@@ -31,13 +31,24 @@ export function showPage(page) {
   openedPage = page;
   page.hidden = false;
   page.scrollTop = 0;
-  requestAnimationFrame(() => page.classList.add("is-visible"));
+  /*
+   * 뒤에 있는 가계부는 안 보일 뿐, 탭으로는 그대로 들어간다.
+   * 시트에는 Tab 을 가두는 장치(trapTab)가 있지만 화면에는 없어 커서가 덮인 목록 속으로 사라진다.
+   */
+  elements.appShell.inert = true;
+  requestAnimationFrame(() => {
+    page.classList.add("is-visible");
+    // 어디로 왔는지 알 수 있게 화면 자체로 옮긴다. aria-labelledby 가 제목을 읽어 준다.
+    page.tabIndex = -1;
+    page.focus({ preventScroll: true });
+  });
 }
 
 export function hidePage() {
   const page = openedPage;
   if (!page) return;
   openedPage = null;
+  elements.appShell.inert = false;
 
   const focused = document.activeElement;
   if (focused instanceof HTMLElement && page.contains(focused)) focused.blur();
@@ -59,5 +70,6 @@ export function closePageNow() {
     page.hidden = true;
   });
   if (openedPage) unlockPageScroll();
+  elements.appShell.inert = false;
   openedPage = null;
 }

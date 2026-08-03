@@ -29,6 +29,8 @@ const COUNT_UP_MS = 520;
 let previousTotal = 0;
 
 /** 월을 바꾸면 이전 달 금액에서 이어지는 애니메이션이 어색하므로 0에서 다시 센다. */
+let totalFrame = 0;
+
 export function resetTotalAnimation() {
   previousTotal = 0;
 }
@@ -59,7 +61,14 @@ function repaintLedgerTitle() {
 }
 
 function animateNumber(from, to) {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  /*
+   * 앞의 애니메이션을 세우지 않으면 둘이 같은 자리에 번갈아 쓴다.
+   * 늦게 시작한 쪽이 먼저 끝나면, 남은 쪽이 새 값 위에 옛 중간값을 도로 적는다.
+   */
+  cancelAnimationFrame(totalFrame);
+
+  // 사람 필터·날짜 선택·보기 전환처럼 총액이 그대로인 렌더가 더 많다. 그때는 셀 것이 없다.
+  if (from === to || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     elements.total.textContent = formatMoney(to);
     return;
   }
@@ -69,9 +78,9 @@ function animateNumber(from, to) {
     const progress = Math.min((now - startedAt) / COUNT_UP_MS, 1);
     const eased = 1 - Math.pow(1 - progress, 3);
     elements.total.textContent = formatMoney(Math.round(from + (to - from) * eased));
-    if (progress < 1) requestAnimationFrame(tick);
+    if (progress < 1) totalFrame = requestAnimationFrame(tick);
   };
-  requestAnimationFrame(tick);
+  totalFrame = requestAnimationFrame(tick);
 }
 
 /**
@@ -109,23 +118,8 @@ export function paintMembers() {
   });
 }
 
-export function render() {
-  // 상단 요약은 항상 그 달 전체 기준. 사람 필터는 아래 목록에만 적용한다.
-  const monthly = getMonthlyExpenses(getExpenses(), getSelectedMonth());
-  const stats = summarize(monthly, getMembers());
-  const memberFilter = getMemberFilter();
-  // 캘린더 숫자는 사람 필터까지만 반영한다. 날짜까지 걸러 넘기면 고른 날 하나만 남고 나머지가 빈다.
-  const byMember = filterByMember(monthly, memberFilter);
-  const dateFilter = getDateFilter();
-  const visible = filterByDate(byMember, dateFilter);
-
-  elements.monthTitle.textContent = formatMonth(getSelectedMonth());
-  animateNumber(previousTotal, stats.total);
-  previousTotal = stats.total;
-
-  // 목표는 값이 하나뿐이라 지난 달을 "지금의 목표"로 판정하게 된다. 이번 달에만 말한다.
-  const isThisMonth = getSelectedMonth() === toMonthKey(new Date());
-
+/** 사람별 합계·비중·목표. 한 사람치 계산이 길어 render 에서 떼어 둔다. */
+function paintMemberShares(stats, monthly, memberFilter, isThisMonth) {
   elements.memberSlots.forEach((slot, index) => {
     const share = stats.perMember[index];
     if (!share) return;
@@ -145,6 +139,40 @@ export function render() {
       ? `${formatMoney(-goal.remaining)}원 초과`
       : `${formatMoney(goal.remaining)}원 남음 · ${goal.percent}%`;
   });
+}
+
+/** 지출 내역 제목 — 건수와 걸린 필터. 둘을 적은 뒤 한 번만 다시 그린다. */
+function paintLedgerHeading(visible, memberFilter, dateFilter) {
+  elements.count.textContent = `(${visible.length})`;
+
+  // 사람과 날짜를 함께 걸 수 있다. 걸린 것만 이어 붙인다.
+  const labels = [
+    memberFilter ? getMemberName(memberFilter) : null,
+    dateFilter ? formatDayLabel(dateFilter) : null,
+  ].filter(Boolean);
+  elements.ledgerFilter.textContent = labels.length ? ` · ${labels.join(" · ")}` : "";
+  elements.ledgerFilter.hidden = !labels.length;
+  repaintLedgerTitle();
+}
+
+export function render() {
+  // 상단 요약은 항상 그 달 전체 기준. 사람 필터는 아래 목록에만 적용한다.
+  const monthly = getMonthlyExpenses(getExpenses(), getSelectedMonth());
+  const stats = summarize(monthly, getMembers());
+  const memberFilter = getMemberFilter();
+  // 캘린더 숫자는 사람 필터까지만 반영한다. 날짜까지 걸러 넘기면 고른 날 하나만 남고 나머지가 빈다.
+  const byMember = filterByMember(monthly, memberFilter);
+  const dateFilter = getDateFilter();
+  const visible = filterByDate(byMember, dateFilter);
+
+  elements.monthTitle.textContent = formatMonth(getSelectedMonth());
+  animateNumber(previousTotal, stats.total);
+  previousTotal = stats.total;
+
+  // 목표는 값이 하나뿐이라 지난 달을 "지금의 목표"로 판정하게 된다. 이번 달에만 말한다.
+  const isThisMonth = getSelectedMonth() === toMonthKey(new Date());
+
+  paintMemberShares(stats, monthly, memberFilter, isThisMonth);
 
   const calendarMode = getViewMode() === "calendar";
   elements.calendar.hidden = !calendarMode;
@@ -155,17 +183,7 @@ export function render() {
     renderCalendar({ monthKey: getSelectedMonth(), monthly: byMember, selected: dateFilter });
   }
 
-  elements.count.textContent = `(${visible.length})`;
-
-  // 사람과 날짜를 함께 걸 수 있다. 걸린 것만 이어 붙인다.
-  const labels = [
-    memberFilter ? getMemberName(memberFilter) : null,
-    dateFilter ? formatDayLabel(dateFilter) : null,
-  ].filter(Boolean);
-  elements.ledgerFilter.textContent = labels.length ? ` · ${labels.join(" · ")}` : "";
-  elements.ledgerFilter.hidden = !labels.length;
-  // 건수와 필터를 모두 적은 뒤에 한 번만 본다.
-  repaintLedgerTitle();
+  paintLedgerHeading(visible, memberFilter, dateFilter);
 
   // 캘린더만 보고 있을 때는 아래 목록을 접어 둔다. 날을 고르면 그날 것만 펼친다.
   elements.list.hidden = calendarMode && !dateFilter;

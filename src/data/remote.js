@@ -131,7 +131,7 @@ export async function fetchAll(householdId) {
  * 목록에 표시만 할 것이라 본문은 필요 없다. 지출 id만 받아 세면 전송량이 훨씬 적다.
  * @returns {Promise<Record<string, number>>} 지출 id별 개수
  */
-export async function fetchNoteCounts() {
+async function fetchNoteCounts() {
   const rows = unwrap(
     "대화 개수 불러오기",
     await supabase.from("expense_notes").select("expense_id"),

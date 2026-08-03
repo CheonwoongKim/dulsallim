@@ -1,9 +1,9 @@
 import { elements } from "../dom.js";
 import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
 import { getMemberName } from "../members.js";
-import { render } from "../render.js";
 import { addNote, countNote, getExpenses, loadNotes } from "../store.js";
 import { escapeHtml } from "../ui/escape.js";
+import { repaintExpenseRow } from "../ui/ledger.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
 import { showToast } from "../ui/toast.js";
 import { getProfile } from "./auth.js";
@@ -77,7 +77,13 @@ export async function openNotes(expenseId) {
     const loaded = await loadNotes(expenseId);
     // 불러오는 사이 사용자가 시트를 닫거나 다른 지출을 열었을 수 있다.
     if (openExpenseId !== expenseId) return;
-    messages = loaded;
+    /*
+     * 불러오는 사이 상대의 말이 실시간으로 도착해 이미 붙어 있을 수 있다.
+     * 통째로 갈아 끼우면 화면에 떴던 말이 사라진다 — 조회 스냅샷은 그보다 앞선 순간이라
+     * 그 말을 담고 있지 않다. 나중에 온 것이므로 뒤에 잇는다.
+     */
+    const loadedIds = new Set(loaded.map((note) => note.id));
+    messages = [...loaded, ...messages.filter((note) => !loadedIds.has(note.id))];
     paintMessages();
     scrollToLatest();
   } catch (error) {
@@ -139,7 +145,8 @@ export function flushPendingNotes() {
  * 구독에는 가구 필터를 걸 수 없어 RLS에 기대는데, 개수까지 흐트러지지 않도록 한 겹 더 확인한다.
  */
 export function receiveNote(note) {
-  if (!getExpenses().some((expense) => expense.id === note.expenseId)) {
+  const expense = getExpenses().find((current) => current.id === note.expenseId);
+  if (!expense) {
     // 버리면 안 된다. 아래 pending 설명 참고.
     if (pending.size < MAX_PENDING) pending.set(note.id, note);
     return;
@@ -155,7 +162,10 @@ export function receiveNote(note) {
     scrollToLatest();
   }
 
-  // 목록에 없는 지출이면 대화 개수가 보이지 않으므로 다시 그릴 이유가 없다.
-  // 괜히 그리면 열어 둔 스와이프가 닫힌다.
-  if (elements.list.querySelector(`.expense-item[data-id="${note.expenseId}"]`)) render();
+  /*
+   * 달라진 건 그 행의 대화 개수뿐이다. 총액도 요약도 그대로다.
+   * 목록에 없으면 보일 자리가 없으니 그럴 필요도 없고,
+   * 있더라도 통째로 다시 그리면 열어 둔 스와이프와 포커스가 사라진다.
+   */
+  repaintExpenseRow(expense);
 }

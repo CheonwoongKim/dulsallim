@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { formatMoney } from "../src/expenses.js";
+import { describeApplied } from "../src/fixed-costs.js";
+import { MAX_AMOUNT, formatAmountInput, isValidAmount, readAmount } from "../src/money.js";
+
+/** 배치 크기는 소스에서 읽는다 — 숫자를 두 곳에 적으면 한쪽만 바뀐다. */
+const APPLY_BATCH_SIZE = Number(/const APPLY_BATCH = (\d+);/.exec(app)[1]);
 import { css, fn, html, source as app, sourceLineCounts, sw } from "./helpers/source.mjs";
 
 test("제출 검증은 날짜를 반드시 확인한다", () => {
@@ -129,13 +135,13 @@ test("사람별 필터는 목록에만 적용되고 상단 요약은 그 달 전
   assert.match(renderFn, /const stats = summarize\(monthly, getMembers\(\)\)/, "요약은 필터 이전 목록으로 계산해야 한다");
   assert.match(renderFn, /filterByMember\(monthly, memberFilter\)/);
   assert.match(renderFn, /renderList\(visible\)/);
-  assert.match(renderFn, /elements\.count\.textContent = `\(\$\{visible\.length\}\)`/, "건수는 필터된 목록 기준");
+  assert.match(fn("paintLedgerHeading"), /elements\.count\.textContent = `\(\$\{visible\.length\}\)`/, "건수는 필터된 목록 기준");
   assert.doesNotMatch(renderFn, /summarize\(visible\)/, "요약을 필터된 목록으로 계산하면 합계가 흔들린다");
 });
 
 test("요약 카드는 눌림 상태를 알리는 버튼이다", () => {
   assert.match(html, /<button class="member-row"[^>]*aria-pressed="false"/);
-  assert.match(fn("render"), /slot\.row\.setAttribute\("aria-pressed", String\(memberFilter === share\.id\)\)/);
+  assert.match(fn("paintMemberShares"), /slot\.row\.setAttribute\("aria-pressed", String\(memberFilter === share\.id\)\)/);
 });
 
 test("사람 이름은 코드가 아니라 서버에서 온다", () => {
@@ -403,18 +409,45 @@ test("마이페이지는 상대 목표를 보여 주되 고치게 하지는 않�
 
 test("목표를 비우면 목표를 쓰지 않는 것으로 저장된다", () => {
   const submit = fn("handleProfileSubmit");
-  assert.match(submit, /digits \? Number\(digits\) : null/, "빈 값은 null 이어야 한다");
-  assert.match(submit, /goal !== null && goal <= 0/, "0원 목표는 DB도 거절한다");
+  assert.match(submit, /const goal = typed \? typed : null/, "빈 값은 null 이어야 한다");
+  assert.match(submit, /goal !== null && !isValidAmount\(goal\)/, "0원 목표는 DB도 거절한다");
+  assert.equal(readAmount(""), 0, "빈 칸은 0으로 읽혀 null 이 된다");
+});
+
+test("금액은 DB 가 받을 수 있는 크기를 넘지 못한다", () => {
+  /*
+   * amount·monthly_goal 은 postgres integer 다. 화면에서 12자리를 받아 두던 때는
+   * 30억 원이 검증을 통과한 뒤 "저장에 실패했어요" 로만 끝나, 왜 안 되는지 알 수 없었다.
+   */
+  assert.equal(MAX_AMOUNT, 2147483647);
+  assert.ok(isValidAmount(MAX_AMOUNT));
+  assert.ok(!isValidAmount(MAX_AMOUNT + 1), "integer 를 넘으면 DB 가 거절한다");
+  assert.ok(!isValidAmount(0));
+  assert.ok(!isValidAmount(-1));
+  assert.ok(!isValidAmount(1.5));
+  // 넘치게 찍어도 입력칸에서 이미 막힌다.
+  assert.equal(formatAmountInput("999999999999"), formatMoney(MAX_AMOUNT));
+  assert.equal(formatAmountInput("1,234원"), "1,234");
+  assert.equal(formatAmountInput(""), "");
+});
+
+test("지출·고정비·목표가 같은 금액 규칙을 쓴다", () => {
+  // 예전에는 지출·고정비가 12자리, 목표가 10자리로 갈라졌고 셋 다 DB 범위와 어긋났다.
+  assert.doesNotMatch(app, /MAX_DIGITS/, "자릿수로 자르던 방식이 남아 있다");
+  for (const name of ["handleProfileSubmit", "validateExpenseInput", "validateFixedInput"]) {
+    assert.match(fn(name), /isValidAmount/, `${name} 이 공통 규칙을 쓰지 않는다`);
+  }
 });
 
 test("요약 카드의 목표는 입력 폼과 같은 규칙을 따른다", () => {
   // 같은 화면에서 규칙이 갈라지면 어느 쪽이 맞는지 알 수 없다.
   const renderFn = fn("render");
   assert.match(renderFn, /getSelectedMonth\(\) === toMonthKey\(new Date\(\)\)/, "이번 달에만 말해야 한다");
-  assert.match(renderFn, /summarizeGoal\(\{ monthly, memberId: share\.id, goal: getMemberGoal\(share\.id\) \}\)/);
-  assert.match(renderFn, /slot\.goal\.hidden = !goal/, "목표가 없으면 아무것도 보이지 않아야 한다");
+  const 비중칠하기 = fn("paintMemberShares");
+  assert.match(비중칠하기, /summarizeGoal\(\{ monthly, memberId: share\.id, goal: getMemberGoal\(share\.id\) \}\)/);
+  assert.match(비중칠하기, /slot\.goal\.hidden = !goal/, "목표가 없으면 아무것도 보이지 않아야 한다");
   // 요약은 항상 그 달 전체 기준이다. 사람 필터가 걸린 목록으로 계산하면 숫자가 흔들린다.
-  assert.doesNotMatch(renderFn, /summarizeGoal\(\{ monthly: visible/);
+  assert.doesNotMatch(비중칠하기, /summarizeGoal\(\{ monthly: visible/);
 });
 
 test("요약 카드의 목표 줄은 카드를 밀어내지 않는다", () => {
@@ -458,19 +491,39 @@ test("서버에 못 닿은 것만으로는 로그아웃시키지 않는다", () 
   assert.match(fn("boot"), /catch \(error\)[\s\S]*showDataGate\(error\.message, true\)/);
 });
 
-test("고정비가 하나도 반영되지 않으면 알린다", () => {
+test("고정비 반영이 실패하면 알린다 — 일부만 실패해도", () => {
   // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
   assert.match(fn("applyOccurrences"), /failed \+= 1/);
-  assert.match(fn("startApp"), /applied\.failed > 0[\s\S]{0,160}반영하지 못했어요/);
+  // 성공만 알리던 때가 있었다. 그때는 2건 중 1건이 빠져도 "1건을 넣었어요"만 떴다.
+  assert.match(describeApplied({ created: 1, failed: 1 }), /넣었고 1건은 반영하지 못했어요/);
+  assert.match(describeApplied({ created: 0, failed: 2 }), /2건을 반영하지 못했어요/);
+  assert.match(describeApplied({ created: 3, failed: 0 }), /3건을 넣었어요/);
+  assert.equal(describeApplied({ created: 0, failed: 0 }), null);
 });
 
-test("보이지 않는 지출의 메시지로는 목록을 다시 그리지 않는다", () => {
-  // 괜히 그리면 열어 둔 스와이프가 닫힌다.
+test("고정비 반영 결과를 두 경로 모두 같은 문구로 알린다", () => {
+  // 등록 직후 경로는 failed 를 아예 보지 않던 때가 있었다.
+  assert.match(fn("startApp"), /describeApplied\(applied\)/);
+  assert.match(fn("handleFixedSubmit"), /describeApplied\(applied\)/);
+});
+
+test("메시지 한 건에 목록 전체를 다시 그리지 않는다", () => {
   const receive = fn("receiveNote");
   // 모르는 지출이면 세지도 그리지도 않는다. 버리지 않고 맡아 두는 건 아래 별도 검사에서 본다.
-  assert.match(receive, /expense\.id === note\.expenseId\)\) \{[\s\S]{0,140}?return;\n\s*\}/,
+  assert.match(receive, /const expense = getExpenses\(\)\.find[\s\S]{0,120}?if \(!expense\) \{[\s\S]{0,140}?return;\n\s*\}/,
     "우리 가구 지출이 아니면 개수도 건드리면 안 된다");
-  assert.match(receive, /elements\.list\.querySelector\([\s\S]{0,80}\) render\(\)/);
+  // 달라지는 건 그 행의 개수뿐이다. 통째로 갈면 열어 둔 스와이프와 포커스가 사라진다.
+  assert.match(receive, /repaintExpenseRow\(expense\)/);
+  assert.doesNotMatch(receive, /\brender\(\)/, "메시지 한 건에 전체를 다시 그릴 이유가 없다");
+});
+
+test("한 행만 다시 그릴 때 스와이프 상태와 포커스를 잃지 않는다", () => {
+  const repaint = fn("repaintExpenseRow");
+  // openRow 는 요소를 그대로 가리킨다. 열린 행을 갈아 끼우면 사라진 노드를 가리킨 채 남는다.
+  assert.match(repaint, /is-open[\s\S]{0,40}closeOpenRow\(\)/);
+  assert.match(repaint, /hadFocus[\s\S]{0,120}\.focus\(\)/);
+  // 목록에 없는 행이면 할 일이 없다.
+  assert.match(repaint, /if \(!row\) return false/);
 });
 
 test("로그아웃하면 예약된 동기화도 취소한다", () => {
@@ -623,7 +676,7 @@ test("목록으로 돌아가면 날짜 필터가 풀린다", () => {
 
 test("사람과 날짜 필터는 함께 걸릴 수 있다", () => {
   const renderFn = fn("render");
-  assert.match(renderFn, /labels\.join\(" · "\)/, "둘 다 걸리면 이어 붙여 보여야 한다");
+  assert.match(fn("paintLedgerHeading"), /labels\.join\(" · "\)/, "둘 다 걸리면 이어 붙여 보여야 한다");
   assert.match(renderFn, /filterByDate\(byMember, dateFilter\)/, "사람 필터 위에 날짜를 더 건다");
 });
 
@@ -1183,7 +1236,7 @@ test("접는 지점과 펴는 지점이 다르다", () => {
 test("목록 길이와 상관없이 내리면 접는다", () => {
   // 전에는 "접고도 스크롤 여유가 남을 때만" 접었는데, 그러면 목록이 짧은 달에는
   // 아예 접히지 않았다. 짧은 목록일수록 접으면 다 보이므로, 정작 쓸모 있는 경우를 막은 셈이다.
-  assert.match(fn("onScroll"), /!condensed && y > CONDENSE_AT\) setCondensed\(true\)/);
+  assert.match(fn("measure"), /!condensed && y > CONDENSE_AT\) setCondensed\(true\)/);
 });
 
 test("되감긴 것을 사용자가 올린 것으로 읽지 않는다", () => {
@@ -1192,7 +1245,7 @@ test("되감긴 것을 사용자가 올린 것으로 읽지 않는다", () => {
   //
   // 스크롤할 수 있는 거리가 펴는 지점에도 못 미치면 밀려난 것이지 올린 것이 아니다.
   assert.match(fn("userIsAtTop"), /maxScroll >= EXPAND_AT && window\.scrollY < EXPAND_AT/);
-  assert.match(fn("onScroll"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
+  assert.match(fn("measure"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
   // 목록이 바뀔 때도 같은 잣대를 쓴다.
   assert.match(fn("recheckCondense"), /userIsAtTop\(\)/);
 });
@@ -1251,7 +1304,7 @@ test("접힌 줄에서 달 이름은 두 줄로 깨지지 않는다", () => {
 test("시트가 열려 있는 동안에는 머리를 건드리지 않는다", () => {
   // 시트를 열면 본 화면 스크롤이 잠겨 scrollY 가 0 이 된다. 그걸 "맨 위"로 읽으면
   // 달 선택 시트를 여는 순간 뒤에서 머리가 펴진다 — 닫고 돌아오면 화면이 커져 있다.
-  assert.match(fn("onScroll"), /if \(isPageScrollLocked\(\)\) return/);
+  assert.match(fn("measure"), /if \(isPageScrollLocked\(\)\) return/);
   assert.match(app, /export function isPageScrollLocked/);
 });
 
@@ -1268,7 +1321,7 @@ test("붙어 있는 제목 아래로 목록이 비치지 않는다", () => {
   assert.match(css, /\.is-stuck \.section-heading::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
   assert.doesNotMatch(css, /\.is-condensed \.section-heading::after/);
   assert.match(fn("syncStuck"), /getBoundingClientRect\(\)\.top - headerHeight/);
-  assert.match(fn("onScroll"), /syncStuck\(\)/);
+  assert.match(fn("measure"), /syncStuck\(\)/);
 });
 
 test("제목 글자가 바뀌면 붙어 있는 제목을 다시 그리게 한다", () => {
@@ -1281,9 +1334,9 @@ test("제목 글자가 바뀌면 붙어 있는 제목을 다시 그리게 한다
   // 건수만 보면 모자란다 — 제목에는 고른 사람 이름도 붙어서, 건수가 그대로여도
   // 필터를 바꾸면 글자 폭이 달라진다. 제목 전체를 봐야 한다.
   assert.match(fn("repaintLedgerTitle"), /elements\.ledgerTitle\?\.textContent/);
-  const renderFn = fn("render");
-  const 필터 = renderFn.indexOf("ledgerFilter.hidden");
-  const 다시그리기 = renderFn.indexOf("repaintLedgerTitle()");
+  const 제목칠하기 = fn("paintLedgerHeading");
+  const 필터 = 제목칠하기.indexOf("ledgerFilter.hidden");
+  const 다시그리기 = 제목칠하기.indexOf("repaintLedgerTitle()");
   assert.ok(다시그리기 > 필터, "건수와 필터를 모두 적은 뒤에 봐야 한다");
 });
 
@@ -1319,4 +1372,62 @@ test("사람을 고른 강조가 잘리지 않는다", () => {
   const 넓힘 = Number(css.match(/\.overview > \.member-summary \{[^}]*padding-inline: (\d+)px/)[1]);
   assert.ok(넓힘 >= 번짐, `잘리는 상자를 ${번짐}px 만큼은 넓혀야 한다 (지금 ${넓힘}px)`);
   assert.match(css, /\.overview > \.member-summary \{[^}]*margin-inline: -\d+px/, "넓힌 만큼 자리는 되돌린다");
+});
+
+test("목록·캘린더 토글은 보이는 크기보다 넓게 눌린다", () => {
+  // 알약을 크게 그리면 제목 줄이 두꺼워진다. 보이는 크기는 두고 누를 자리만 넓힌다.
+  // 가로로도 넓히면 두 버튼의 자리가 겹쳐 경계에서 어느 쪽이 눌릴지 알 수 없어진다.
+  const 높이 = Number(css.match(/\.view-toggle button \{[^}]*height: (\d+)px/)[1]);
+  const 넓힘 = Number(css.match(/\.view-toggle button::after \{[^}]*inset: -(\d+)px 0/)[1]);
+  assert.ok(높이 + 넓힘 * 2 >= 44, `누를 자리가 ${높이 + 넓힘 * 2}px 로 44px 에 못 미친다`);
+});
+
+test("스크롤 측정은 한 프레임에 한 번만 한다", () => {
+  // scrollHeight·getBoundingClientRect 는 읽을 때마다 레이아웃을 다시 계산하게 만든다.
+  // passive 는 스크롤을 막지 않겠다는 약속일 뿐, 읽는 값이 비싸다는 사실은 바꾸지 않는다.
+  const scroll = fn("onScroll");
+  assert.match(scroll, /if \(queued\) return/);
+  assert.match(scroll, /requestAnimationFrame\(\(\) => \{[\s\S]*?queued = false;[\s\S]*?measure\(\)/);
+});
+
+test("밀린 고정비를 한 건씩 줄 세우지 않는다", () => {
+  // 고정비 10개가 열두 달 밀리면 백스무 번을 차례로 기다려 첫 화면이 몇 초 늦는다.
+  const apply = fn("applyOccurrences");
+  assert.match(apply, /Promise\.all\(occurrences\.slice\(from, from \+ APPLY_BATCH\)\.map\(applyOne\)\)/);
+  // 그렇다고 전부 한꺼번에 던지지도 않는다.
+  assert.match(app, /const APPLY_BATCH = \d+;/);
+  assert.ok(APPLY_BATCH_SIZE > 1 && APPLY_BATCH_SIZE <= 12, `한 번에 ${APPLY_BATCH_SIZE}건은 과하다`);
+  // 한 건이 실패해도 나머지는 살린다.
+  assert.match(fn("applyOne"), /catch \{[\s\S]*?return null/);
+});
+
+test("전체 화면을 열면 뒤의 가계부는 탭에서 빠진다", () => {
+  // 시트에는 Tab 을 가두는 trapTab 이 있지만 화면에는 없어 커서가 덮인 목록 속으로 사라졌다.
+  assert.match(fn("showPage"), /elements\.appShell\.inert = true/);
+  assert.match(fn("showPage"), /page\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(fn("hidePage"), /elements\.appShell\.inert = false/);
+  assert.match(fn("closePageNow"), /elements\.appShell\.inert = false/);
+});
+
+test("접힌 요약 카드는 탭 순서에서도 빠진다", () => {
+  // opacity 0 · 높이 0 · pointer-events none 중 어느 것도 포커스를 막지 못한다.
+  assert.match(fn("setCondensed"), /elements\.overview\.inert = next/);
+});
+
+test("지출 내용면은 키보드로도 누를 수 있다", () => {
+  // div 였을 때는 클릭 위임으로만 대화가 열려, 키보드·스위치 사용자는 대화를 못 열었다.
+  assert.match(fn("createExpenseRow"), /<button class="expense-surface swipe-surface" type="button"/);
+  // 버튼 기본 모양(가운데 정렬·테두리)을 걷어내지 않으면 div 였을 때와 달라 보인다.
+  assert.match(css, /\.expense-surface \{[^}]*text-align: left/);
+  assert.match(css, /\.expense-surface \{[^}]*border: 0/);
+});
+
+test("고정비를 채우기 전에 구독을 건다", () => {
+  // 뒤에 두면 그 사이 상대가 남긴 말이 어느 쪽에도 안 잡힌다.
+  // 이미 불러온 개수에도 없고, 구독은 지나간 일을 들려주지 않는다.
+  const start = fn("startApp");
+  assert.ok(
+    start.indexOf("watchForChanges") < start.indexOf("applyDueFixedCosts"),
+    "구독이 고정비 반영보다 뒤에 있다",
+  );
 });

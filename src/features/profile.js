@@ -3,13 +3,13 @@ import { formatMoney } from "../expenses.js";
 import { PALETTE, getMembers } from "../members.js";
 import { paintMembers, render } from "../render.js";
 import { updateProfile } from "../data/remote.js";
+import { formatAmountInput, isValidAmount, readAmount } from "../money.js";
 import { reloadMembers } from "../store.js";
 import { hidePage, showPage } from "../ui/page.js";
 import { showToast } from "../ui/toast.js";
 import { getProfile, updateCurrentProfile } from "./auth.js";
 
 const MAX_NAME = 12;
-const GOAL_MAX_DIGITS = 10;
 
 let pickedColor = null;
 
@@ -82,8 +82,7 @@ export function handleNameInput() {
 
 /** 금액은 지출 폼과 같은 방식으로 콤마를 붙여 준다. */
 export function handleGoalInput(event) {
-  const digits = event.target.value.replace(/\D/g, "").slice(0, GOAL_MAX_DIGITS);
-  event.target.value = digits ? formatMoney(Number(digits)) : "";
+  event.target.value = formatAmountInput(event.target.value);
   elements.profileError.textContent = "";
 }
 
@@ -103,9 +102,9 @@ export async function handleProfileSubmit(event) {
   }
 
   // 비워 두면 목표를 쓰지 않는다는 뜻이다. 0원 목표는 뜻이 없어 DB도 거절한다.
-  const digits = elements.profileGoal.value.replace(/\D/g, "");
-  const goal = digits ? Number(digits) : null;
-  if (goal !== null && goal <= 0) {
+  const typed = readAmount(elements.profileGoal.value);
+  const goal = typed ? typed : null;
+  if (goal !== null && !isValidAmount(goal)) {
     elements.profileError.textContent = "목표는 1원 이상이어야 해요. 쓰지 않으려면 비워 주세요.";
     elements.profileGoal.focus();
     return;

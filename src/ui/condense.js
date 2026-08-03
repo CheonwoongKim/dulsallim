@@ -37,6 +37,12 @@ function setCondensed(next) {
   if (next === condensed) return;
   condensed = next;
   elements.appShell.classList.toggle("is-condensed", next);
+  /*
+   * 접힌 요약 카드는 눈에서만 사라진다.
+   * opacity 0 · 높이 0 · pointer-events none 중 어느 것도 탭 순서와 낭독기에서 빼 주지 않아,
+   * 스크롤한 뒤 Tab 을 누르면 보이지 않는 카드로 커서가 들어간다.
+   */
+  if (elements.overview) elements.overview.inert = next;
 }
 
 /**
@@ -74,7 +80,7 @@ function userIsAtTop() {
   return maxScroll >= EXPAND_AT && window.scrollY < EXPAND_AT;
 }
 
-function onScroll() {
+function measure() {
   /*
    * 시트가 열려 있으면 본 화면 스크롤이 잠겨 scrollY 가 0 이 된다.
    * 그걸 "맨 위로 올라갔다"로 읽으면, 달 선택 시트를 여는 순간 뒤에서 머리가 펴진다.
@@ -88,7 +94,31 @@ function onScroll() {
   syncStuck();
 }
 
+/**
+ * 스크롤은 한 프레임에 여러 번 울린다.
+ *
+ * 그때마다 scrollHeight 와 getBoundingClientRect 를 읽으면 브라우저가 레이아웃을 다시 계산한다.
+ * passive 는 스크롤을 막지 않겠다는 약속일 뿐, 읽는 값이 비싸다는 사실은 바꾸지 않는다.
+ * 화면은 한 프레임에 한 번만 바뀌므로 재는 것도 그만큼이면 된다.
+ */
+let queued = false;
+
+function onScroll() {
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(() => {
+    queued = false;
+    measure();
+  });
+}
+
+let watching = false;
+
 export function watchScroll() {
+  // 같은 탭에서 로그아웃·로그인을 되풀이하면 startApp 이 다시 불린다.
+  // 막지 않으면 스크롤 한 번에 같은 측정이 로그인 횟수만큼 돈다.
+  if (watching) return;
+  watching = true;
   syncHeaderHeight();
   new ResizeObserver(() => {
     syncHeaderHeight();

@@ -50,6 +50,8 @@ import {
   setRowOpen,
   startSwipe,
 } from "./ui/swipe.js";
+import { describeApplied } from "./fixed-costs.js";
+import { formatAmountInput } from "./money.js";
 import { closePageNow, getOpenPage, hidePage } from "./ui/page.js";
 import {
   handleGoalInput,
@@ -110,8 +112,6 @@ import {
   showFormView,
   updateFixedHint,
 } from "./features/fixed-sheet.js";
-
-const AMOUNT_MAX_DIGITS = 12;
 
 function closeActiveSheet() {
   if (!elements.sheet.hidden) closeForm();
@@ -264,8 +264,7 @@ elements.fixedDay.addEventListener("input", (event) => {
   updateFixedHint();
 });
 elements.fixedAmount.addEventListener("input", (event) => {
-  const digits = event.target.value.replace(/\D/g, "").slice(0, AMOUNT_MAX_DIGITS);
-  event.target.value = digits ? formatMoney(Number(digits)) : "";
+  event.target.value = formatAmountInput(event.target.value);
   elements.fixedAmountError.textContent = "";
 });
 elements.fixedItem.addEventListener("input", () => {
@@ -295,8 +294,7 @@ elements.form.querySelectorAll('input[name="member"]').forEach((radio) => {
   radio.addEventListener("change", syncGoalNotice);
 });
 elements.amount.addEventListener("input", (event) => {
-  const digits = event.target.value.replace(/\D/g, "").slice(0, AMOUNT_MAX_DIGITS);
-  event.target.value = digits ? formatMoney(Number(digits)) : "";
+  event.target.value = formatAmountInput(event.target.value);
   elements.amountError.textContent = "";
   syncGoalNotice();
 });
@@ -482,17 +480,21 @@ async function startApp() {
   watchScroll();
   paintMembers();
 
-  // 반영일이 지난 고정비를 먼저 채운 뒤 그린다.
-  const applied = await applyDueFixedCosts();
-  render();
+  /*
+   * 고정비를 채우기 전에 귀부터 연다.
+   *
+   * 뒤에 두면 그 사이 상대가 남긴 말이 어느 쪽에도 안 잡힌다 — 이미 불러온 개수에도 없고,
+   * 구독은 지나간 일을 들려주지 않는다. 밀린 고정비가 많을수록 그 틈이 길어진다.
+   */
   watchForChanges(profile.household_id);
 
-  if (applied.created > 0) {
-    showToast(`이번 달 고정비 ${applied.created}건을 넣었어요`);
-  } else if (applied.failed > 0) {
-    // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
-    showToast(`고정비 ${applied.failed}건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요`);
-  }
+  // 반영일이 지난 고정비를 채운 뒤 그린다.
+  const applied = await applyDueFixedCosts();
+  render();
+
+  // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
+  const notice = describeApplied(applied);
+  if (notice) showToast(notice);
 }
 
 elements.retryLoad.addEventListener("click", () => (getProfile() ? startApp() : boot()));

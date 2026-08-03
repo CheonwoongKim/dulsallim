@@ -1,10 +1,12 @@
 import { elements } from "../dom.js";
 import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
 import { getMemberName } from "../members.js";
+import { isValidAmount, readAmount } from "../money.js";
 import {
   MAX_DAY,
   MIN_DAY,
   collectDueOccurrences,
+  describeApplied,
   firstApplicableMonth,
   isValidDay,
   nextOccurrenceDate,
@@ -146,7 +148,7 @@ function validateFixedInput({ day, item, amount }) {
     elements.fixedItemError.textContent = "지출 항목을 입력해 주세요.";
     firstInvalidField = firstInvalidField || elements.fixedItem;
   }
-  if (!Number.isSafeInteger(amount) || amount <= 0) {
+  if (!isValidAmount(amount)) {
     elements.fixedAmountError.textContent = "1원 이상의 금액을 입력해 주세요.";
     firstInvalidField = firstInvalidField || elements.fixedAmount;
   }
@@ -159,7 +161,7 @@ export async function handleFixedSubmit(event) {
   const input = {
     day: Number(String(data.get("day") || "").replace(/\D/g, "")),
     item: String(data.get("item") || "").trim(),
-    amount: Number(String(data.get("amount") || "").replace(/\D/g, "")),
+    amount: readAmount(data.get("amount")),
   };
 
   const firstInvalidField = validateFixedInput(input);
@@ -194,8 +196,13 @@ export async function handleFixedSubmit(event) {
 
   showListView();
   // 등록·수정 직후 반영일이 이미 지난 달이 있을 수 있다.
-  if ((await applyDueFixedCosts()).created > 0) render();
-  showToast(existing ? "고정비를 수정했어요. 이미 기록된 지출은 그대로예요" : "고정비를 등록했어요");
+  const applied = await applyDueFixedCosts();
+  if (applied.created > 0) render();
+  // 반영에 실패한 게 있으면 등록 성공만 알리고 넘어가지 않는다.
+  const notice = describeApplied(applied);
+  showToast(
+    notice ?? (existing ? "고정비를 수정했어요. 이미 기록된 지출은 그대로예요" : "고정비를 등록했어요"),
+  );
 }
 
 export async function removeFixedTemplate(id) {
