@@ -119,6 +119,7 @@ begin
 end;
 $$;
 
+revoke execute on function fire_nags(uuid) from public, anon;
 grant execute on function fire_nags(uuid) to authenticated;
 
 -- ── 확인 ────────────────────────────────────────────────────────

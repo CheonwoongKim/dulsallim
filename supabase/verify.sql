@@ -166,9 +166,22 @@ with checks as (
 
   union all
 
-  -- 13) 울린 기록에 직접 손댈 수 없는가 (열려 있으면 잔소리를 지우고 다시 울릴 수 있다)
+  -- 13) 서버 함수를 비로그인이 부를 수 없는가
+  -- 표와 달리 함수는 실행 권한이 기본으로 PUBLIC 에 열려 있다. grant 만으로는 닫히지 않는다.
   select
     13,
+    '함수 실행 차단',
+    count(*)::text || ' / 3 잠김',
+    case when count(*) = 3 then 'OK' else 'FAIL' end,
+    'migration-hardening.sql 의 revoke execute 를 실행하세요'
+  from (values ('reset_household()'), ('apply_fixed_cost(uuid, date, date)'), ('fire_nags(uuid)')) as f(sig)
+  where not has_function_privilege('anon', f.sig, 'execute')
+
+  union all
+
+  -- 14) 울린 기록에 직접 손댈 수 없는가 (열려 있으면 잔소리를 지우고 다시 울릴 수 있다)
+  select
+    14,
     '울린 기록 보호',
     count(*)::text || ' 건 남음',
     case when count(*) = 0 then 'OK' else 'FAIL' end,

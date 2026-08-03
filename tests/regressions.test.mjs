@@ -957,3 +957,22 @@ test("아직 모르는 지출의 메시지는 버리지 않고 맡아 둔다", (
   // 다시 읽은 "뒤", 그리기 "전"이어야 개수가 맞는다.
   assert.match(app, /await reloadExpenses\(\);[\s\S]{0,200}?flushPendingNotes\(\);[\s\S]{0,80}?render\(\);/);
 });
+
+test("서버 함수는 비로그인이 부를 수 없다", async () => {
+  // 표와 달리 함수는 실행 권한이 기본으로 PUBLIC 에 열려 있다.
+  // grant 만 적어 두면 anon key 를 아는 누구나 부를 수 있고, 이 셋은 definer 라 소유자로 돈다.
+  const { readFile } = await import("node:fs/promises");
+  const 함수 = ["reset_household", "apply_fixed_cost", "fire_nags"];
+
+  for (const file of ["schema.sql", "migration-hardening.sql", "migration-nag.sql"]) {
+    const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
+    for (const name of 함수) {
+      if (!sql.includes(`grant execute on function ${name}`)) continue;
+      assert.match(
+        sql,
+        new RegExp(`revoke execute on function ${name}\\([^)]*\\)\\s*from public`),
+        `${file}: ${name} 의 PUBLIC 실행 권한을 닫지 않았다`,
+      );
+    }
+  }
+});

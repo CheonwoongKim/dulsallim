@@ -401,6 +401,13 @@ begin
 end;
 $$;
 
+-- 표와 달리 함수는 실행 권한이 기본으로 PUBLIC 에 열려 있다.
+-- grant 만 적어 두면 anon key 를 아는 사람 누구나 부를 수 있고,
+-- 이 셋은 definer 라 소유자 권한으로 돈다. 먼저 닫고 필요한 역할에만 연다.
+revoke execute on function reset_household()                  from public, anon;
+revoke execute on function apply_fixed_cost(uuid, date, date) from public, anon;
+revoke execute on function fire_nags(uuid)                    from public, anon;
+
 grant execute on function reset_household()                    to authenticated;
 grant execute on function apply_fixed_cost(uuid, date, date)   to authenticated;
 grant execute on function fire_nags(uuid)                      to authenticated;
