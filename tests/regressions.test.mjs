@@ -1180,20 +1180,21 @@ test("접는 지점과 펴는 지점이 다르다", () => {
   assert.ok(펴기 < 접기, `펴는 지점 ${펴기} 이 접는 지점 ${접기} 보다 낮아야 한다`);
 });
 
-test("접고도 펴는 지점보다 위에 남을 수 있을 때만 접는다", () => {
-  // 짧은 화면에서 접으면 문서가 스크롤 위치보다 짧아져 브라우저가 되돌리고,
-  // 펴는 지점 아래로 내려가면 곧바로 도로 펴진다. 접었다 펴지는 그 튕김을 막는다.
-  assert.match(fn("onScroll"), /roomToCondense\(\)/);
-  assert.match(fn("roomToCondense"), /maxScroll - shrinkAmount\(\) >= EXPAND_AT/);
-  // 줄어드는 양은 기기마다 다르다. 상수로 박아 두면 노치 기기에서 어긋난다.
-  assert.match(fn("shrinkAmount"), /expandedHeight - condensedHeight/);
+test("목록 길이와 상관없이 내리면 접는다", () => {
+  // 전에는 "접고도 스크롤 여유가 남을 때만" 접었는데, 그러면 목록이 짧은 달에는
+  // 아예 접히지 않았다. 짧은 목록일수록 접으면 다 보이므로, 정작 쓸모 있는 경우를 막은 셈이다.
+  assert.match(fn("onScroll"), /!condensed && y > CONDENSE_AT\) setCondensed\(true\)/);
 });
 
-test("목록이 짧아졌다고 접힌 화면을 도로 펴지 않는다", () => {
-  // roomToCondense 는 "펼친 상태에서 접어도 되는가"를 재는 자다. 이미 접힌 상태의
-  // 여유를 그 자로 재면 멀쩡한데도 펴 버린다 — 달을 바꾸면 화면이 통째로 커졌다.
-  assert.doesNotMatch(fn("recheckCondense"), /roomToCondense/);
-  assert.match(fn("recheckCondense"), /window\.scrollY < EXPAND_AT/);
+test("되감긴 것을 사용자가 올린 것으로 읽지 않는다", () => {
+  // 접히면 문서가 짧아져 브라우저가 스크롤을 되감는다. 그걸 "위로 올렸다"로 읽으면
+  // 곧바로 도로 펴진다 — 접었다 펴지는 튕김이다. 막을 곳은 접는 쪽이 아니라 펴는 쪽이다.
+  //
+  // 스크롤할 수 있는 거리가 펴는 지점에도 못 미치면 밀려난 것이지 올린 것이 아니다.
+  assert.match(fn("userIsAtTop"), /maxScroll >= EXPAND_AT && window\.scrollY < EXPAND_AT/);
+  assert.match(fn("onScroll"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
+  // 목록이 바뀔 때도 같은 잣대를 쓴다.
+  assert.match(fn("recheckCondense"), /userIsAtTop\(\)/);
 });
 
 test("접어도 달 이동은 남긴다", () => {

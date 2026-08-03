@@ -15,21 +15,9 @@ import { isPageScrollLocked } from "./scroll-lock.js";
 const CONDENSE_AT = 72;
 const EXPAND_AT = 24;
 
-/**
- * 접히면 문서가 머리 높이만큼 짧아진다. 그 탓에 브라우저가 스크롤 위치를 되돌려
- * 펴는 지점 아래로 내려가면 도로 펴진다 — 접었다가 곧바로 펴지는 그 튕김이다.
- * 그러니 "접고 난 뒤에도 펴는 지점보다 위에 남아 있을 수 있는가"를 본다.
- *
- * 줄어드는 양은 기기마다 다르다(노치 여백). 실제로 접힐 때 재 두고, 알기 전에는 넉넉히 잡는다.
- */
-const FALLBACK_SHRINK = 180;
-const SAFETY = 8;
-
 let condensed = false;
 let stuck = false;
 let headerHeight = 0;
-let expandedHeight = 0;
-let condensedHeight = 0;
 
 /**
  * 지출 내역 제목이 머리 바로 밑에 붙으려면 머리 높이를 알아야 한다.
@@ -43,13 +31,6 @@ function syncHeaderHeight() {
   if (!height) return;
   headerHeight = height;
   document.documentElement.style.setProperty("--header-h", `${height}px`);
-  // 전환 도중 값도 들어오지만 마지막 값이 남으므로, 끝나면 저절로 맞는다.
-  if (condensed) condensedHeight = height;
-  else expandedHeight = height;
-}
-
-function shrinkAmount() {
-  return expandedHeight && condensedHeight ? expandedHeight - condensedHeight : FALLBACK_SHRINK;
 }
 
 function setCondensed(next) {
@@ -75,9 +56,22 @@ function syncStuck() {
   elements.appShell.classList.toggle("is-stuck", next);
 }
 
-function roomToCondense() {
+/**
+ * 펴도 되는 상황인가.
+ *
+ * 접히면 문서가 머리 높이만큼 짧아지고, 브라우저는 스크롤 위치를 그만큼 되감는다.
+ * 그 되감김을 "사용자가 위로 올렸다"로 읽으면 곧바로 도로 펴진다 — 접었다 펴지는 튕김이다.
+ *
+ * 전에는 이걸 "여유가 있을 때만 접기"로 막았는데, 그러면 목록이 짧은 달에는 아예 접히지
+ * 않았다. 접기가 가장 쓸모 있는 경우를 막은 셈이다(짧은 목록일수록 접으면 다 보인다).
+ * 막을 곳은 접는 쪽이 아니라 펴는 쪽이다.
+ *
+ * 스크롤할 수 있는 거리가 펴는 지점에도 못 미치면, 위에 있는 건 사용자가 올린 것이
+ * 아니라 밀려난 것이다. 그때는 펴지 않는다.
+ */
+function userIsAtTop() {
   const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-  return maxScroll - shrinkAmount() >= EXPAND_AT + SAFETY;
+  return maxScroll >= EXPAND_AT && window.scrollY < EXPAND_AT;
 }
 
 function onScroll() {
@@ -88,8 +82,9 @@ function onScroll() {
    */
   if (isPageScrollLocked()) return;
   const y = window.scrollY;
-  if (!condensed && y > CONDENSE_AT && roomToCondense()) setCondensed(true);
-  else if (condensed && y < EXPAND_AT) setCondensed(false);
+  // 목록 길이와 상관없이, 내리면 접는다.
+  if (!condensed && y > CONDENSE_AT) setCondensed(true);
+  else if (condensed && userIsAtTop()) setCondensed(false);
   syncStuck();
 }
 
@@ -107,11 +102,9 @@ export function watchScroll() {
 /**
  * 목록이 바뀌면 문서 길이도 바뀐다. 다시 그린 뒤 불러 준다.
  *
- * 여기서 roomToCondense 를 쓰면 안 된다. 그건 "펼친 상태에서 접어도 되는가"를 재는 자라,
- * 이미 접힌 상태의 여유를 그 자로 재면 멀쩡한데도 펴 버린다.
- * (달을 바꿔 목록이 짧아지면 접힌 화면이 통째로 도로 커졌다)
- * 접힌 채로 볼 자리가 남아 있으면 그대로 둔다. 맨 위로 밀려났을 때만 편다.
+ * 목록이 짧아졌다고 펴지 않는다. 달을 바꿔 목록이 짧아지면 접힌 화면이 통째로
+ * 도로 커지던 적이 있었다. 사용자가 실제로 맨 위로 올렸을 때만 편다.
  */
 export function recheckCondense() {
-  if (condensed && window.scrollY < EXPAND_AT) setCondensed(false);
+  if (condensed && userIsAtTop()) setCondensed(false);
 }
