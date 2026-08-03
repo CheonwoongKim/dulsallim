@@ -5,6 +5,7 @@ import { deleteNag, fetchNags, insertNag, setNagEnabled, updateNag } from "../da
 import { getContext } from "../store.js";
 import { escapeHtml } from "../ui/escape.js";
 import { hidePage, showPage } from "../ui/page.js";
+import { hideSheet, showSheet } from "../ui/sheet.js";
 import { showToast } from "../ui/toast.js";
 import { getProfile, updateCurrentProfile } from "./auth.js";
 
@@ -32,8 +33,13 @@ function paintTarget(target) {
 }
 
 function paintList() {
+  // 다 채웠으면 더 넣을 수 없다는 걸 버튼과 안내로 함께 알린다.
+  const full = nags.length >= MAX_NAGS;
+  elements.addNag.disabled = full;
+  elements.nagFull.hidden = !full;
+
   if (!nags.length) {
-    elements.nagList.innerHTML = `<p class="nag-empty">아직 심어 둔 말이 없어요.</p>`;
+    elements.nagList.innerHTML = `<p class="nag-empty">아직 심어 둔 말이 없어요. 오른쪽 위 + 로 추가하세요.</p>`;
     return;
   }
   elements.nagList.innerHTML = nags
@@ -51,33 +57,47 @@ function paintList() {
     .join("");
 }
 
-function showAddForm() {
-  editingId = null;
+/** @param {object|null} nag 넘기면 수정 모드로 연다. */
+function openNagSheet(nag = null) {
+  editingId = nag?.id || null;
   elements.nagForm.reset();
-  elements.nagFormMode.textContent = "새 잔소리";
-  elements.nagSubmitLabel.textContent = "추가";
-  elements.nagCancel.hidden = true;
+  elements.nagFormMode.textContent = nag ? "잔소리 수정" : "새 잔소리";
+  elements.nagFormTitle.textContent = nag ? "무슨 말로 바꿀까요?" : "언제 무슨 말을 할까요?";
+  elements.nagSubmitLabel.textContent = nag ? "변경사항 저장" : "추가";
+  elements.nagPercent.value = nag ? String(nag.percent) : "";
+  elements.nagBody.value = nag?.body || "";
   elements.nagError.textContent = "";
-  // 다 채웠으면 더 넣을 자리가 없다.
-  elements.nagForm.hidden = nags.length >= MAX_NAGS;
+  syncNagHint();
+  elements.nagForm.scrollTop = 0;
+  showSheet(elements.nagSheet);
+  setTimeout(() => (nag ? elements.nagBody : elements.nagPercent).focus(), 260);
+}
+
+export function addNag() {
+  if (nags.length >= MAX_NAGS) return;
+  openNagSheet();
 }
 
 export function editNag(id) {
   const nag = nags.find((current) => current.id === id);
-  if (!nag) return;
-  editingId = id;
-  elements.nagForm.hidden = false;
-  elements.nagFormMode.textContent = "잔소리 수정";
-  elements.nagSubmitLabel.textContent = "변경사항 저장";
-  elements.nagCancel.hidden = false;
-  elements.nagPercent.value = String(nag.percent);
-  elements.nagBody.value = nag.body;
-  elements.nagError.textContent = "";
-  elements.nagBody.focus();
+  if (nag) openNagSheet(nag);
 }
 
-export function cancelEdit() {
-  showAddForm();
+export function closeNagSheet() {
+  hideSheet(elements.nagSheet, () => {
+    editingId = null;
+  });
+}
+
+/** 적은 구간이 상대 목표로 얼마인지 미리 알려 준다. 70%가 감이 안 오기 때문이다. */
+export function syncNagHint() {
+  const target = getTarget();
+  const percent = Number(elements.nagPercent.value.replace(/\D/g, ""));
+  if (!target?.goal || !percent) {
+    elements.nagHint.textContent = "";
+    return;
+  }
+  elements.nagHint.textContent = `${target.name} 님이 ${formatMoney(Math.round((target.goal * percent) / 100))}원을 넘길 때`;
 }
 
 /** 설정 메뉴에 몇 개를 심어 뒀는지 알려 준다. */
@@ -102,7 +122,6 @@ export async function openNagPage() {
   }
   paintList();
   paintSummary(target);
-  showAddForm();
 }
 
 export async function toggleNagEnabled(enabled) {
@@ -153,7 +172,7 @@ export async function handleNagSubmit(event) {
 
   paintList();
   paintSummary(target);
-  showAddForm();
+  closeNagSheet();
 }
 
 export async function removeNag(id) {
@@ -166,7 +185,6 @@ export async function removeNag(id) {
   }
   paintList();
   paintSummary(getTarget());
-  showAddForm();
 }
 
 export { hidePage as closeNagPage };

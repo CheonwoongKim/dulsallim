@@ -60,11 +60,13 @@ import {
 } from "./features/profile.js";
 import { handleReset, openSettingsPage, syncResetButton } from "./features/settings.js";
 import {
-  cancelEdit,
+  addNag,
+  closeNagSheet,
   editNag,
   handleNagSubmit,
   openNagPage,
   removeNag,
+  syncNagHint,
   toggleNagEnabled,
 } from "./features/nag.js";
 import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "./features/analysis.js";
@@ -99,6 +101,7 @@ function closeActiveSheet() {
   if (!elements.monthSheet.hidden) closeMonthSheet();
   if (!elements.fixedSheet.hidden) closeFixedSheet();
   if (!elements.notesSheet.hidden) closeNotes();
+  if (!elements.nagSheet.hidden) closeNagSheet();
 }
 
 /* ── 상단: 사람 필터 · 월 이동 ─────────────────────────────── */
@@ -190,11 +193,13 @@ elements.profilePalette.addEventListener("click", (event) => {
 });
 elements.openNag.addEventListener("click", openNagPage);
 elements.nagEnabled.addEventListener("change", (event) => toggleNagEnabled(event.target.checked));
+elements.addNag.addEventListener("click", addNag);
+closeOnPress(elements.closeNagSheet, closeNagSheet);
 elements.nagForm.addEventListener("submit", handleNagSubmit);
-elements.nagCancel.addEventListener("click", cancelEdit);
 elements.nagPercent.addEventListener("input", (event) => {
   event.target.value = event.target.value.replace(/\D/g, "").slice(0, 3);
   elements.nagError.textContent = "";
+  syncNagHint();
 });
 elements.nagBody.addEventListener("input", () => {
   elements.nagError.textContent = "";

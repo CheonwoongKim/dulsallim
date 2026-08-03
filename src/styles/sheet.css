@@ -125,6 +125,11 @@
 /* 시트 안에서 스크롤되는 영역(지출 폼 · 월 그리드 · 고정비). 헤더는 바깥에 고정된다. */
 .sheet-scroll {
   display: grid;
+  /*
+   * 시트 안 항목 사이 간격. 폼마다 id 로 따로 정하면 새 시트를 만들 때 꼭 빠뜨린다.
+   * (실제로 잔소리 시트에서 안내문과 다음 라벨이 0px 로 붙었다.)
+   */
+  gap: 21px;
   min-height: 0;
   padding: 0 22px max(24px, env(safe-area-inset-bottom));
   overflow-x: hidden;
@@ -139,11 +144,6 @@
 /* 키보드가 내려가며 시트가 움직이는 동안 탭이 엉뚱한 입력에 새지 않게 한다. */
 .sheet-scroll.is-settling {
   pointer-events: none;
-}
-
-#expense-form,
-#fixed-form {
-  gap: 21px;
 }
 
 #fixed-list-view {

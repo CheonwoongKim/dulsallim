@@ -9,7 +9,13 @@ const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** 열릴 수 있는 시트 전부. 포커스 가두기와 드래그 배선이 이 목록을 따른다. */
-export const SHEETS = [elements.sheet, elements.monthSheet, elements.fixedSheet, elements.notesSheet];
+export const SHEETS = [
+  elements.sheet,
+  elements.monthSheet,
+  elements.fixedSheet,
+  elements.notesSheet,
+  elements.nagSheet,
+];
 
 let lastFocusedElement = null;
 let closeTimer = null;

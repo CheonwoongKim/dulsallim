@@ -809,10 +809,39 @@ test("잔소리는 다섯 개까지, 같은 구간에 둘을 둘 수 없다", as
   const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
   assert.match(sql, /unique index[^;]*nags \(author_id, percent\)/);
   assert.match(app, /const MAX_NAGS = 5/);
-  assert.match(fn("showAddForm"), /elements\.nagForm\.hidden = nags\.length >= MAX_NAGS/);
+  assert.match(fn("paintList"), /elements\.addNag\.disabled = full/, "다 찼으면 추가 버튼이 잠겨야 한다");
+  assert.match(fn("addNag"), /nags\.length >= MAX_NAGS\) return/);
 });
 
 test("잔소리 스위치는 저장에 실패하면 되돌아간다", () => {
   // 켠 줄 알았는데 안 켜져 있으면 안 된다.
   assert.match(fn("toggleNagEnabled"), /catch \(error\)[\s\S]*elements\.nagEnabled\.checked = !enabled/);
+});
+
+test("잔소리 입력은 목록에 밀리지 않는 자리에 있다", () => {
+  // 목록 아래에 폼을 두면 다섯 개가 쌓였을 때 화면 밖으로 밀린다.
+  assert.match(html, /<header class="page-head">[\s\S]*?id="add-nag"[\s\S]*?<\/header>/, "머리에 추가 버튼이 있어야 한다");
+  assert.match(css, /\.page-head \{[^}]*position: sticky/, "머리가 붙어 있어야 늘 닿는다");
+  assert.match(html, /<section class="sheet" id="nag-sheet"[^>]*aria-modal="true"/);
+  assert.match(app, /SHEETS = \[[\s\S]*?elements\.nagSheet[\s\S]*?\]/, "다른 시트와 같은 처리를 받아야 한다");
+  assert.match(app, /closeOnPress\(elements\.closeNagSheet, closeNagSheet\)/);
+});
+
+test("잔소리 스위치는 보기만 토글이고 알맹이는 체크박스다", () => {
+  // 화면 낭독기와 키보드에는 그대로 체크박스로 보여야 한다.
+  assert.match(html, /<input type="checkbox" id="nag-enabled" class="switch-input"/);
+  assert.match(css, /\.switch-input:checked \+ \.switch \{[^}]*background: var\(--accent\)/);
+  assert.match(css, /\.switch-input:focus-visible \+ \.switch \{[^}]*outline/, "키보드 포커스가 보여야 한다");
+});
+
+test("잠긴 아이콘 버튼은 어느 화면에서든 잠겨 보인다", () => {
+  // 화면마다 따로 정하면 새 화면에서 빠뜨린다.
+  assert.match(css, /\.icon-button:disabled \{[^}]*opacity/);
+  assert.doesNotMatch(css, /#[a-z-]+ \.icon-button:disabled/, "특정 화면에만 걸어 두면 안 된다");
+});
+
+test("시트 안 항목 간격은 폼마다 따로 정하지 않는다", () => {
+  // id 로 하나씩 걸어 두면 새 시트를 만들 때 빠뜨려 라벨이 서로 붙는다.
+  assert.match(css, /\.sheet-scroll \{[\s\S]*?gap:\s*\d+px/);
+  assert.doesNotMatch(css, /#expense-form,\s*\n#fixed-form \{[^}]*gap/);
 });
