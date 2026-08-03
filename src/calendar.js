@@ -1,5 +1,3 @@
-import { formatMoney } from "./expenses.js";
-
 export const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 /**
@@ -39,18 +37,17 @@ export function sumByDate(expenses) {
 }
 
 /**
- * 좁은 칸(50px 남짓)에 들어가도록 접은 금액.
- * `1,234,567`은 어떻게 해도 안 들어간다. 만 단위로 접되 만 미만은 그대로 둔다 —
- * `0.5만`보다 `4,500`이 읽기 쉽다.
+ * 좁은 칸(50px 남짓)에 들어가도록 접은 금액. 언제나 만 단위로 적는다.
+ *
+ * `1,234,567`은 어떻게 해도 칸에 안 들어간다. 단위를 하나로 맞추면 칸끼리
+ * 크기 비교가 눈으로 바로 되는 이점도 있다 — `1,400`과 `46.3만`은 나란히 두면
+ * 어느 쪽이 큰지 한 번 더 생각하게 된다.
+ *
+ * 자릿수는 크기에 따라 줄인다. 작을수록 소수가 필요하고, 커질수록 자리가 없다.
  */
 export function formatCompactMoney(amount) {
-  if (amount < 10000) return formatMoney(amount);
-
   const man = amount / 10000;
-  // 10만 미만은 소수 한 자리까지. 그 위는 자릿수가 늘어 소수를 붙일 자리가 없다.
-  if (man < 100) {
-    const rounded = Math.round(man * 10) / 10;
-    return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}만`;
-  }
-  return `${Math.round(man)}만`;
+  const decimals = man < 1 ? 2 : man < 100 ? 1 : 0;
+  // toFixed 뒤 Number로 되돌리면 뒤에 남는 0이 정리된다. 0.50만 → 0.5만
+  return `${Number(man.toFixed(decimals))}만`;
 }

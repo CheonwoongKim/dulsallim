@@ -70,14 +70,24 @@ test("sumByDate는 같은 날 지출을 더한다", () => {
   assert.deepEqual(sumByDate([]), {});
 });
 
-test("formatCompactMoney는 좁은 칸에 들어가게 접는다", () => {
-  assert.equal(formatCompactMoney(4500), "4,500", "만 미만은 그대로가 읽기 쉽다");
-  assert.equal(formatCompactMoney(9999), "9,999");
+test("formatCompactMoney는 언제나 만 단위로 적는다", () => {
+  // 단위가 섞이면 칸끼리 크기 비교가 한 번에 안 된다.
+  assert.equal(formatCompactMoney(500), "0.05만");
+  assert.equal(formatCompactMoney(1400), "0.14만");
+  assert.equal(formatCompactMoney(4500), "0.45만");
+  assert.equal(formatCompactMoney(5000), "0.5만", "뒤에 남는 0은 정리한다");
   assert.equal(formatCompactMoney(10000), "1만");
   assert.equal(formatCompactMoney(15000), "1.5만");
   assert.equal(formatCompactMoney(21000), "2.1만");
   assert.equal(formatCompactMoney(120000), "12만");
+  assert.equal(formatCompactMoney(463000), "46.3만");
   assert.equal(formatCompactMoney(1234567), "123만");
+});
+
+test("어떤 금액이든 만 단위 표기로 끝난다", () => {
+  for (const amount of [1, 500, 9999, 10000, 99999, 999999, 1234567]) {
+    assert.match(formatCompactMoney(amount), /만$/, `${amount}`);
+  }
 });
 
 test("접은 금액은 어떤 값이든 6글자를 넘지 않는다", () => {
