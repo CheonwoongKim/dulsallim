@@ -1253,3 +1253,14 @@ test("시트가 열려 있는 동안에는 머리를 건드리지 않는다", ()
   assert.match(fn("onScroll"), /if \(isPageScrollLocked\(\)\) return/);
   assert.match(app, /export function isPageScrollLocked/);
 });
+
+test("붙어 있는 제목 아래로 목록이 비치지 않는다", () => {
+  // margin 은 투명하다. 아래 여백을 margin 으로 주면 그 틈으로 지나가는 줄이 보인다.
+  // 그리고 목록 한 줄(72px)이 이 머리(44px)보다 커서 아랫부분이 늘 삐져나오므로,
+  // 붙어 있는 동안에는 선을 그어 "여기 아래는 지나가는 목록"임을 알린다.
+  const 규칙 = css.match(/\n\.section-heading \{[^}]*\}/)[0];
+  assert.match(규칙, /background: var\(--paper\)/);
+  assert.doesNotMatch(규칙, /margin-bottom/, "여백은 padding 으로 줘야 배경이 덮는다");
+  // 딱 자르면 반쯤 잘린 글자가 남는다. 배경색으로 녹여 보낸다.
+  assert.match(css, /\.is-condensed \.section-heading::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
+});
