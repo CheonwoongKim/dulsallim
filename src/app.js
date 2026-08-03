@@ -31,7 +31,7 @@ import {
 } from "./features/month-picker.js";
 import {
   SHEETS,
-  beginSettle,
+  settleOnFocusLeave,
   closeOnPress,
   endSheetDrag,
   keepFocusInSheet,
@@ -154,12 +154,7 @@ elements.backdrop.addEventListener("click", closeActiveSheet);
 
 elements.form.addEventListener("submit", handleSubmit);
 // 포커스가 폼 밖으로 나가면 키보드가 내려가며 레이아웃이 흔들린다. 그 사이 오탭을 막는다.
-[elements.form, elements.fixedForm].forEach((form) => {
-  form.addEventListener("focusout", (event) => {
-    if (form.contains(event.relatedTarget)) return;
-    beginSettle(form);
-  });
-});
+[elements.form, elements.fixedForm].forEach(settleOnFocusLeave);
 closeOnPress(elements.closeForm, closeForm);
 
 /* ── 마이페이지 · 설정 ────────────────────────────────────── */

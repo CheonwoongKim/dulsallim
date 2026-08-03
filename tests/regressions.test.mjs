@@ -114,6 +114,11 @@ test("닫기 버튼 누름은 시트 드래그로 오인되지 않는다", () =>
 
 test("키보드가 내려가는 동안 폼은 입력을 받지 않는다", () => {
   assert.match(fn("beginSettle"), /is-settling/);
+  // 굳히기는 "폼 밖을 눌러" 포커스가 빠졌을 때만. 폼 안 버튼을 누른 것까지 굳히면
+  // 그 버튼의 click 이 사라진다(iOS 는 버튼에 포커스를 주지 않아 relatedTarget 이 빈다).
+  assert.match(fn("settleOnFocusLeave"), /lastPress\.target/);
+  assert.doesNotMatch(app, /focusout[\s\S]{0,120}?beginSettle\(form\)/,
+    "focusout 만 보고 굳히면 안 된다");
   assert.match(fn("beginSettle"), /clearTimeout\(formSettleTimer\)/);
   assert.match(app, /form\.addEventListener\("focusout"/);
   assert.match(css, /\.sheet-scroll\.is-settling\s*\{[^}]*pointer-events:\s*none/);

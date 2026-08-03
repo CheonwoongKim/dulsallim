@@ -5,6 +5,8 @@ import { lockPageScroll, unlockPageScroll } from "./scroll-lock.js";
 const CLOSE_MS = 320;
 const DISMISS_DISTANCE = 96;
 const SETTLE_MS = 350;
+/** pointerdown 뒤 focusout 이 따라오는 데 걸리는 시간. 넉넉히 잡되 옛 기록은 안 믿는다. */
+const PRESS_WINDOW_MS = 700;
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -142,6 +144,36 @@ export function beginSettle(scroller) {
   formSettleTimer = setTimeout(() => {
     scroller.classList.remove("is-settling");
   }, SETTLE_MS);
+}
+
+/** 마지막으로 손이 닿은 곳. focusout 만으로는 "어디를 눌러서" 포커스가 빠졌는지 알 수 없다. */
+let lastPress = { target: null, at: 0 };
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    lastPress = { target: event.target, at: event.timeStamp };
+  },
+  true,
+);
+
+/**
+ * 포커스가 폼 밖으로 나가면 잠깐 굳힌다. 단, 폼 안을 눌러서 빠진 경우는 뺀다.
+ *
+ * iOS 사파리는 버튼을 탭해도 포커스를 주지 않는다. 그래서 금액 칸에 커서가 있는 채로
+ * 「추가」를 누르면 relatedTarget 이 빈 focusout 이 먼저 오는데, 이것까지 "폼을 떠났다"로
+ * 치면 폼 전체가 pointer-events: none 이 되어 방금 누른 그 click 이 통째로 사라진다.
+ * 버튼이 안 눌리고 분류 선택이 됐다 안 됐다 하던 원인이 이것이다.
+ *
+ * 눌린 곳이 폼 안이면 키보드가 내려가도 시트는 그 자리에 있으므로 굳힐 이유도 없다.
+ */
+export function settleOnFocusLeave(form) {
+  form.addEventListener("focusout", (event) => {
+    if (form.contains(event.relatedTarget)) return;
+    // 방금 누른 곳이 폼 안이면 그 손짓의 결과다. 시간까지 보는 건 오래된 기록을 믿지 않기 위해서다.
+    const 방금 = event.timeStamp - lastPress.at < PRESS_WINDOW_MS;
+    if (방금 && form.contains(lastPress.target)) return;
+    beginSettle(form);
+  });
 }
 
 const dragTracker = createDragTracker({
