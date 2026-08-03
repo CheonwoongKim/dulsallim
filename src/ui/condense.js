@@ -26,6 +26,8 @@ const FALLBACK_SHRINK = 180;
 const SAFETY = 8;
 
 let condensed = false;
+let stuck = false;
+let headerHeight = 0;
 let expandedHeight = 0;
 let condensedHeight = 0;
 
@@ -39,6 +41,7 @@ let condensedHeight = 0;
 function syncHeaderHeight() {
   const height = elements.appHeader?.offsetHeight;
   if (!height) return;
+  headerHeight = height;
   document.documentElement.style.setProperty("--header-h", `${height}px`);
   // 전환 도중 값도 들어오지만 마지막 값이 남으므로, 끝나면 저절로 맞는다.
   if (condensed) condensedHeight = height;
@@ -53,6 +56,23 @@ function setCondensed(next) {
   if (next === condensed) return;
   condensed = next;
   elements.appShell.classList.toggle("is-condensed", next);
+}
+
+/**
+ * 지출 내역 제목이 실제로 머리 밑에 가서 붙었는지.
+ *
+ * 접힘과 붙음은 다른 일이다. 접히는 건 72px 부터인데 제목이 붙는 건 180px 쯤부터라,
+ * 그 사이 100px 구간에서는 접혔지만 제목은 제자리에 있다.
+ * 그때는 제목 밑을 지나가는 줄이 없으므로 흐릴 이유도 없다 — 흐리면 첫 줄 위쪽만
+ * 까닭 없이 잘려 보인다.
+ */
+function syncStuck() {
+  const heading = elements.sectionHeading;
+  if (!heading) return;
+  const next = heading.getBoundingClientRect().top - headerHeight < 1;
+  if (next === stuck) return;
+  stuck = next;
+  elements.appShell.classList.toggle("is-stuck", next);
 }
 
 function roomToCondense() {
@@ -70,11 +90,15 @@ function onScroll() {
   const y = window.scrollY;
   if (!condensed && y > CONDENSE_AT && roomToCondense()) setCondensed(true);
   else if (condensed && y < EXPAND_AT) setCondensed(false);
+  syncStuck();
 }
 
 export function watchScroll() {
   syncHeaderHeight();
-  new ResizeObserver(syncHeaderHeight).observe(elements.appHeader);
+  new ResizeObserver(() => {
+    syncHeaderHeight();
+    syncStuck();
+  }).observe(elements.appHeader);
   // passive: 스크롤을 막을 일이 없다고 알려 줘야 브라우저가 기다리지 않는다.
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll);

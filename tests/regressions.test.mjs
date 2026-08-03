@@ -1205,7 +1205,7 @@ test("접어도 달 이동은 남긴다", () => {
 test("머리 높이는 접히는 동안에도 따라 잰다", () => {
   // 클래스를 바꾼 직후 한 번만 재면 애니메이션 도중의 값을 잡아,
   // 지출 내역 제목이 머리보다 아래에 붙어 빈 띠가 생긴다(실제로 194px 을 쟀다).
-  assert.match(app, /new ResizeObserver\(syncHeaderHeight\)\.observe\(elements\.appHeader\)/);
+  assert.match(app, /new ResizeObserver\(\(\) => \{\s*syncHeaderHeight\(\);\s*syncStuck\(\);\s*\}\)\.observe\(elements\.appHeader\)/);
   assert.match(css, /\.section-heading \{[^}]*top: var\(--header-h/);
 });
 
@@ -1262,7 +1262,12 @@ test("붙어 있는 제목 아래로 목록이 비치지 않는다", () => {
   assert.match(규칙, /background: var\(--paper\)/);
   assert.doesNotMatch(규칙, /margin-bottom/, "여백은 padding 으로 줘야 배경이 덮는다");
   // 딱 자르면 반쯤 잘린 글자가 남는다. 배경색으로 녹여 보낸다.
-  assert.match(css, /\.is-condensed \.section-heading::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
+  // 조건은 "접혔나"가 아니라 "붙었나"다 — 접힘은 72px 부터인데 제목이 붙는 건 180px 쯤부터라,
+  // 그 사이에는 지나가는 줄이 없는데도 첫 줄 위 20px 이 흐려져 까닭 없이 잘려 보였다.
+  assert.match(css, /\.is-stuck \.section-heading::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
+  assert.doesNotMatch(css, /\.is-condensed \.section-heading::after/);
+  assert.match(fn("syncStuck"), /getBoundingClientRect\(\)\.top - headerHeight/);
+  assert.match(fn("onScroll"), /syncStuck\(\)/);
 });
 
 test("제목 글자가 바뀌면 붙어 있는 제목을 다시 그리게 한다", () => {

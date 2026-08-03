@@ -171,9 +171,9 @@ export function render() {
   elements.list.hidden = calendarMode && !dateFilter;
   if (!elements.list.hidden) renderList(visible);
 
-  // 분석을 열어 둔 채 달이나 사람을 바꿀 수 있다. 같은 자리에서 함께 맞춘다.
-  // 목록이 짧아졌으면 접어 둘 이유가 없어진다.
+  // 목록이 바뀌면 문서 길이도 바뀐다. 맨 위로 밀려났으면 머리를 편다.
   recheckCondense();
+  // 분석을 열어 둔 채 달이나 사람을 바꿀 수 있다. 같은 자리에서 함께 맞춘다.
   if (!elements.analysisPage.hidden) paintAnalysis();
   if (!elements.trendSheet.hidden) refreshTrend();
 }
