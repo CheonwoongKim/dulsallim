@@ -206,6 +206,19 @@ export function settleOnFocusLeave(form) {
   });
 }
 
+/*
+ * 키보드가 오르내리면 보이는 화면의 높이가 바뀌고, 그만큼 시트가 움직인다.
+ * 그 순간 노린 곳과 실제로 눌리는 곳이 어긋난다 — 닫기 버튼을 보고 눌렀는데
+ * 327px 아래에 있던 분류 select 가 그 자리에 올라와 대신 눌렸다(아이폰 키보드 높이가 딱 그만하다).
+ *
+ * focusout 으로는 이 순간을 잡을 수 없다. 키보드가 뜰 때 포커스는 폼 안에 그대로 있어
+ * 아무 신호도 나지 않는다. 화면 크기가 바뀌는 것이 유일하게 정확한 신호다.
+ */
+window.visualViewport?.addEventListener("resize", () => {
+  const scroller = getOpenSheet()?.querySelector(".sheet-scroll");
+  if (scroller) beginSettle(scroller);
+});
+
 const dragTracker = createDragTracker({
   onBegin(event) {
     const sheet = event.currentTarget;

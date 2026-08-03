@@ -1278,3 +1278,14 @@ test("건수가 바뀌면 붙어 있는 제목을 다시 그리게 한다", () =
   assert.match(fn("setRecordCount"), /textContent === text\) return/, "안 바뀌었으면 건드리지 않는다");
   assert.match(fn("setRecordCount"), /display = "none"[\s\S]*?offsetHeight[\s\S]*?display = ""/);
 });
+
+test("키보드가 오르내리는 순간에는 시트 안 입력을 막는다", () => {
+  // 키보드가 뜨면 시트가 그만큼 밀린다. 그 순간 노린 곳과 눌리는 곳이 어긋나,
+  // 닫기 버튼을 보고 눌렀는데 327px 아래의 분류 select 가 그 자리에 올라와 대신 눌렸다
+  // (아이폰 키보드 높이가 291~336px 이라 거리가 거의 같다).
+  //
+  // focusout 으로는 이 순간을 잡을 수 없다 — 키보드가 뜰 때 포커스는 폼 안에 그대로 있어
+  // 아무 신호도 나지 않는다. 화면 크기 변화가 유일하게 정확한 신호다.
+  assert.match(app, /visualViewport\?\.addEventListener\("resize"/);
+  assert.match(app, /getOpenSheet\(\)\?\.querySelector\("\.sheet-scroll"\)[\s\S]{0,80}beginSettle/);
+});
