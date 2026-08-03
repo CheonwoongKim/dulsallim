@@ -18,14 +18,27 @@
 
 ### 1. Supabase
 
-프로젝트를 만든 뒤 SQL Editor 에서 순서대로 실행합니다.
+**새 프로젝트라면** SQL Editor 에서 이 세 개만 순서대로 실행합니다.
 
-| 파일 | 용도 |
-|---|---|
-| `supabase/schema.sql` | 테이블·RLS·권한 (새 프로젝트) |
-| `supabase/seed.sql` | 가구 생성과 계정 연결 |
-| `supabase/migration-profile.sql` | 아바타 색상과 프로필 수정 권한 |
-| `supabase/verify.sql` | 설정 점검. 전 항목이 OK 여야 합니다 |
+| 순서 | 파일 | 용도 |
+|---|---|---|
+| 1 | `supabase/schema.sql` | 테이블·RLS·권한·서버 함수 전부 |
+| 2 | `supabase/seed.sql` | 가구 생성과 계정 연결 |
+| 3 | `supabase/verify.sql` | 설정 점검. 전 항목이 OK 여야 합니다 |
+
+`migration-*.sql` 은 **이미 쓰고 있는 프로젝트를 따라잡게 하는 파일**입니다.
+새 프로젝트에는 실행하지 마세요 — `schema.sql` 에 이미 다 들어 있고,
+`migration-profile.sql` 은 그 시점의 권한만 열어 두므로 나중 것을 도로 닫아 버립니다.
+
+이미 쓰고 있는 프로젝트라면 아직 안 돌린 것만 순서대로 실행하고 `verify.sql` 로 확인합니다.
+
+| 순서 | 파일 | 언제 추가됐나 |
+|---|---|---|
+| 1 | `supabase/migration-profile.sql` | 아바타 색상 |
+| 2 | `supabase/migration-goal.sql` | 월 지출 목표 |
+| 3 | `supabase/migration-categories.sql` | 반려견·의료 분류 |
+| 4 | `supabase/migration-nag.sql` | 소비 잔소리 |
+| 5 | `supabase/migration-hardening.sql` | 대화 작성자 검사, 초기화·고정비 반영 트랜잭션 |
 
 대시보드에서 **가입은 반드시 꺼 두세요**
 (Project Settings → Authentication → User Signups → Allow new users to sign up).

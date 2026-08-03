@@ -5,16 +5,17 @@
 
 with checks as (
 
-  -- 1) 테이블 6개가 모두 있는가
+  -- 1) 테이블 8개가 모두 있는가
   select
     1 as no,
     '테이블 생성' as item,
-    count(*)::text || ' / 6' as detail,
-    case when count(*) = 6 then 'OK' else 'FAIL' end as status,
+    count(*)::text || ' / 8' as detail,
+    case when count(*) = 8 then 'OK' else 'FAIL' end as status,
     'schema.sql 을 다시 실행하세요' as hint
   from information_schema.tables
   where table_schema = 'public'
-    and table_name in ('households','profiles','fixed_costs','expenses','fixed_cost_applications','expense_notes')
+    and table_name in ('households','profiles','fixed_costs','expenses',
+                       'fixed_cost_applications','expense_notes','nags','nag_fires')
 
   union all
 
@@ -23,23 +24,28 @@ with checks as (
     2,
     'RLS 활성화',
     count(*) filter (where rowsecurity)::text || ' / ' || count(*)::text,
-    case when count(*) = count(*) filter (where rowsecurity) then 'OK' else 'FAIL' end,
+    case when count(*) = 8 and count(*) = count(*) filter (where rowsecurity)
+         then 'OK' else 'FAIL' end,
     'RLS 가 꺼진 테이블은 anon key 로 전부 읽힙니다'
   from pg_tables
   where schemaname = 'public'
-    and tablename in ('households','profiles','fixed_costs','expenses','fixed_cost_applications','expense_notes')
+    and tablename in ('households','profiles','fixed_costs','expenses',
+                      'fixed_cost_applications','expense_notes','nags','nag_fires')
 
   union all
 
-  -- 3) 정책이 6개 다 있는가
+  -- 3) 정책이 8개 다 있는가
+  -- nag_fires 에는 일부러 정책을 두지 않는다(fire_nags 만 손대므로). 그래서 표는 8개, 정책도 8개다.
   select
     3,
     '접근 정책',
-    count(*)::text || ' / 6',
-    case when count(*) = 6 then 'OK' else 'FAIL' end,
+    count(*)::text || ' / 8',
+    case when count(*) = 8 then 'OK' else 'FAIL' end,
     'RLS 만 켜고 정책이 없으면 본인도 아무것도 못 봅니다'
   from pg_policies
   where schemaname = 'public'
+    and tablename in ('households','profiles','fixed_costs','expenses',
+                      'fixed_cost_applications','expense_notes','nags')
 
   union all
 
@@ -87,7 +93,8 @@ with checks as (
   from information_schema.role_table_grants
   where grantee = 'anon'
     and table_schema = 'public'
-    and table_name in ('households','profiles','fixed_costs','expenses','fixed_cost_applications','expense_notes')
+    and table_name in ('households','profiles','fixed_costs','expenses',
+                       'fixed_cost_applications','expense_notes','nags','nag_fires')
 
   union all
 
@@ -99,7 +106,7 @@ with checks as (
     case when count(*) = 4
           and count(*) filter (where column_name in ('display_name','avatar_color','monthly_goal','nag_enabled')) = 4
          then 'OK' else 'FAIL' end,
-    'migration-*.sql 의 revoke/grant 구문을 다시 실행하세요'
+    'schema.sql 의 revoke/grant 구문을 다시 실행하세요'
   from information_schema.column_privileges
   where grantee = 'authenticated' and table_name = 'profiles' and privilege_type = 'UPDATE'
 
@@ -115,6 +122,61 @@ with checks as (
   from pg_publication_tables
   where pubname = 'supabase_realtime'
     and tablename in ('expenses','expense_notes')
+
+  union all
+
+  -- 10) 서버가 통째로 처리하는 함수 3개가 있는가
+  select
+    10,
+    '서버 함수',
+    coalesce(string_agg(proname, ', ' order by proname), '없음'),
+    case when count(*) = 3 then 'OK' else 'FAIL' end,
+    'migration-hardening.sql (또는 schema.sql) 을 실행하세요'
+  from pg_proc
+  where proname in ('fire_nags', 'reset_household', 'apply_fixed_cost')
+
+  union all
+
+  -- 11) 대화에 작성자 검사가 걸렸는가 (없으면 상대 이름으로 메시지를 지어낼 수 있다)
+  select
+    11,
+    '대화 작성자 검사',
+    case when count(*) = 1 then '있음' else '없음' end,
+    case when count(*) = 1 then 'OK' else 'FAIL' end,
+    'migration-hardening.sql 을 실행하세요'
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'expense_notes'
+    and with_check like '%auth.uid()%'
+
+  union all
+
+  -- 12) 남의 말을 고치거나 지울 권한이 남아 있지 않은가
+  select
+    12,
+    '대화 수정·삭제 차단',
+    count(*)::text || ' 건 남음',
+    case when count(*) = 0 then 'OK' else 'FAIL' end,
+    'migration-hardening.sql 의 revoke 구문을 다시 실행하세요'
+  from information_schema.role_table_grants
+  where grantee = 'authenticated'
+    and table_schema = 'public'
+    and table_name = 'expense_notes'
+    and privilege_type in ('UPDATE', 'DELETE')
+
+  union all
+
+  -- 13) 울린 기록에 직접 손댈 수 없는가 (열려 있으면 잔소리를 지우고 다시 울릴 수 있다)
+  select
+    13,
+    '울린 기록 보호',
+    count(*)::text || ' 건 남음',
+    case when count(*) = 0 then 'OK' else 'FAIL' end,
+    'schema.sql 의 revoke all on nag_fires 를 다시 실행하세요'
+  from information_schema.role_table_grants
+  where grantee in ('authenticated', 'anon')
+    and table_schema = 'public'
+    and table_name = 'nag_fires'
 )
 
 select status, item, detail, hint

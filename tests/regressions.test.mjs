@@ -145,14 +145,26 @@ test("지출을 저장하면 필터가 풀려 방금 넣은 기록이 보인다"
   assert.match(fn("handleSubmit"), /setMemberFilter\(null\)/);
 });
 
-test("고정비는 반영 표시를 먼저 찍어 두 폰이 같은 달을 두 번 넣지 못하게 한다", () => {
+test("고정비는 한 트랜잭션으로 반영해 같은 달이 두 번 들어가지 않는다", async () => {
+  // 예전에는 표시·생성·연결을 세 요청으로 나눴다. 지출이 저장된 뒤 응답만 유실되면
+  // 표시를 되돌리고 재시도해 같은 지출이 두 번 생겼다 — 되돌리기가 곧 중복의 원인이었다.
   const apply = fn("applyOccurrence");
-  const claimAt = apply.indexOf('from("fixed_cost_applications").insert');
-  const insertAt = apply.indexOf("await insertExpense");
-  assert.ok(claimAt > -1 && insertAt > claimAt, "지출을 먼저 만들면 상대 폰이 같은 지출을 또 만든다");
-  assert.match(apply, /claimError\?\.code === DUPLICATE\) return null/, "이미 반영된 달은 오류가 아니라 건너뛸 일이다");
-  assert.match(apply, /catch \(error\)[\s\S]*fixed_cost_applications"\)\s*\.delete\(\)/, "지출을 못 만들었으면 표시도 지워야 그 달을 건너뛰지 않는다");
+  assert.match(apply, /rpc\("apply_fixed_cost"/);
+  assert.doesNotMatch(apply, /\.delete\(\)/, "되돌릴 일이 없어야 한다");
   assert.match(fn("applyDueFixedCosts"), /applyOccurrences\(due\)/);
+
+  const { readFile } = await import("node:fs/promises");
+  for (const file of ["schema.sql", "migration-hardening.sql"]) {
+    const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
+    const 함수 = sql.match(/create or replace function apply_fixed_cost[\s\S]*?\n\$\$;/)[0];
+
+    const 표시 = 함수.indexOf("insert into fixed_cost_applications");
+    const 생성 = 함수.indexOf("insert into expenses");
+    assert.ok(표시 > -1 && 생성 > 표시, `${file}: 지출을 먼저 만들면 상대 폰이 같은 지출을 또 만든다`);
+    assert.match(함수, /on conflict \(fixed_cost_id, month\) do nothing/, `${file}: 이미 반영된 달은 건너뛸 일이다`);
+    // definer 는 RLS 를 우회한다. 이 검사가 남의 가구 고정비를 막는 유일한 벽이다.
+    assert.match(함수, /household_id = current_household_id\(\)/, `${file}: 가구 검사가 없다`);
+  }
 });
 
 test("고정비 시트도 다른 시트와 같은 처리를 받는다", () => {
@@ -450,7 +462,8 @@ test("고정비가 하나도 반영되지 않으면 알린다", () => {
 test("보이지 않는 지출의 메시지로는 목록을 다시 그리지 않는다", () => {
   // 괜히 그리면 열어 둔 스와이프가 닫힌다.
   const receive = fn("receiveNote");
-  assert.match(receive, /getExpenses\(\)\.some\(\(expense\) => expense\.id === note\.expenseId\)\) return/,
+  // 모르는 지출이면 세지도 그리지도 않는다. 버리지 않고 맡아 두는 건 아래 별도 검사에서 본다.
+  assert.match(receive, /expense\.id === note\.expenseId\)\) \{[\s\S]{0,140}?return;\n\s*\}/,
     "우리 가구 지출이 아니면 개수도 건드리면 안 된다");
   assert.match(receive, /elements\.list\.querySelector\([\s\S]{0,80}\) render\(\)/);
 });
@@ -844,4 +857,103 @@ test("시트 안 항목 간격은 폼마다 따로 정하지 않는다", () => {
   // id 로 하나씩 걸어 두면 새 시트를 만들 때 빠뜨려 라벨이 서로 붙는다.
   assert.match(css, /\.sheet-scroll \{[\s\S]*?gap:\s*\d+px/);
   assert.doesNotMatch(css, /#expense-form,\s*\n#fixed-form \{[^}]*gap/);
+});
+
+/* ── 코드 리뷰 후속 ───────────────────────────────────────────── */
+
+test("README 는 새 프로젝트에 마이그레이션을 실행하라고 하지 않는다", async () => {
+  // migration-profile.sql 은 그 시점의 권한만 열어 둔다. 새 프로젝트에 나중에 실행하면
+  // monthly_goal·nag_enabled 수정 권한이 도로 닫혀 마이페이지 저장과 잔소리 토글이 깨진다.
+  const { readFile, readdir } = await import("node:fs/promises");
+  const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+  const 신규 = readme.split("이미 쓰고 있는 프로젝트")[0];
+
+  assert.doesNotMatch(신규, /migration-\w+\.sql \|/, "새 프로젝트 표에 마이그레이션이 있으면 안 된다");
+
+  // 있는 마이그레이션은 하나도 빠짐없이 안내돼야 한다.
+  const files = (await readdir(new URL("../supabase", import.meta.url)))
+    .filter((name) => name.startsWith("migration-"));
+  assert.ok(files.length, "마이그레이션 파일을 찾지 못했다");
+  for (const file of files) {
+    assert.ok(readme.includes(file), `README 에 ${file} 안내가 없다`);
+  }
+});
+
+test("schema.sql 하나로 새 프로젝트가 완성된다", async () => {
+  // 마이그레이션에만 있고 schema.sql 에 없으면, 새로 깐 사람은 그 기능이 통째로 빠진다.
+  const { readFile } = await import("node:fs/promises");
+  const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
+
+  for (const 조각 of ["nags", "nag_fires", "fire_nags", "reset_household", "apply_fixed_cost"]) {
+    assert.ok(schema.includes(조각), `schema.sql 에 ${조각} 이 없다`);
+  }
+});
+
+test("verify.sql 의 기대 개수는 schema.sql 의 실제 개수와 같다", async () => {
+  // 숫자를 손으로 적어 두면 표나 정책이 늘 때마다 어긋나고, 멀쩡한 설치가 FAIL 로 보인다.
+  const { readFile } = await import("node:fs/promises");
+  const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
+  const verify = await readFile(new URL("../supabase/verify.sql", import.meta.url), "utf8");
+
+  const 표 = schema.match(/create table if not exists/g).length;
+  const 정책 = schema.match(/^create policy/gm).length;
+
+  assert.equal(Number(verify.match(/'테이블 생성'[\s\S]{0,80}?' \/ (\d+)'/)[1]), 표);
+  assert.equal(Number(verify.match(/'접근 정책'[\s\S]{0,80}?' \/ (\d+)'/)[1]), 정책);
+});
+
+test("대화는 반드시 자기 이름으로만 남길 수 있다", async () => {
+  // author_id 를 안 보면 API 를 직접 불러 상대 이름으로 메시지를 지어낼 수 있다.
+  const { readFile } = await import("node:fs/promises");
+  for (const file of ["schema.sql", "migration-hardening.sql"]) {
+    const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
+    const 정책 = sql.match(/create policy expense_notes_all[\s\S]*?;/)[0];
+    const 검사부 = 정책.split("with check")[1];
+    assert.match(검사부, /author_id = auth\.uid\(\)/, `${file} 이 작성자를 확인하지 않는다`);
+  }
+});
+
+test("대화를 고치거나 지울 권한은 주지 않는다", async () => {
+  // 정책의 using 은 같은 가구면 통과시키므로, 권한을 열어 두면 상대 말을 지울 수 있다.
+  const { readFile } = await import("node:fs/promises");
+  for (const file of ["schema.sql", "migration-hardening.sql"]) {
+    const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
+    assert.match(sql, /revoke update, delete on expense_notes from authenticated/, file);
+    assert.doesNotMatch(
+      sql,
+      /grant[^;]*update[^;]*\bon\b[^;]*expense_notes[^;]*to authenticated/,
+      `${file} 이 대화 수정 권한을 연다`,
+    );
+  }
+});
+
+test("publication 등록은 이미 들어 있는지 보고 한다", async () => {
+  // alter publication 에는 if not exists 가 없어, 그냥 쓰면 두 번째 실행에서 멈춘다.
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
+  assert.doesNotMatch(sql, /^alter publication/m, "맨 앞에 두면 재실행이 깨진다");
+  assert.match(sql, /pg_publication_tables[\s\S]*?alter publication supabase_realtime add table/);
+});
+
+test("절반만 적용되면 안 되는 일은 서버 함수 하나로 부른다", () => {
+  // 요청을 나누면 중간에 끊겼을 때 고정비만 사라지거나 같은 지출이 두 번 생긴다.
+  assert.match(app, /rpc\("reset_household"\)/);
+  assert.match(app, /rpc\("apply_fixed_cost"/);
+  assert.doesNotMatch(app, /from\("fixed_cost_applications"\)\s*\.insert/, "직접 표시하면 안 된다");
+  assert.doesNotMatch(app, /from\("expenses"\)\.delete\(\)\.eq\("household_id"/, "직접 지우면 안 된다");
+});
+
+test("목표를 넘기는 모든 길에서 잔소리를 판정한다", () => {
+  // 새 지출만 보면 금액 수정이나 고정비 반영으로 넘긴 경우를 놓친다.
+  for (const 함수 of ["addExpense", "editExpense", "applyOccurrences"]) {
+    assert.match(fn(함수), /fireNags/, `${함수} 가 잔소리를 판정하지 않는다`);
+  }
+});
+
+test("아직 모르는 지출의 메시지는 버리지 않고 맡아 둔다", () => {
+  // 지출은 모아서 읽고 메시지는 즉시 온다. 버리면 개수가 새로고침 전까지 어긋난다.
+  assert.match(fn("receiveNote"), /pending\.set/, "모르는 지출이면 맡아 둬야 한다");
+  assert.match(app, /export function flushPendingNotes/);
+  // 다시 읽은 "뒤", 그리기 "전"이어야 개수가 맞는다.
+  assert.match(app, /await reloadExpenses\(\);[\s\S]{0,200}?flushPendingNotes\(\);[\s\S]{0,80}?render\(\);/);
 });

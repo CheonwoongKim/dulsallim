@@ -70,7 +70,13 @@ import {
   toggleNagEnabled,
 } from "./features/nag.js";
 import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "./features/analysis.js";
-import { closeNotes, handleNoteSubmit, openNotes, receiveNote } from "./features/notes.js";
+import {
+  closeNotes,
+  flushPendingNotes,
+  handleNoteSubmit,
+  openNotes,
+  receiveNote,
+} from "./features/notes.js";
 import { showToast } from "./ui/toast.js";
 import {
   getProfile,
@@ -425,6 +431,8 @@ function watchForChanges(householdId) {
     syncTimer = setTimeout(async () => {
       try {
         await reloadExpenses();
+        // 지출보다 먼저 도착해 맡겨 뒀던 메시지를 이제 붙인다. 그려지기 전이어야 개수가 맞는다.
+        flushPendingNotes();
         render();
       } catch {
         // 실패해도 지금 보이는 화면은 그대로 둔다. 다음 변경 때 다시 시도된다.

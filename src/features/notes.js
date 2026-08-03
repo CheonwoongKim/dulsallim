@@ -113,11 +113,37 @@ export async function handleNoteSubmit(event) {
 }
 
 /**
+ * 아직 내 목록에 없는 지출의 메시지를 잠시 맡아 둔다.
+ *
+ * 두 통로의 속도가 다른 게 원인이다. 지출은 400ms 씩 모아서 다시 읽는데 메시지는 즉시 온다.
+ * 그래서 상대가 기록하는 순간 서버가 붙이는 잔소리는 거의 매번 지출보다 먼저 도착한다.
+ * 그때 그냥 버리면 개수를 세는 곳(countNote)까지 건너뛰어, 앱을 완전히 새로 켜기 전에는
+ * 목록의 말풍선 숫자가 계속 하나 모자라게 보인다.
+ *
+ * 지워진 지출의 메시지처럼 끝내 짝을 못 찾는 것도 있어 한도를 둔다.
+ */
+const pending = new Map();
+const MAX_PENDING = 50;
+
+/** 지출을 다시 읽은 뒤 부른다. 그 사이 맡아 둔 메시지를 이제야 붙인다. */
+export function flushPendingNotes() {
+  if (!pending.size) return;
+  const waiting = [...pending.values()];
+  pending.clear();
+  // 여전히 모르는 지출이면 receiveNote 가 도로 맡아 둔다.
+  waiting.forEach(receiveNote);
+}
+
+/**
  * 상대가 남긴(또는 내가 방금 보낸) 메시지를 화면에 붙인다.
  * 구독에는 가구 필터를 걸 수 없어 RLS에 기대는데, 개수까지 흐트러지지 않도록 한 겹 더 확인한다.
  */
 export function receiveNote(note) {
-  if (!getExpenses().some((expense) => expense.id === note.expenseId)) return;
+  if (!getExpenses().some((expense) => expense.id === note.expenseId)) {
+    // 버리면 안 된다. 아래 pending 설명 참고.
+    if (pending.size < MAX_PENDING) pending.set(note.id, note);
+    return;
+  }
 
   // 응답과 구독 중 어느 쪽이 먼저 와도 여기서 한 번만 센다.
   const isNew = countNote(note);

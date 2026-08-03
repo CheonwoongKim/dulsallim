@@ -9,9 +9,6 @@ import {
   toTemplate,
 } from "./rows.js";
 
-/** 같은 달을 두 번 반영하려 할 때 DB가 돌려주는 코드. 오류가 아니라 "이미 됐다"는 뜻이다. */
-const DUPLICATE = "23505";
-
 /**
  * PostgREST 오류를 그대로 보여주면 무슨 일인지 알 수 없다.
  * 어떤 동작이 실패했는지 우리말로 붙이고, 원문은 콘솔에 남겨 원인 추적이 가능하게 한다.
@@ -83,18 +80,13 @@ export async function updateProfile(userId, { name, color, goal }) {
 
 /**
  * 가구의 모든 기록을 지운다. 되돌릴 수 없다.
- * 고정비를 먼저 지우면 반영 기록이 함께 사라지고, 그 뒤 지출을 지운다.
- * 순서가 반대면 "반영했다"는 기록만 남아 초기화 직후 지난 달 고정비가 되살아나지 않는다.
+ *
+ * 서버 함수 하나로 부르는 이유는 트랜잭션 때문이다. 고정비와 지출을 두 요청으로 나누면
+ * 두 번째가 실패했을 때 고정비만 사라진 절반 상태가 남는다. 함수 안이면 전부 되거나 전부 안 된다.
+ * (지우는 순서 자체는 서버가 지킨다 — schema.sql 의 reset_household)
  */
-export async function resetHousehold(householdId) {
-  unwrap(
-    "고정비 삭제",
-    await supabase.from("fixed_costs").delete().eq("household_id", householdId),
-  );
-  unwrap(
-    "지출 삭제",
-    await supabase.from("expenses").delete().eq("household_id", householdId),
-  );
+export async function resetHousehold() {
+  unwrap("데이터 초기화", await supabase.rpc("reset_household"));
 }
 
 export async function fetchExpenses(householdId) {
@@ -243,39 +235,26 @@ export async function deleteTemplate(id) {
 /**
  * 고정비 한 건을 그 달의 지출로 만든다.
  *
- * 순서가 중요하다. 반영 기록을 **먼저** 남기는데, 이 표는 (고정비, 달)이 기본키라
- * 두 사람이 같은 순간에 앱을 열어도 DB가 둘 중 하나만 통과시킨다.
- * 지출을 먼저 만들면 그 사이에 상대 폰이 같은 지출을 또 만들어 두 번 기록된다.
+ * 반영 표시와 지출 생성이 한 트랜잭션이어야 한다. 요청을 나누면 지출이 저장된 뒤
+ * 응답만 유실됐을 때 표시를 되돌리고 재시도해 같은 지출이 두 번 생긴다.
+ * 서버 함수 안에서는 커밋된 표시가 그대로 남아 재시도해도 중복이 생기지 않는다.
+ *
+ * 날짜 계산은 여기서 한다. 말일 보정 규칙이 화면 쪽에 있고 이미 검증돼 있다.
  *
  * @returns {Promise<object|null>} 만들어진 지출. 이미 반영된 달이면 null.
  */
-export async function applyOccurrence(occurrence, context) {
-  const claim = fromOccurrence(occurrence);
-  const { error: claimError } = await supabase.from("fixed_cost_applications").insert(claim);
-  if (claimError?.code === DUPLICATE) return null;
-  if (claimError) throw fail("고정비 반영", claimError);
-
-  const { template, date } = occurrence;
-  // 지출과 반영 기록을 서로 이어 둬야 나중에 어느 지출이 고정비에서 왔는지 알 수 있다.
-  const draft = { ...template, date, fixedCostId: template.id };
-
-  try {
-    const created = await insertExpense(draft, context);
-    await supabase
-      .from("fixed_cost_applications")
-      .update({ expense_id: created.id })
-      .eq("fixed_cost_id", claim.fixed_cost_id)
-      .eq("month", claim.month);
-    return created;
-  } catch (error) {
-    // 지출을 못 만들었는데 "반영했다"는 기록만 남으면 그 달을 영영 건너뛴다. 표시를 되돌린다.
-    await supabase
-      .from("fixed_cost_applications")
-      .delete()
-      .eq("fixed_cost_id", claim.fixed_cost_id)
-      .eq("month", claim.month);
-    throw error;
-  }
+export async function applyOccurrence(occurrence) {
+  const { fixed_cost_id, month } = fromOccurrence(occurrence);
+  const rows = unwrap(
+    "고정비 반영",
+    await supabase.rpc("apply_fixed_cost", {
+      p_fixed_cost_id: fixed_cost_id,
+      p_month: month,
+      p_spent_on: occurrence.date,
+    }),
+  );
+  // 빈 결과는 상대 폰이 먼저 넣었다는 뜻이다. 오류가 아니다.
+  return rows?.length ? toExpense(rows[0]) : null;
 }
 
 /* ── 소비 잔소리 ──────────────────────────────────────────── */

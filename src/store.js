@@ -53,7 +53,7 @@ export async function reloadMembers() {
 
 /** 가구의 모든 기록을 지운다. 되돌릴 수 없다. */
 export async function resetHousehold() {
-  await remote.resetHousehold(context.householdId);
+  await remote.resetHousehold();
   expenses = [];
   fixedTemplates = [];
   fixedApplied = [];
@@ -109,6 +109,8 @@ export async function addExpense(input) {
 export async function editExpense(id, input) {
   const updated = await remote.updateExpense(id, input, context);
   expenses = expenses.map((expense) => (expense.id === id ? updated : expense));
+  // 금액을 올려 구간을 넘기는 것도 넘긴 것이다. 새 지출만 보면 이 경우를 놓친다.
+  remote.fireNags(id);
   return updated;
 }
 
@@ -161,9 +163,13 @@ export async function applyOccurrences(occurrences) {
 
   for (const occurrence of occurrences) {
     try {
-      const expense = await remote.applyOccurrence(occurrence, context);
+      const expense = await remote.applyOccurrence(occurrence);
       // null이면 상대 폰이 먼저 넣은 것이다. 기록만 남기고 넘어간다.
-      if (expense) created.push(expense);
+      if (expense) {
+        created.push(expense);
+        // 월세처럼 큰 고정비 하나로 구간을 넘기는 일이 잦다. 직접 적은 지출만 볼 이유가 없다.
+        remote.fireNags(expense.id);
+      }
       appliedKeys.push(occurrence.key);
     } catch {
       // 이유는 remote가 콘솔에 남긴다. 여기서는 다음 건을 계속 시도하고, 끝나면 알린다.
