@@ -1149,3 +1149,24 @@ test("숨기는 시점은 닫히는 애니메이션보다 늦다", async () => {
     assert.ok(닫힘 >= 전환, `${js}: 숨김 ${닫힘}ms 가 전환 ${전환}ms 보다 빠르다`);
   }
 });
+
+test("README 기능 목록이 실제 화면과 어긋나지 않는다", async () => {
+  // 기능을 붙이면서 README 를 잊으면, 처음 보는 사람은 있는 줄도 모르고 지나간다.
+  // 화면을 여는 버튼이 있는데 안내에 없으면 잡는다.
+  const { readFile } = await import("node:fs/promises");
+  const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+  const 기능 = readme.split("## 준비")[0];
+
+  const 화면 = [
+    ["open-analysis", "분석"],
+    ["open-trend", "추이"],
+    ["open-nag", "소비 잔소리"],
+    ["open-profile", "마이페이지"],
+    ["open-settings", "설정"],
+    ["notes-sheet", "대화"],
+  ];
+  for (const [id, 낱말] of 화면) {
+    assert.ok(html.includes(id), `화면에 ${id} 가 없다 — 목록을 고칠 게 아니라 이 검사를 고쳐야 한다`);
+    assert.ok(기능.includes(낱말), `README 기능 목록에 "${낱말}" 안내가 없다`);
+  }
+});
