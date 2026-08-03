@@ -178,7 +178,9 @@ main {
 }
 
 .eyebrow {
+  height: 15px;
   margin: 0 0 9px;
+  overflow: hidden;
   color: var(--ink-soft);
   font-size: 12px;
   font-weight: 700;
@@ -192,7 +194,8 @@ main {
 
 .total-amount {
   display: flex;
-  min-height: 62px;
+  /* min-height 가 아니라 height 다. 상자가 글자 지표를 따라가면 높이가 끊긴다. */
+  height: 62px;
   margin: 0;
   align-items: baseline;
   justify-content: center;
@@ -337,11 +340,20 @@ main {
    스크롤은 "목록을 보겠다"는 뜻이므로 그때는 한 줄로 줄여 자리를 내준다.
    월 이동은 남긴다 — 월 라벨이 달 선택 시트를 여는 버튼이기도 하다. */
 
-.app-header,
+/*
+ * 높이는 px 로만 움직이게 한다.
+ *
+ * font-size 를 애니메이션하면 글자 상자 높이가 폰트 지표 단위로 뚝뚝 끊겨,
+ * 머리 높이가 2px 갔다 13px 가는 식으로 고르지 않게 변한다. 프레임은 안 끊기는데
+ * 단계별로 툭툭 끊겨 보이는 이유가 이것이다.
+ * 상자에 명시적인 height 를 주면 px→px 라 선형으로 흐르고, 글자 크기는 그 안에서
+ * 따로 줄어들 뿐 높이에 관여하지 않는다.
+ */
 .overview-head,
 .total-amount,
-.month-label {
-  transition: height 180ms ease, padding 180ms ease, font-size 180ms ease;
+.eyebrow {
+  transition: height 260ms ease, padding 260ms ease, margin 260ms ease,
+    font-size 260ms ease, opacity 140ms ease;
 }
 
 .is-condensed .overview-head {
@@ -354,13 +366,16 @@ main {
   animation: none;
 }
 
-/* 총액 위 설명은 접었을 때 없어도 안다 — 큰 숫자 하나뿐이다. */
+/* 총액 위 설명은 접었을 때 없어도 안다 — 큰 숫자 하나뿐이다.
+   display: none 으로 지우면 그 높이가 한 프레임에 사라져 툭 끊긴다. 높이를 줄여 없앤다. */
 .is-condensed .eyebrow {
-  display: none;
+  height: 0;
+  margin-bottom: 0;
+  opacity: 0;
 }
 
 .is-condensed .total-amount {
-  min-height: 0;
+  height: 30px;
   font-size: 24px;
   letter-spacing: -0.05em;
 }
@@ -369,18 +384,19 @@ main {
   margin-bottom: 0;
 }
 
+/* 글자 크기는 그대로 둔다. 이것까지 줄이면 월 이동 줄의 높이가 또 끊긴다.
+   대신 줄바꿈은 막는다 — 총액과 한 줄에 서면서 폭이 좁아져 "2026년 8 / 월" 로 깨졌다. */
 .is-condensed .month-label {
   min-width: 0;
-  padding: 4px 4px;
-  font-size: 14px;
+  padding: 4px;
+  white-space: nowrap;
 }
 
 /* 접히는 동안 글자 크기가 뛰는 게 보이면 산만하다. 애니메이션을 줄여 달라는 설정은 따른다. */
 @media (prefers-reduced-motion: reduce) {
-  .app-header,
   .overview-head,
   .total-amount,
-  .month-label {
+  .eyebrow {
     transition: none;
   }
 }

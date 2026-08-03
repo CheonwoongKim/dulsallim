@@ -1190,7 +1190,7 @@ test("접고도 스크롤할 여유가 있을 때만 접는다", () => {
 test("접어도 달 이동은 남긴다", () => {
   // 월 라벨은 달 선택 시트를 여는 버튼이기도 하다. 감추면 달을 바꾸려고 스크롤을 도로 올려야 한다.
   assert.doesNotMatch(css, /\.is-condensed[^{]*\.month-control \{[^}]*display: none/);
-  assert.match(css, /\.is-condensed \.eyebrow \{[^}]*display: none/, "설명 문구는 접을 때 없어도 된다");
+  assert.match(css, /\.is-condensed \.eyebrow \{[^}]*height: 0/, "설명 문구는 접을 때 없어도 된다");
 });
 
 test("머리 높이는 접히는 동안에도 따라 잰다", () => {
@@ -1220,4 +1220,20 @@ test("검사에서 빠진 소스 파일이 없다", async () => {
 
   const 빠진것 = 실제.filter((path) => !Object.hasOwn(sourceLineCounts, path));
   assert.deepEqual(빠진것, [], `helpers/source.mjs 에 등록되지 않은 파일: ${빠진것.join(", ")}`);
+});
+
+test("접히는 높이는 글자 크기가 아니라 px 이 끌고 간다", () => {
+  // font-size 를 애니메이션하면 글자 상자 높이가 폰트 지표 단위로 끊긴다.
+  // 프레임은 멀쩡한데 높이가 2px 갔다 13px 가는 식이라 "단계별로 끊어지는" 느낌이 된다.
+  // 상자에 명시적 height 를 주면 px→px 라 선형으로 흐른다. (측정: 가장 큰 걸음 13px → 6px)
+  assert.match(css, /\n\.total-amount \{[^}]*\n  height: \d+px;/, "min-height 면 글자 지표를 따라간다");
+  assert.match(css, /\.is-condensed \.total-amount \{[^}]*height: \d+px/);
+  assert.match(css, /\n\.eyebrow \{[^}]*\n  height: \d+px;/);
+  // 한 프레임에 사라지면 그 높이만큼 툭 끊긴다.
+  assert.doesNotMatch(css, /\.is-condensed \.eyebrow \{[^}]*display: none/);
+});
+
+test("접힌 줄에서 달 이름은 두 줄로 깨지지 않는다", () => {
+  // 총액과 한 줄에 서면 폭이 좁아진다. 실제로 "2026년 8 / 월" 로 깨졌다.
+  assert.match(css, /\.is-condensed \.month-label \{[^}]*white-space: nowrap/);
 });
