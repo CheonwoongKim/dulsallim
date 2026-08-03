@@ -146,6 +146,11 @@
   pointer-events: none;
 }
 
+/* 닫히는 중. 손가락 밑으로 다른 요소가 들어와 대신 눌리는 것을 막는다. */
+.sheet.is-closing {
+  pointer-events: none;
+}
+
 #fixed-list-view {
   gap: 18px;
 }

@@ -2,7 +2,11 @@ import { elements } from "../dom.js";
 import { createDragTracker } from "./drag-tracker.js";
 import { lockPageScroll, unlockPageScroll } from "./scroll-lock.js";
 
-const CLOSE_MS = 320;
+/*
+ * 닫히는 데 걸리는 시간. sheet.css 의 transform 전환보다 짧으면 안 된다.
+ * 짧으면 애니메이션 도중에 hidden 이 걸려 시트가 툭 사라진다.
+ */
+const CLOSE_MS = 420;
 const DISMISS_DISTANCE = 96;
 const SETTLE_MS = 350;
 /** pointerdown 뒤 focusout 이 따라오는 데 걸리는 시간. 넉넉히 잡되 옛 기록은 안 믿는다. */
@@ -69,6 +73,8 @@ document.addEventListener(
 
 export function showSheet(sheet) {
   clearTimeout(closeTimer);
+  // 닫히는 도중에 다시 열 수 있다. 막아 둔 것을 먼저 푼다.
+  sheet.classList.remove("is-closing");
   // 어떤 경로로든 굳은 채 남았다면 여기서 푼다. 갓 연 시트가 안 눌리는 일만은 없어야 한다.
   sheet.querySelectorAll(".is-settling").forEach((el) => el.classList.remove("is-settling"));
   lastFocusedElement = document.activeElement;
@@ -84,6 +90,18 @@ export function showSheet(sheet) {
 }
 
 export function hideSheet(sheet, onHidden) {
+  /*
+   * 닫는 동안에는 시트 안의 무엇도 눌리지 않게 한다.
+   *
+   * click 은 손을 뗄 때 좌표를 다시 히트테스트한다. 그런데 포커스를 놓는 순간
+   * 키보드가 내려가기 시작해 시트가 움직이므로, 닫기를 누른 손가락 밑에 다른 것이
+   * 들어와 대신 눌린다. 분류 select 가 닫기 버튼에서 330px 아래인데 아이폰 키보드가
+   * 딱 그만한 높이라, 실제로 분류 피커가 열리는 일이 있었다.
+   *
+   * 어느 요소가 들어오는지 맞히는 대신 통째로 막는다. 어차피 사라질 화면이라 잃을 것이 없다.
+   */
+  sheet.classList.add("is-closing");
+
   // 포커스를 먼저 놓아 키보드가 내려가기 시작하게 한다.
   const focused = document.activeElement;
   if (focused instanceof HTMLElement && sheet.contains(focused)) focused.blur();
@@ -94,6 +112,7 @@ export function hideSheet(sheet, onHidden) {
   closeTimer = setTimeout(() => {
     elements.backdrop.hidden = true;
     sheet.hidden = true;
+    sheet.classList.remove("is-closing");
     sheet.style.removeProperty("--drag-y");
     onHidden?.();
     unlockPageScroll();

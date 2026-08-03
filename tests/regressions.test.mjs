@@ -1118,3 +1118,34 @@ test("시트를 열 때 굳은 상태를 풀고 시작한다", () => {
   // 어떤 경로로든 굳은 채 남았다면, 다시 열었을 때만큼은 멀쩡해야 한다.
   assert.match(fn("showSheet"), /is-settling/);
 });
+
+test("닫히는 중인 시트는 아무것도 눌리지 않는다", () => {
+  // 키보드가 내려가면 시트가 움직인다. 그 사이 손을 뗀 자리의 히트테스트가 다시 일어나,
+  // 닫기를 누른 손가락 밑에 다른 요소가 들어와 대신 눌린다.
+  // (분류 select 는 닫기 버튼에서 330px 아래, 아이폰 키보드 높이와 거의 같다.
+  //  select 가 눌리면 iOS 는 포커스만으로도 분류 피커를 띄운다)
+  // 어느 요소가 들어오는지 맞히는 대신, 닫히는 동안은 시트를 통째로 막는다.
+  assert.match(fn("hideSheet"), /classList\.add\("is-closing"\)/);
+  assert.match(fn("hideSheet"), /classList\.remove\("is-closing"\)/);
+  assert.match(css, /\.sheet\.is-closing \{[^}]*pointer-events: none/);
+  // 닫는 도중 다시 열면 막아 둔 것을 풀어야 한다.
+  assert.match(fn("showSheet"), /is-closing/);
+});
+
+test("숨기는 시점은 닫히는 애니메이션보다 늦다", async () => {
+  // 애니메이션이 420ms 인데 320ms 에 hidden 을 걸면 남은 100ms 가 잘려 툭 사라진다.
+  // CLOSE_MS 는 시트와 페이지에 하나씩 있어 파일을 직접 짝지어 읽는다.
+  const { readFile } = await import("node:fs/promises");
+  const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+  for (const [js, cssFile, rule] of [
+    ["src/ui/sheet.js", "src/styles/sheet.css", "\\.sheet"],
+    ["src/ui/page.js", "src/styles/page.css", "\\.page"],
+  ]) {
+    const 닫힘 = Number((await read(js)).match(/const CLOSE_MS = (\d+)/)[1]);
+    const 전환 = Number(
+      (await read(cssFile)).match(new RegExp(`\n${rule} \\{[\\s\\S]*?transform (\\d+)ms`))[1],
+    );
+    assert.ok(닫힘 >= 전환, `${js}: 숨김 ${닫힘}ms 가 전환 ${전환}ms 보다 빠르다`);
+  }
+});
