@@ -54,6 +54,7 @@ export const elements = {
   trendNext: document.querySelector("#trend-next"),
   trendYear: document.querySelector("#trend-year"),
   trendChart: document.querySelector("#trend-chart"),
+  trendReadout: document.querySelector("#trend-readout"),
   trendLegend: document.querySelector("#trend-legend"),
   nagSheet: document.querySelector("#nag-sheet"),
   closeNagSheet: document.querySelector("#close-nag-sheet"),

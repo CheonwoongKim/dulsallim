@@ -72,9 +72,12 @@ import {
 import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "./features/analysis.js";
 import {
   closeTrendSheet,
+  endScrub,
+  moveScrub,
+  openScrubbedMonth,
   openTrendSheet,
-  selectTrendMonth,
   shiftTrendYear,
+  startScrub,
 } from "./features/trend.js";
 import {
   closeNotes,
@@ -210,10 +213,12 @@ elements.openTrend.addEventListener("click", openTrendSheet);
 closeOnPress(elements.closeTrendSheet, closeTrendSheet);
 elements.trendPrev.addEventListener("click", () => shiftTrendYear(-1));
 elements.trendNext.addEventListener("click", () => shiftTrendYear(1));
-elements.trendChart.addEventListener("click", (event) => {
-  const month = event.target.dataset.trendMonth;
-  if (month) selectTrendMonth(month);
-});
+// 세로 점선을 끌어 달을 짚는다. 아래 숫자 줄을 누르면 그 달을 자세히 본다.
+elements.trendChart.addEventListener("pointerdown", startScrub);
+elements.trendChart.addEventListener("pointermove", moveScrub);
+elements.trendChart.addEventListener("pointerup", endScrub);
+elements.trendChart.addEventListener("pointercancel", endScrub);
+elements.trendReadout.addEventListener("click", openScrubbedMonth);
 elements.nagForm.addEventListener("submit", handleNagSubmit);
 elements.nagPercent.addEventListener("input", (event) => {
   event.target.value = event.target.value.replace(/\D/g, "").slice(0, 3);

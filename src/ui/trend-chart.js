@@ -25,8 +25,6 @@ const LAST_MONTH_INDEX = 11;
 /** 점 반지름. 진행 중인 달은 속을 비우고 조금 키워 "아직 안 끝났다"고 알린다. */
 const DOT_R = 2.6;
 const DOT_R_PROVISIONAL = 3.4;
-/** 눈금 숫자를 그 선에서 얼마나 띄울지. */
-const AXIS_GAP = 3;
 
 const x = (index) => PAD.left + (index / LAST_MONTH_INDEX) * PLOT.width;
 const y = (value, max) => PAD.top + (1 - value / max) * PLOT.height;
@@ -83,7 +81,7 @@ function drawDots(line, max, currentIndex) {
       return `<circle class="trend-dot${provisional ? " is-provisional" : ""}" cx="${round(x(index))}" cy="${round(
         y(point, max),
       )}" r="${provisional ? DOT_R_PROVISIONAL : DOT_R}" stroke="${line.color}" fill="${
-        provisional ? "var(--surface)" : line.color
+        provisional ? "var(--white)" : line.color
       }" />`;
     })
     .join("");
@@ -96,46 +94,43 @@ function drawGoal(line, max) {
 }
 
 /**
- * 0·절반·꼭대기 세 줄만 긋는다. 폰에서 그 이상은 선이 글자를 덮는다.
- * 숫자는 각 줄 바로 위에 왼쪽 맞춤으로 얹는다. 이 함수를 맨 먼저 그려
- * 선과 점이 숫자 위를 지나가게 한다 — 가려야 할 것은 숫자 쪽이다.
+ * 0·절반·꼭대기 세 줄. 숫자는 붙이지 않는다.
+ *
+ * 이 그래프가 답하는 질문은 "얼마"가 아니라 "어떻게 변했나"다. 축에 숫자를 달면
+ * 눈이 자꾸 그리로 가서 정작 모양을 못 본다. 정확한 금액은 세로 점선을 짚으면 나온다.
+ * 선은 남긴다 — 숫자가 없어도 높이를 가늠할 자는 있어야 한다.
  */
 function drawGrid(max) {
   return [0, max / 2, max]
     .map((value) => {
       const at = round(y(value, max));
-      return (
-        `<line class="trend-grid" x1="${PAD.left}" y1="${at}" x2="${PAD.left + PLOT.width}" y2="${at}" />` +
-        `<text class="trend-axis" x="${PAD.left}" y="${round(at - AXIS_GAP)}" text-anchor="start">${
-          value ? escapeHtml(formatCompactMoney(value)) : "0"
-        }</text>`
-      );
+      return `<line class="trend-grid" x1="${PAD.left}" y1="${at}" x2="${PAD.left + PLOT.width}" y2="${at}" />`;
     })
     .join("");
 }
 
-/** 열두 달을 다 적으면 글자가 겹친다. 홀수 달만 적어도 위치는 읽힌다. */
-function drawMonthLabels() {
+/** 열두 달을 다 적는다. 세로 축 숫자를 뺀 만큼 가로에 쓸 자리가 넉넉해졌다. */
+function drawMonthLabels(scrubIndex) {
   return Array.from({ length: 12 }, (_, index) => {
-    if (index % 2 !== 0) return "";
-    return `<text class="trend-axis" x="${round(x(index))}" y="${VIEW.height - 6}" text-anchor="middle">${index + 1}</text>`;
+    const here = index === scrubIndex ? " is-active" : "";
+    return `<text class="trend-axis${here}" x="${round(x(index))}" y="${VIEW.height - 6}" text-anchor="middle">${index + 1}</text>`;
   }).join("");
 }
 
-/** 손가락으로 점을 정확히 누르기는 어렵다. 달마다 세로 띠를 통째로 눌리게 둔다. */
-function drawTapTargets(months, recorded) {
-  const band = PLOT.width / LAST_MONTH_INDEX;
-  return months
-    .map((monthKey, index) => {
-      if (!recorded[index]) return "";
-      const left = round(Math.max(PAD.left, x(index) - band / 2));
-      const width = round(Math.min(band, PAD.left + PLOT.width - left));
-      return `<rect class="trend-hit" data-trend-month="${monthKey}" x="${left}" y="${PAD.top}" width="${width}" height="${PLOT.height}" />`;
-    })
-    .join("");
+/** 짚고 있는 달을 가리키는 세로 점선. 끌면 이 선이 따라온다. */
+function drawScrub(scrubIndex) {
+  const at = round(x(scrubIndex));
+  return `<line class="trend-scrub" id="trend-scrub" x1="${at}" y1="${PAD.top}" x2="${at}" y2="${PAD.top + PLOT.height}" />`;
 }
 
-export function drawTrend({ months, recorded, currentIndex, max, series }) {
+/** 화면에서 어디를 짚었는지를 몇 월인지로 바꾼다. @param ratio 0(왼쪽 끝)~1(오른쪽 끝) */
+export function monthIndexAt(ratio) {
+  const unit = ratio * VIEW.width;
+  const step = PLOT.width / LAST_MONTH_INDEX;
+  return Math.min(LAST_MONTH_INDEX, Math.max(0, Math.round((unit - PAD.left) / step)));
+}
+
+export function drawTrend({ currentIndex, max, series }, scrubIndex) {
   const body = series
     .map((line) => drawGoal(line, max) + drawLine(line, max, currentIndex) + drawDots(line, max, currentIndex))
     .join("");
@@ -143,19 +138,41 @@ export function drawTrend({ months, recorded, currentIndex, max, series }) {
   return (
     `<svg viewBox="0 0 ${VIEW.width} ${VIEW.height}" role="img" aria-label="달마다 쓴 금액 추이">` +
     drawGrid(max) +
-    drawMonthLabels() +
+    drawScrub(scrubIndex) +
+    drawMonthLabels(scrubIndex) +
     body +
-    drawTapTargets(months, recorded) +
     `</svg>`
   );
 }
 
-/** 색이 사람을 뜻한다는 것과, 점선이 목표라는 것만 알려 주면 된다. */
+/** 점선을 옮길 때 SVG 를 통째로 다시 만들지 않는다. 선 하나만 옮기면 된다. */
+export function moveScrubLine(root, scrubIndex) {
+  const line = root.querySelector("#trend-scrub");
+  if (!line) return;
+  const at = round(x(scrubIndex));
+  line.setAttribute("x1", at);
+  line.setAttribute("x2", at);
+  root.querySelectorAll(".trend-axis").forEach((label, index) => {
+    label.classList.toggle("is-active", index === scrubIndex);
+  });
+}
+
+/**
+ * 세로 축에서 숫자를 뺀 대신, 기준이 되는 숫자는 여기에 둔다.
+ * 목표 금액은 이 그래프에서 가장 자주 쓰이는 자라서 늘 보이는 편이 낫다.
+ */
 export function drawLegend(series) {
   return series
     .map(
       (line) =>
-        `<span class="trend-key"><i style="background:${line.color}"></i>${escapeHtml(line.name)}</span>`,
+        `<span class="trend-row">` +
+        `<span class="trend-key"><i style="background:${line.color}"></i>${escapeHtml(line.name)}</span>` +
+        (line.goal
+          ? `<span class="trend-key"><i class="is-goal" style="background:repeating-linear-gradient(90deg,${line.color} 0 4px,transparent 4px 7px)"></i>목표 ${escapeHtml(
+              formatCompactMoney(line.goal),
+            )}</span>`
+          : `<span class="trend-key is-muted">목표 없음</span>`) +
+        `</span>`,
     )
     .join("");
 }

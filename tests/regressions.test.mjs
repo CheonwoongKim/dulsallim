@@ -1001,12 +1001,22 @@ test("그래프는 분석 페이지를 건드리지 않고 머리 오른쪽에�
   assert.match(css, /\.page-action \{[^}]*margin-left: auto/, "오른쪽 끝에 붙어야 한다");
 });
 
-test("달을 짚으면 그 달로 옮겨 가고 시트는 닫힌다", () => {
+test("짚은 달을 자세히 보면 그 달로 옮겨 가고 시트는 닫힌다", () => {
   // ‹ › 로 넘겨 가며 찾던 일을, 눈에 띈 달을 짚는 일로 바꾸는 것이 이 시트의 존재 이유다.
-  assert.match(fn("selectTrendMonth"), /setSelectedMonth\(monthKey\)/);
-  assert.match(fn("selectTrendMonth"), /paintAnalysis\(\)/);
-  assert.match(fn("selectTrendMonth"), /closeTrendSheet\(\)/);
-  assert.match(app, /dataset\.trendMonth[\s\S]{0,80}selectTrendMonth\(month\)/);
+  assert.match(fn("openScrubbedMonth"), /setSelectedMonth\(data\.months\[scrubIndex\]\)/);
+  assert.match(fn("openScrubbedMonth"), /paintAnalysis\(\)/);
+  assert.match(fn("openScrubbedMonth"), /closeTrendSheet\(\)/);
+  assert.match(app, /trendReadout\.addEventListener\("click", openScrubbedMonth\)/);
+  // 기록이 없는 달로는 갈 데가 없다.
+  assert.match(fn("openScrubbedMonth"), /recorded\[scrubIndex\]\) return/);
+});
+
+test("세로 점선은 끌어서 옮기고, 옮기는 동안 다시 그리지 않는다", () => {
+  // 매번 SVG를 통째로 만들면 손가락을 따라오지 못한다.
+  assert.match(fn("scrubTo"), /moveScrubLine\(/);
+  assert.doesNotMatch(fn("scrubTo"), /drawTrend\(/, "짚을 때마다 다시 그리면 안 된다");
+  assert.match(app, /trendChart\.addEventListener\("pointerdown", startScrub\)/);
+  assert.match(css, /\.trend-chart \{[^}]*touch-action: none/, "브라우저가 스크롤로 채가면 겨눌 수 없다");
 });
 
 test("세로 축은 언제나 0부터 그린다", () => {
@@ -1021,8 +1031,24 @@ test("추이 금액 단위는 캘린더와 같은 자를 쓴다", () => {
 
 test("추이 그래프의 좌우 여백은 같다", () => {
   // 세로 축 숫자를 왼쪽에 세우면 그 자리만큼 격자가 밀려 왼쪽만 휑해 보인다.
-  // 숫자는 격자 위에 얹고, 선은 폭을 다 쓰게 한다.
   assert.match(app, /PAD = \{ left: (\d+), right: \1,/, "좌우 여백이 달라졌다");
-  assert.match(fn("drawGrid"), /text-anchor="start"/, "숫자는 격자 위 왼쪽 맞춤이다");
   assert.doesNotMatch(fn("drawGrid"), /PAD\.left - /, "숫자를 격자 왼쪽 밖으로 빼면 안 된다");
+});
+
+test("세로 축에는 숫자를 달지 않는다", () => {
+  // 이 화면이 답하는 질문은 "얼마"가 아니라 "어떻게 변했나"다.
+  // 정확한 금액은 점선을 짚으면 나오고, 기준이 되는 목표 금액은 범례에 있다.
+  assert.doesNotMatch(fn("drawGrid"), /<text/, "축에 숫자를 달면 눈이 모양을 못 본다");
+  assert.match(fn("drawLegend"), /목표 \$\{escapeHtml\(\s*formatCompactMoney\(line\.goal\)/);
+});
+
+test("가로축에는 열두 달을 다 적는다", () => {
+  assert.doesNotMatch(fn("drawMonthLabels"), /index % 2/, "건너뛰면 몇 월인지 세어야 한다");
+});
+
+test("범례의 목표 표시는 그래프의 점선과 같은 모양이다", () => {
+  // 색만 옅게 하면 "흐린 실선"으로 보여 목표선인지 알 수 없다.
+  // 무늬를 인라인으로 그리는 이유: CSS 로 두면 색을 지정하는 인라인 스타일이 덮어쓴다.
+  assert.match(fn("drawLegend"), /repeating-linear-gradient/);
+  assert.doesNotMatch(css, /\.trend-key i\.is-goal \{[^}]*background-image/);
 });

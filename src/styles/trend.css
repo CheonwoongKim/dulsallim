@@ -15,9 +15,30 @@
   vector-effect: non-scaling-stroke;
 }
 
+.trend-chart {
+  /* 가로로 끄는 동작은 우리가 쓴다. 브라우저가 스크롤로 채가면 선을 겨눌 수 없다. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .trend-axis {
   font-size: 8px;
-  fill: var(--muted);
+  fill: var(--ink-soft);
+}
+
+/* 지금 짚고 있는 달. 어느 달을 보고 있는지 아래 숫자와 이어 준다. */
+.trend-axis.is-active {
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+.trend-scrub {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.45;
+  vector-effect: non-scaling-stroke;
 }
 
 .trend-line {
@@ -52,18 +73,65 @@
   vector-effect: non-scaling-stroke;
 }
 
-.trend-hit {
-  fill: transparent;
+/* 짚은 달의 숫자. 누르면 그 달을 자세히 본다. */
+.trend-readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--paper-deep);
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  text-align: left;
   cursor: pointer;
 }
 
+.trend-readout:disabled {
+  color: var(--ink-soft);
+  cursor: default;
+}
+
+.trend-readout span {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.trend-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.trend-amount i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
 .trend-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
+  display: grid;
+  gap: 8px;
   margin: 0;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--ink-soft);
+}
+
+.trend-row {
+  display: flex;
+  gap: 16px;
+}
+
+/* 목표선 표시. 그래프의 점선과 같은 모양이라 설명 없이도 이어진다.
+   무늬는 인라인으로 그린다 — 여기서 background-image 로 두면 색을 지정하는
+   인라인 스타일이 통째로 덮어써서 무늬가 사라진다. */
+.trend-key i.is-goal {
+  opacity: 0.55;
 }
 
 .trend-key {
@@ -81,6 +149,6 @@
 .trend-note {
   margin: 0;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--ink-soft);
   line-height: 1.5;
 }
