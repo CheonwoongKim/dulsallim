@@ -709,3 +709,11 @@ test("막대 길이는 옆에 적힌 %와 같은 것을 가리킨다", () => {
   const floor = Number(css.match(/\.analysis-bar i \{[^}]*min-width:\s*(\d+)px/)[1]);
   assert.ok(floor >= 8, `min-width ${floor}px — 작은 분류가 안 보인다`);
 });
+
+test("비중을 나타내는 막대는 화면이 달라도 같은 두께다", () => {
+  // 같은 뜻의 그림이 화면마다 두께가 다르면 서로 다른 것으로 읽힌다.
+  const 분석 = css.match(/\.analysis-bar \{[^}]*?height:\s*(\d+)px/);
+  const 본화면 = css.match(/\.ratio-bar \{[^}]*?height:\s*(\d+)px/);
+  assert.ok(분석 && 본화면, "두 막대의 height 규칙을 찾지 못했다");
+  assert.equal(분석[1], 본화면[1], `분석 ${분석[1]}px vs 본 화면 ${본화면[1]}px`);
+});

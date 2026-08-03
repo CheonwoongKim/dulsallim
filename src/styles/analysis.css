@@ -133,10 +133,14 @@
   white-space: nowrap;
 }
 
-/* 회색 부분이 그 달 전체(100%)다. 색이 그 분류의 몫이라 막대와 옆의 %가 같은 것을 가리킨다. */
+/*
+ * 회색 부분이 그 달 전체(100%)다. 색이 그 분류의 몫이라 막대와 옆의 %가 같은 것을 가리킨다.
+ * 높이는 본 화면의 사람별 비중 바와 같은 4px. 같은 뜻의 그림이 화면마다 두께가 다르면
+ * 서로 다른 것으로 읽힌다.
+ */
 .analysis-bar {
   overflow: hidden;
-  height: 8px;
+  height: 4px;
   border-radius: 99px;
   background: var(--paper-deep);
 }
