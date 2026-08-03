@@ -44,6 +44,10 @@
   outline-offset: -5px;
 }
 
+.swipe-action.is-copy {
+  background: var(--sage);
+}
+
 .swipe-action.is-edit {
   background: var(--ink-soft);
 }

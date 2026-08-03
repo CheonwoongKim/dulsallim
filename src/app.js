@@ -5,7 +5,12 @@ import { formatMoney } from "./expenses.js";
 import { paintMembers, render, resetTotalAnimation } from "./render.js";
 import { clearData, getExpenses, loadAll, reloadExpenses } from "./store.js";
 import { subscribeExpenses, subscribeNotes, unsubscribe } from "./data/remote.js";
-import { deleteExpense, toggleMemberFilter, undoDelete } from "./features/expense-actions.js";
+import {
+  copyExpense,
+  deleteExpense,
+  toggleMemberFilter,
+  undoDelete,
+} from "./features/expense-actions.js";
 import {
   closeForm,
   handleSubmit,
@@ -207,6 +212,11 @@ elements.item.addEventListener("input", () => {
 elements.list.addEventListener("click", (event) => {
   if (event.target.closest("[data-open-form]")) {
     openForm();
+    return;
+  }
+  const copyButton = event.target.closest("[data-copy-id]");
+  if (copyButton) {
+    copyExpense(copyButton.dataset.copyId);
     return;
   }
   const editButton = event.target.closest("[data-edit-id]");

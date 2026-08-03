@@ -555,3 +555,33 @@ test("보낸 메시지는 시트를 다시 열지 않아도 바로 보인다", (
   assert.equal(callSites, 1, `countNote 를 부르는 곳이 ${callSites}곳 — 하나여야 한다`);
   assert.match(fn("receiveNote"), /const isNew = countNote\(note\)/);
 });
+
+test("복제는 값만 가져오고 새 기록으로 남는다", () => {
+  // 수정으로 열리면 지난 기록을 덮어써 버린다.
+  const copy = fn("copyExpense");
+  assert.match(copy, /\{ editing: false \}/, "수정 모드로 열면 안 된다");
+  assert.match(copy, /category: source\.category, item: source\.item, amount: source\.amount/);
+  // 날짜와 결제자는 일부러 안 가져온다 — 폼이 오늘·로그인한 사람으로 채운다.
+  assert.doesNotMatch(copy, /date: source\.date/, "지난 날짜를 가져오면 안 된다");
+  assert.doesNotMatch(copy, /member: source\.member/, "지난 결제자를 가져오면 안 된다");
+
+  const open = fn("openForm");
+  assert.match(open, /editingExpenseId = editing \? expense\.id : null/);
+  assert.match(open, /editing \? "기록 수정" : "새로운 기록"/, "복제인데 '기록 수정'이 뜨면 안 된다");
+});
+
+test("목록 행의 수정·삭제 자리는 그대로다", () => {
+  // 손이 기억하는 위치가 바뀌면 삭제를 잘못 누른다. 복제는 맨 왼쪽에 붙인다.
+  const row = app.match(/<span class="swipe-actions">[\s\S]*?<\/span>/)[0];
+  const order = [...row.matchAll(/data-(copy|edit|delete)-id/g)].map((m) => m[1]);
+  assert.deepEqual(order, ["copy", "edit", "delete"]);
+});
+
+test("복제는 지출 목록에만 있다", async () => {
+  // 고정비는 매월 반복되는 틀이라 같은 것을 하나 더 만들 이유가 없다.
+  const { readFile } = await import("node:fs/promises");
+  const read = (path) => readFile(new URL(`../src/${path}`, import.meta.url), "utf8");
+
+  assert.match(await read("ui/ledger.js"), /data-copy-id/, "지출 행에는 있어야 한다");
+  assert.doesNotMatch(await read("features/fixed-sheet.js"), /data-copy|복제/, "고정비 행에는 없어야 한다");
+});

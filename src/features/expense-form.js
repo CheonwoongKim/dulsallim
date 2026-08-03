@@ -88,12 +88,19 @@ export function syncGoalNotice() {
     : `남은 목표 ${formatMoney(status.remaining)}원 · ${status.percent}%`;
 }
 
-export function openForm(expense = null) {
-  editingExpenseId = expense?.id || null;
+/**
+ * @param {object|null} draft 채워 넣을 값
+ * @param {{editing?: boolean}} [options]
+ *   editing이 false면 값만 가져오고 새 기록으로 남는다(복제).
+ *   비워 둔 항목은 아래 기본값이 채운다 — 날짜는 오늘, 결제자는 로그인한 사람.
+ */
+export function openForm(draft = null, { editing = Boolean(draft) } = {}) {
+  const expense = draft;
+  editingExpenseId = editing ? expense.id : null;
   elements.form.reset();
-  elements.formEyebrow.textContent = expense ? "기록 수정" : "새로운 기록";
-  elements.formTitle.textContent = expense ? "내용을 수정할까요?" : "어디에 썼나요?";
-  elements.submitLabel.textContent = expense ? "변경사항 저장" : "지출 추가하기";
+  elements.formEyebrow.textContent = editing ? "기록 수정" : "새로운 기록";
+  elements.formTitle.textContent = editing ? "내용을 수정할까요?" : "어디에 썼나요?";
+  elements.submitLabel.textContent = editing ? "변경사항 저장" : "지출 추가하기";
   elements.date.value = expense?.date || getDefaultDate();
   syncDateDisplay();
   elements.category.value = expense?.category || "food";

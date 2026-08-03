@@ -1,4 +1,5 @@
 import { nextMemberFilter } from "../expenses.js";
+import { openForm } from "./expense-form.js";
 import { render } from "../render.js";
 import {
   addExpense,
@@ -65,6 +66,23 @@ export async function undoDelete() {
     return;
   }
   hideToast();
+}
+
+/**
+ * 같은 지출을 오늘 또 했을 때. 분류·항목·금액만 가져와 새 기록으로 연다.
+ *
+ * 날짜와 결제자는 일부러 가져오지 않는다 — 오늘, 내가 쓴 것을 적는 것이지
+ * 지난 기록을 그대로 옮기는 게 아니다. 폼이 오늘·로그인한 사람으로 채운다.
+ */
+export function copyExpense(id) {
+  const source = getExpenses().find((expense) => expense.id === id);
+  closeOpenRow();
+  if (!source) return;
+
+  openForm(
+    { category: source.category, item: source.item, amount: source.amount },
+    { editing: false },
+  );
 }
 
 /** 같은 사람을 다시 누르면 필터가 해제된다. */

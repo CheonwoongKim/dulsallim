@@ -15,6 +15,7 @@ function createExpenseRow(expense) {
   // 액션 패널을 먼저 두고 내용면이 그 위를 덮는다. 스와이프하면 내용면이 밀려 액션이 드러난다.
   article.innerHTML = `
     <span class="swipe-actions">
+      <button class="swipe-action is-copy" type="button" data-copy-id="${expense.id}" aria-label="${escapeHtml(expense.item)} 복제">복제</button>
       <button class="swipe-action is-edit" type="button" data-edit-id="${expense.id}" aria-label="${escapeHtml(expense.item)} 수정">수정</button>
       <button class="swipe-action is-delete" type="button" data-delete-id="${expense.id}" aria-label="${escapeHtml(expense.item)} 삭제">삭제</button>
     </span>
