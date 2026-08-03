@@ -217,14 +217,17 @@
 
         <div class="compare-list" role="group" aria-label="무엇과 비교할지">
           <button type="button" data-compare="previous" aria-pressed="false">
+            <span class="compare-mark" aria-hidden="true"></span>
             <span class="compare-name">지난달</span>
             <span class="compare-value" id="compare-previous"></span>
           </button>
           <button type="button" data-compare="lastYear" aria-pressed="false">
+            <span class="compare-mark" aria-hidden="true"></span>
             <span class="compare-name">작년 같은 달</span>
             <span class="compare-value" id="compare-last-year"></span>
           </button>
         </div>
+        <p class="compare-hint" id="compare-hint" hidden>눌러서 분류별로 함께 비교할 수 있어요</p>
 
         <div class="analysis-categories">
           <p class="eyebrow">분류별</p>

@@ -143,11 +143,17 @@ function paintCompared(categories, otherCategories) {
 /** 견줄 기록이 있는 달만 고를 수 있게 한다. */
 function paintComparePicker(compared, active) {
   const 가능 = { previous: compared.previous, lastYear: compared.lastYear };
+  let 고를수있음 = false;
+
   elements.compareButtons.forEach((button) => {
     const mode = button.dataset.compare;
     button.disabled = !가능[mode];
+    if (가능[mode]) 고를수있음 = true;
     button.setAttribute("aria-pressed", String(Boolean(active) && compareWith === mode));
   });
+
+  // 고를 게 있는데 아직 안 골랐을 때만 알린다. 한 번 고르고 나면 설명이 필요 없다.
+  elements.compareHint.hidden = !고를수있음 || Boolean(active);
 }
 
 /** 같은 것을 다시 누르면 꺼진다. */

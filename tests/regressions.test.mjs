@@ -749,3 +749,13 @@ test("0원인 분류에는 막대를 그리지 않는다", () => {
   // 최소 굵기 8px 이 0에까지 적용되면 안 썼는데 쓴 것처럼 보인다.
   assert.match(fn("paintCompared"), /amount \? `<i style="width:.*?" : ""/s);
 });
+
+test("비교를 고를 수 있다는 것이 눈에 보인다", () => {
+  // 잠긴 것과 안 잠긴 것이 똑같이 보이면 눌러볼 생각조차 안 든다.
+  assert.match(html, /class="compare-mark"/, "고를 수 있다는 표식이 있어야 한다");
+  assert.match(css, /button\[aria-pressed="true"\] \.compare-mark \{[^}]*background: var\(--accent\)/);
+  assert.match(css, /\.compare-list button:disabled \{[^}]*opacity/, "잠긴 줄은 흐려야 한다");
+
+  // 고를 게 있는데 아직 안 골랐을 때만 안내한다.
+  assert.match(fn("paintComparePicker"), /elements\.compareHint\.hidden = !고를수있음 \|\| Boolean\(active\)/);
+});
