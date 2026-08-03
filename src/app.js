@@ -71,6 +71,12 @@ import {
 } from "./features/nag.js";
 import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "./features/analysis.js";
 import {
+  closeTrendSheet,
+  openTrendSheet,
+  selectTrendMonth,
+  shiftTrendYear,
+} from "./features/trend.js";
+import {
   closeNotes,
   flushPendingNotes,
   handleNoteSubmit,
@@ -108,6 +114,7 @@ function closeActiveSheet() {
   if (!elements.fixedSheet.hidden) closeFixedSheet();
   if (!elements.notesSheet.hidden) closeNotes();
   if (!elements.nagSheet.hidden) closeNagSheet();
+  if (!elements.trendSheet.hidden) closeTrendSheet();
 }
 
 /* ── 상단: 사람 필터 · 월 이동 ─────────────────────────────── */
@@ -196,6 +203,17 @@ elements.openNag.addEventListener("click", openNagPage);
 elements.nagEnabled.addEventListener("change", (event) => toggleNagEnabled(event.target.checked));
 elements.addNag.addEventListener("click", addNag);
 closeOnPress(elements.closeNagSheet, closeNagSheet);
+
+/* ── 한 해 추이 시트 ──────────────────────────────────────── */
+
+elements.openTrend.addEventListener("click", openTrendSheet);
+closeOnPress(elements.closeTrendSheet, closeTrendSheet);
+elements.trendPrev.addEventListener("click", () => shiftTrendYear(-1));
+elements.trendNext.addEventListener("click", () => shiftTrendYear(1));
+elements.trendChart.addEventListener("click", (event) => {
+  const month = event.target.dataset.trendMonth;
+  if (month) selectTrendMonth(month);
+});
 elements.nagForm.addEventListener("submit", handleNagSubmit);
 elements.nagPercent.addEventListener("input", (event) => {
   event.target.value = event.target.value.replace(/\D/g, "").slice(0, 3);

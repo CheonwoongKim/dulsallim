@@ -981,3 +981,40 @@ test("서버 함수는 비로그인이 부를 수 없다", async () => {
     }
   }
 });
+
+/* ── 한 해 추이 시트 ──────────────────────────────────────────── */
+
+test("추이 시트도 다른 시트와 같은 처리를 받는다", () => {
+  assert.match(html, /<section class="sheet" id="trend-sheet"[^>]*aria-modal="true"/);
+  assert.match(app, /SHEETS = \[[\s\S]*?elements\.trendSheet[\s\S]*?\]/, "공통 배선 목록에 있어야 한다");
+  assert.match(fn("closeActiveSheet"), /closeTrendSheet\(\)/);
+  assert.match(app, /closeOnPress\(elements\.closeTrendSheet, closeTrendSheet\)/);
+});
+
+test("그래프는 분석 페이지를 건드리지 않고 머리 오른쪽에서 연다", () => {
+  // 분석 페이지는 한 달을 깊이 보는 곳이라 그대로 두기로 했다.
+  assert.match(
+    html,
+    /<section class="page" id="analysis-page"[\s\S]*?<header class="page-head">[\s\S]*?id="open-trend"[\s\S]*?<\/header>/,
+    "분석 페이지 머리에 그래프 버튼이 있어야 한다",
+  );
+  assert.match(css, /\.page-action \{[^}]*margin-left: auto/, "오른쪽 끝에 붙어야 한다");
+});
+
+test("달을 짚으면 그 달로 옮겨 가고 시트는 닫힌다", () => {
+  // ‹ › 로 넘겨 가며 찾던 일을, 눈에 띈 달을 짚는 일로 바꾸는 것이 이 시트의 존재 이유다.
+  assert.match(fn("selectTrendMonth"), /setSelectedMonth\(monthKey\)/);
+  assert.match(fn("selectTrendMonth"), /paintAnalysis\(\)/);
+  assert.match(fn("selectTrendMonth"), /closeTrendSheet\(\)/);
+  assert.match(app, /dataset\.trendMonth[\s\S]{0,80}selectTrendMonth\(month\)/);
+});
+
+test("세로 축은 언제나 0부터 그린다", () => {
+  // 0에서 시작하지 않으면 20만 차이가 절벽처럼 보여 그래프가 거짓말을 한다.
+  assert.match(fn("drawGrid"), /\[0, max \/ 2, max\]/);
+});
+
+test("추이 금액 단위는 캘린더와 같은 자를 쓴다", () => {
+  // 같은 앱에서 한쪽은 46.3만, 다른 쪽은 463,000원이면 크기 비교가 눈으로 안 된다.
+  assert.match(app, /import \{ formatCompactMoney \} from "\.\.\/calendar\.js"/);
+});

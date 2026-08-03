@@ -1,0 +1,86 @@
+/* 한 해 추이 그래프 — 선과 점만으로 그린다. */
+
+.trend-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 선 굵기가 좌표계와 함께 늘어나면 폰에서 뭉툭해진다. 화면 기준으로 고정한다. */
+  vector-effect: non-scaling-stroke;
+  overflow: visible;
+}
+
+.trend-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.trend-axis {
+  font-size: 8px;
+  fill: var(--muted);
+}
+
+.trend-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 아직 안 끝난 달로 들어가는 구간. 실선으로 이으면 급락처럼 보인다. */
+.trend-line.is-provisional {
+  stroke-dasharray: 3 3;
+}
+
+.trend-dot {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 아직 안 끝난 달. 속을 비워 "한 달치가 아니다"라고 말한다.
+   테두리까지 점선으로 하면 이 크기에서는 그냥 지저분해 보여서 채움만 비운다. */
+.trend-dot.is-provisional {
+  stroke-width: 2;
+}
+
+/* 목표선은 배경처럼 옅게. 읽을 것은 실선이지 이 선이 아니다. */
+.trend-goal {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.trend-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.trend-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trend-key i {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.trend-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
