@@ -102,16 +102,21 @@
   gap: 10px;
 }
 
+/*
+ * 줄 전체를 하나의 격자로 묶는다.
+ * 줄마다 따로 계산하면 오른쪽 금액의 글자 수에 따라 막대가 쓸 수 있는 너비가 달라져
+ * 막대 끝이 줄마다 어긋난다. 한 격자로 묶으면 모든 줄이 같은 열 너비를 나눠 쓴다.
+ */
 #analysis-list {
   display: grid;
-  gap: 18px;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 18px 10px;
+  align-items: center;
 }
 
+/* 줄은 묶음일 뿐, 칸은 위 격자에 직접 놓인다. */
 .analysis-row {
-  display: grid;
-  gap: 10px;
-  align-items: center;
-  grid-template-columns: 52px 1fr auto;
+  display: contents;
 }
 
 .analysis-name {
@@ -136,15 +141,20 @@
   /* 색은 분류마다 다르므로 분석 화면이 직접 넣는다. */
 }
 
-.analysis-value {
-  color: var(--ink);
+.analysis-amount,
+.analysis-percent {
   font-size: 13px;
+  /* 숫자 폭을 고정해 자릿수가 달라도 열이 흔들리지 않는다. */
   font-variant-numeric: tabular-nums;
+  text-align: right;
   white-space: nowrap;
 }
 
-.analysis-value b {
-  margin-left: 6px;
+.analysis-amount {
+  color: var(--ink);
+}
+
+.analysis-percent {
   color: var(--ink-soft);
   font-size: 12px;
   font-weight: 700;

@@ -82,7 +82,8 @@ export function paintAnalysis() {
       <div class="analysis-row">
         <span class="analysis-name">${escapeHtml(category.label)}</span>
         <span class="analysis-bar"><i style="width:${Math.max(2, (category.total / top) * 100)}%;background:${category.color}"></i></span>
-        <span class="analysis-value">${formatMoney(category.total)}원<b>${category.percent}%</b></span>
+        <span class="analysis-amount">${formatMoney(category.total)}원</span>
+        <span class="analysis-percent">${category.percent}%</span>
       </div>`,
     )
     .join("");

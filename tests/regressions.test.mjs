@@ -687,3 +687,14 @@ test("분석 페이지도 다른 전체 화면과 같은 처리를 받는다", (
   assert.match(app, /pages: \[[\s\S]*?#analysis-page[\s\S]*?\]/, "닫기·스크롤 잠금 목록에 있어야 한다");
   assert.match(html, /<section class="page" id="analysis-page"[^>]*aria-labelledby/);
 });
+
+test("분석 막대는 줄마다 같은 길이를 쓴다", () => {
+  // 줄마다 격자를 따로 계산하면 오른쪽 금액의 글자 수만큼 막대가 짧아져 끝이 어긋난다.
+  assert.match(css, /#analysis-list \{[^}]*grid-template-columns/, "열 너비는 목록 전체가 함께 정한다");
+  assert.match(css, /\.analysis-row \{[^}]*display: contents/, "줄이 스스로 격자를 만들면 안 된다");
+  assert.doesNotMatch(css, /\.analysis-row \{[^}]*grid-template-columns/);
+
+  // 금액과 비중이 한 칸에 뭉쳐 있으면 열 너비를 나눌 수 없다.
+  assert.match(app, /class="analysis-amount"/);
+  assert.match(app, /class="analysis-percent"/);
+});
