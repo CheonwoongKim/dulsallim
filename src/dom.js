@@ -109,6 +109,7 @@ export const elements = {
   nextYear: document.querySelector("#next-year"),
   monthGrid: document.querySelector("#month-grid"),
   ledgerFilter: document.querySelector("#ledger-filter"),
+  sectionHeading: document.querySelector(".section-heading"),
   count: document.querySelector("#record-count"),
   list: document.querySelector("#expense-list"),
   calendar: document.querySelector("#expense-calendar"),

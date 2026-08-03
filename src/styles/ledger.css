@@ -18,14 +18,6 @@
   align-items: flex-end;
   justify-content: space-between;
   background: var(--paper);
-  /*
-   * 붙어 있는 요소는 브라우저가 따로 떼어 그린다. 그런데 iOS 에서는 그렇게 떼어 낸
-   * 그림판이 예전 크기로 남는 일이 있다. 달을 옮겨 "(9)" 가 "(13)" 이 되면 글자는
-   * 넓어졌는데 그림판은 그대로라, 넘친 닫는 괄호가 네모나게 잘려 보였다.
-   * 스크롤하면 다시 그려져 멀쩡해지는 것도 같은 이유다.
-   * 미리 알려 두면 브라우저가 이 요소를 제대로 관리하는 그림판에 올린다.
-   */
-  will-change: transform;
 }
 
 .section-heading h2,

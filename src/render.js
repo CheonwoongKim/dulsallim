@@ -33,6 +33,26 @@ export function resetTotalAnimation() {
   previousTotal = 0;
 }
 
+/**
+ * 건수를 적고, 바뀌었으면 제목을 한 번 강제로 다시 그린다.
+ *
+ * 제목은 붙어 있어(sticky) iOS 가 따로 떼어 그리는데, 안의 글자가 바뀌어도 그 그림이
+ * 갱신되지 않는 일이 있다. "(9)" 가 "(13)" 이 되면 넓어진 만큼이 네모나게 잘려
+ * 닫는 괄호가 반쯤 사라져 보였다. 스크롤하면 멀쩡해지는 것도 그래서다.
+ * display 를 껐다 켜면 브라우저가 다시 그릴 수밖에 없다. 달이나 필터를 바꿀 때만
+ * 일어나는 일이라 비용도 눈에 띄지 않는다.
+ */
+function setRecordCount(text) {
+  if (elements.count.textContent === text) return;
+  elements.count.textContent = text;
+
+  const heading = elements.sectionHeading;
+  if (!heading) return;
+  heading.style.display = "none";
+  void heading.offsetHeight;
+  heading.style.display = "";
+}
+
 function animateNumber(from, to) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     elements.total.textContent = formatMoney(to);
@@ -130,7 +150,7 @@ export function render() {
     renderCalendar({ monthKey: getSelectedMonth(), monthly: byMember, selected: dateFilter });
   }
 
-  elements.count.textContent = `(${visible.length})`;
+  setRecordCount(`(${visible.length})`);
 
   // 사람과 날짜를 함께 걸 수 있다. 걸린 것만 이어 붙인다.
   const labels = [
