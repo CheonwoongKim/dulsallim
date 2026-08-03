@@ -41,6 +41,12 @@
 /* 날짜별 지출 격자 */
 .calendar {
   display: grid;
+  /*
+   * 목록은 첫 행의 안쪽 여백 덕에 글자가 제목에서 41px 아래에서 시작한다.
+   * 캘린더는 요일 줄이 곧바로 붙어 답답해 보이므로 같은 자리에서 시작하도록 맞춘다.
+   * 위 제목의 margin-bottom(14px)과 맞닿아 큰 쪽으로 합쳐지므로, 이 값이 그대로 최종 간격이 된다.
+   */
+  margin-top: 41px;
   margin-bottom: 8px;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;

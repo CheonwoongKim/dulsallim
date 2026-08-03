@@ -646,3 +646,11 @@ test("전환 버튼은 손가락이 닿을 만큼 크다", () => {
   const height = Number(css.match(/\.view-toggle button \{[^}]*height:\s*(\d+)px/)[1]);
   assert.ok(width >= 36 && height >= 28, `${width}×${height}px — 너무 작다`);
 });
+
+test("캘린더도 목록과 같은 높이에서 시작한다", () => {
+  // 목록은 첫 행 안쪽 여백 덕에 41px 아래에서 글자가 시작한다.
+  // 캘린더는 요일 줄이 곧바로 붙어 그만큼을 margin 으로 벌어 준다. 빠지면 답답해 보인다.
+  // 인접 margin 은 큰 쪽으로 합쳐지므로 이 값이 그대로 최종 간격이 된다.
+  const top = Number(css.match(/\.calendar \{[^}]*margin-top:\s*(\d+)px/)[1]);
+  assert.ok(top >= 38 && top <= 44, `margin-top ${top}px — 목록의 41px 과 어긋난다`);
+});
