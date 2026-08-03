@@ -22,6 +22,12 @@
   user-select: none;
 }
 
+.trend-chart:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
 .trend-axis {
   font-size: 8px;
   fill: var(--ink-soft);

@@ -17,7 +17,7 @@ const HEADROOM = 1.5;
 const MIN_TOP = AXIS_UNIT;
 
 /** 그 해의 열두 달 키. 1월이 0번이다. */
-export function yearMonthKeys(year) {
+function yearMonthKeys(year) {
   return Array.from({ length: MONTHS_IN_YEAR }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
 }
 

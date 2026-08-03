@@ -114,7 +114,9 @@ function drawGrid(max) {
 function drawMonthLabels(scrubIndex) {
   return Array.from({ length: 12 }, (_, index) => {
     const here = index === scrubIndex ? " is-active" : "";
-    return `<text class="trend-axis${here}" x="${round(x(index))}" y="${VIEW.height - 6}" text-anchor="middle">${index + 1}</text>`;
+    return `<text class="trend-axis${here}" data-month-index="${index}" x="${round(x(index))}" y="${
+      VIEW.height - 6
+    }" text-anchor="middle">${index + 1}</text>`;
   }).join("");
 }
 
@@ -153,8 +155,10 @@ export function moveScrubLine(root, scrubIndex) {
   const at = round(x(scrubIndex));
   line.setAttribute("x1", at);
   line.setAttribute("x2", at);
-  root.querySelectorAll(".trend-axis").forEach((label, index) => {
-    label.classList.toggle("is-active", index === scrubIndex);
+  // 표시를 보고 찾는다. 그리는 순서에 기대면 같은 클래스를 쓰는 글자가 하나만 늘어도
+  // 조용히 엉뚱한 달이 굵어진다 — 터지지 않고 틀리는 쪽이라 더 나쁘다.
+  root.querySelectorAll("[data-month-index]").forEach((label) => {
+    label.classList.toggle("is-active", Number(label.dataset.monthIndex) === scrubIndex);
   });
 }
 

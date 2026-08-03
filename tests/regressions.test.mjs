@@ -1004,17 +1004,15 @@ test("그래프는 분석 페이지를 건드리지 않고 머리 오른쪽에�
 test("짚은 달을 자세히 보면 그 달로 옮겨 가고 시트는 닫힌다", () => {
   // ‹ › 로 넘겨 가며 찾던 일을, 눈에 띈 달을 짚는 일로 바꾸는 것이 이 시트의 존재 이유다.
   assert.match(fn("openScrubbedMonth"), /setSelectedMonth\(data\.months\[scrubIndex\]\)/);
-  assert.match(fn("openScrubbedMonth"), /paintAnalysis\(\)/);
   assert.match(fn("openScrubbedMonth"), /closeTrendSheet\(\)/);
-  assert.match(app, /trendReadout\.addEventListener\("click", openScrubbedMonth\)/);
   // 기록이 없는 달로는 갈 데가 없다.
-  assert.match(fn("openScrubbedMonth"), /recorded\[scrubIndex\]\) return/);
+  assert.match(fn("openScrubbedMonth"), /recorded\[scrubIndex\]\) return false/);
 });
 
 test("세로 점선은 끌어서 옮기고, 옮기는 동안 다시 그리지 않는다", () => {
   // 매번 SVG를 통째로 만들면 손가락을 따라오지 못한다.
-  assert.match(fn("scrubTo"), /moveScrubLine\(/);
-  assert.doesNotMatch(fn("scrubTo"), /drawTrend\(/, "짚을 때마다 다시 그리면 안 된다");
+  assert.match(fn("setScrub"), /moveScrubLine\(/);
+  assert.doesNotMatch(fn("setScrub"), /drawTrend\(/, "짚을 때마다 다시 그리면 안 된다");
   assert.match(app, /trendChart\.addEventListener\("pointerdown", startScrub\)/);
   assert.match(css, /\.trend-chart \{[^}]*touch-action: none/, "브라우저가 스크롤로 채가면 겨눌 수 없다");
 });
@@ -1065,4 +1063,38 @@ test("월 이동 줄은 스스로 아래 여백을 갖지 않는다", () => {
   const 기본 = css.match(/\n\.month-control \{[^}]*\}/)[0];
   assert.doesNotMatch(기본, /margin-bottom|margin:\s*[^;]*\d+px/, "여백은 쓰는 자리가 정한다");
   assert.match(css, /\.overview-head \.month-control \{[^}]*margin-bottom/, "본 화면에서만 띄운다");
+});
+
+test("추이 그래프로 달을 옮기면 본 화면도 함께 따라온다", () => {
+  // 보고 있는 달은 본 화면과 나눠 쓰는 상태다. 한쪽만 다시 그리면 화면과 상태가 어긋나,
+  // 본 화면에서 "다음 달"을 눌렀는데 과거로 가는 일이 생긴다(실제로 8월 → 7월이 나왔다).
+  // render() 가 본 화면과 분석 페이지를 함께 그리므로 그것 하나만 부르면 된다.
+  assert.match(app, /if \(openScrubbedMonth\(\)\) render\(\)/);
+  assert.doesNotMatch(fn("openScrubbedMonth"), /paintAnalysis/, "render 가 이미 한다");
+});
+
+test("시트를 열어 둔 채 기록이 바뀌면 그래프도 다시 그린다", () => {
+  // 분석 페이지가 이미 이 방식으로 갱신된다. 화면이 늘 때마다 여기 한 줄씩 붙는다.
+  assert.match(app, /analysisPage\.hidden\) paintAnalysis\(\)/);
+  assert.match(app, /trendSheet\.hidden\) refreshTrend\(\)/);
+});
+
+test("점선은 키보드로도 옮길 수 있다", () => {
+  // 이 앱은 포커스 가두기와 focus-visible 을 챙겨 왔다. 여기만 포인터 전용이면 안 된다.
+  assert.match(html, /id="trend-chart"[^>]*tabindex="0"/);
+  assert.match(html, /id="trend-chart"[^>]*role="slider"/);
+  assert.match(app, /trendChart\.addEventListener\("keydown", scrubByKey\)/);
+  assert.match(css, /\.trend-chart:focus-visible \{[^}]*outline/);
+});
+
+test("굵게 칠할 달을 그리는 순서로 찾지 않는다", () => {
+  // querySelectorAll 의 N번째가 N월이라고 가정하면, 나중에 같은 클래스를 쓰는 글자가
+  // 하나만 늘어도 조용히 엉뚱한 달이 굵어진다. 터지지 않고 틀리는 쪽이라 더 나쁘다.
+  assert.match(fn("moveScrubLine"), /data-month-index/);
+  assert.doesNotMatch(fn("moveScrubLine"), /forEach\(\(label, index\)/, "순서에 기대면 안 된다");
+});
+
+test("한 해 데이터는 한 번만 계산한다", () => {
+  // 열 때 두 번 계산해도 결과는 같지만, 읽는 사람이 "왜 두 번이지" 하고 멈춘다.
+  assert.equal((app.match(/buildYearSeries\(getExpenses\(\)/g) || []).length, 1);
 });

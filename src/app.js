@@ -76,6 +76,7 @@ import {
   moveScrub,
   openScrubbedMonth,
   openTrendSheet,
+  scrubByKey,
   shiftTrendYear,
   startScrub,
 } from "./features/trend.js";
@@ -218,7 +219,11 @@ elements.trendChart.addEventListener("pointerdown", startScrub);
 elements.trendChart.addEventListener("pointermove", moveScrub);
 elements.trendChart.addEventListener("pointerup", endScrub);
 elements.trendChart.addEventListener("pointercancel", endScrub);
-elements.trendReadout.addEventListener("click", openScrubbedMonth);
+elements.trendChart.addEventListener("keydown", scrubByKey);
+// 보고 있는 달은 본 화면과 나눠 쓰는 상태다. 한쪽만 그리면 화면과 상태가 어긋난다.
+elements.trendReadout.addEventListener("click", () => {
+  if (openScrubbedMonth()) render();
+});
 elements.nagForm.addEventListener("submit", handleNagSubmit);
 elements.nagPercent.addEventListener("input", (event) => {
   event.target.value = event.target.value.replace(/\D/g, "").slice(0, 3);
