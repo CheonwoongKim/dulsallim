@@ -12,6 +12,11 @@ let depth = 0;
  * 시트가 열린 동안 배경 페이지가 움직이지 않게 고정한다.
  * iOS는 overflow:hidden만으로는 스크롤이 막히지 않아 position:fixed로 위치를 잡아둔다.
  */
+/** 잠긴 동안의 scrollY 는 0 이다. 그걸 "맨 위로 올라갔다"로 읽으면 안 되는 곳이 있다. */
+export function isPageScrollLocked() {
+  return depth > 0;
+}
+
 export function lockPageScroll() {
   depth += 1;
   // 이미 잠겨 있다면 위치를 다시 읽지 않는다. 그때의 scrollY는 0이라 원래 위치를 잃는다.
