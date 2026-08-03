@@ -25,7 +25,6 @@ let closeTimer = null;
 let swallowTimer = null;
 /** 닫기 누름 직후 따라오는 click 한 번을 삼킬지. */
 let swallowNextClick = false;
-let formSettleTimer = null;
 let dismiss = () => {};
 
 /** 아래로 끌어 닫을 때 어떤 시트를 닫을지는 기능 쪽이 안다. 배선은 app.js가 주입한다. */
@@ -70,6 +69,8 @@ document.addEventListener(
 
 export function showSheet(sheet) {
   clearTimeout(closeTimer);
+  // 어떤 경로로든 굳은 채 남았다면 여기서 푼다. 갓 연 시트가 안 눌리는 일만은 없어야 한다.
+  sheet.querySelectorAll(".is-settling").forEach((el) => el.classList.remove("is-settling"));
   lastFocusedElement = document.activeElement;
   sheet.style.removeProperty("--drag-y");
   elements.backdrop.style.removeProperty("opacity");
@@ -139,12 +140,17 @@ export function keepFocusInSheet(event) {
  * 모바일 키보드가 내려가는 동안 시트가 움직여 클릭 좌표가 엉뚱한 입력 요소에 떨어지는 것을 막는다.
  * 레이아웃이 자리를 잡을 때까지 폼만 잠깐 입력을 받지 않게 한다(헤더의 닫기 버튼은 계속 동작).
  */
+const settleTimers = new WeakMap();
+
 export function beginSettle(scroller) {
-  clearTimeout(formSettleTimer);
+  // 타이머를 하나로 쓰면 두 폼이 잇달아 굳을 때 뒤엣것이 앞엣것의 해제를 취소한다.
+  // 그러면 앞 폼은 pointer-events: none 인 채로 영영 남아 입력이 아예 안 된다.
+  clearTimeout(settleTimers.get(scroller));
   scroller.classList.add("is-settling");
-  formSettleTimer = setTimeout(() => {
-    scroller.classList.remove("is-settling");
-  }, SETTLE_MS);
+  settleTimers.set(
+    scroller,
+    setTimeout(() => scroller.classList.remove("is-settling"), SETTLE_MS),
+  );
 }
 
 /** 마지막으로 손이 닿은 곳. focusout 만으로는 "어디를 눌러서" 포커스가 빠졌는지 알 수 없다. */
@@ -172,7 +178,11 @@ export function settleOnFocusLeave(form) {
     if (form.contains(event.relatedTarget)) return;
     // 방금 누른 곳이 폼 안이면 그 손짓의 결과다. 시간까지 보는 건 오래된 기록을 믿지 않기 위해서다.
     const 방금 = event.timeStamp - lastPress.at < PRESS_WINDOW_MS;
-    if (방금 && form.contains(lastPress.target)) return;
+    if (!방금) return beginSettle(form);
+    if (form.contains(lastPress.target)) return;
+    // 닫기를 누른 것이라면 시트가 통째로 사라지는 중이다. 잘못 눌릴 입력 자체가 없으니
+    // 굳힐 이유가 없고, 굳히면 닫히는 동안과 다시 열었을 때까지 입력이 먹지 않는다.
+    if (lastPress.target?.closest?.(".close-button")) return;
     beginSettle(form);
   });
 }

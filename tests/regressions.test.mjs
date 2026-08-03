@@ -119,7 +119,7 @@ test("키보드가 내려가는 동안 폼은 입력을 받지 않는다", () =>
   assert.match(fn("settleOnFocusLeave"), /lastPress\.target/);
   assert.doesNotMatch(app, /focusout[\s\S]{0,120}?beginSettle\(form\)/,
     "focusout 만 보고 굳히면 안 된다");
-  assert.match(fn("beginSettle"), /clearTimeout\(formSettleTimer\)/);
+  assert.match(fn("beginSettle"), /clearTimeout\(settleTimers\.get\(scroller\)\)/);
   assert.match(app, /form\.addEventListener\("focusout"/);
   assert.match(css, /\.sheet-scroll\.is-settling\s*\{[^}]*pointer-events:\s*none/);
 });
@@ -1097,4 +1097,24 @@ test("굵게 칠할 달을 그리는 순서로 찾지 않는다", () => {
 test("한 해 데이터는 한 번만 계산한다", () => {
   // 열 때 두 번 계산해도 결과는 같지만, 읽는 사람이 "왜 두 번이지" 하고 멈춘다.
   assert.equal((app.match(/buildYearSeries\(getExpenses\(\)/g) || []).length, 1);
+});
+
+test("굳히기 타이머는 폼마다 따로 둔다", () => {
+  // 타이머를 하나로 쓰면 두 폼이 잇달아 굳을 때 뒤엣것이 앞엣것의 해제를 취소한다.
+  // 그러면 앞 폼은 pointer-events: none 인 채로 영영 남아 입력 자체가 안 된다.
+  // (브라우저에서 재현했다 — 900ms 뒤에도 지출 폼이 굳어 있었다)
+  assert.match(app, /const settleTimers = new WeakMap\(\)/);
+  assert.match(fn("beginSettle"), /settleTimers\.get\(scroller\)/);
+  assert.match(fn("beginSettle"), /settleTimers\.set\(\s*scroller/);
+});
+
+test("닫기 버튼을 누를 때는 폼을 굳히지 않는다", () => {
+  // 굳히기는 "다음 탭이 엉뚱한 입력에 떨어지는 것"을 막으려는 것이다.
+  // 시트가 통째로 사라지는 중이면 잘못 눌릴 입력 자체가 없다.
+  assert.match(fn("settleOnFocusLeave"), /close-button/);
+});
+
+test("시트를 열 때 굳은 상태를 풀고 시작한다", () => {
+  // 어떤 경로로든 굳은 채 남았다면, 다시 열었을 때만큼은 멀쩡해야 한다.
+  assert.match(fn("showSheet"), /is-settling/);
 });
