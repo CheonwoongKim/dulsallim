@@ -1264,3 +1264,9 @@ test("붙어 있는 제목 아래로 목록이 비치지 않는다", () => {
   // 딱 자르면 반쯤 잘린 글자가 남는다. 배경색으로 녹여 보낸다.
   assert.match(css, /\.is-condensed \.section-heading::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
 });
+
+test("건수 표시는 제목의 좁은 자간을 물려받지 않는다", () => {
+  // 자간이 음수면 마지막 글자 뒤에도 그만큼 붙어 진행폭이 안쪽으로 당겨진다.
+  // 괄호처럼 오른쪽 끝까지 획이 닿는 글자는 그 1px 이 깎여 "(13'" 처럼 보일 수 있다.
+  assert.match(css, /\.section-heading h2 \{[^}]*\}[\s\S]*?\.record-count \{[^}]*letter-spacing: normal/);
+});
