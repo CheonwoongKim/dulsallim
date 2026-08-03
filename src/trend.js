@@ -9,17 +9,12 @@ import { toMonthKey } from "./expenses.js";
  */
 
 const MONTHS_IN_YEAR = 12;
-/** 기록이 하나도 없을 때 쓰는 세로 축 꼭대기. 0으로 두면 축이 무너진다. */
-const EMPTY_TOP = 100000;
-/**
- * 꼭대기로 쓸 만한 숫자들. 모두 절반이 딱 떨어져 가운데 눈금을 그릴 수 있다.
- *
- * 촘촘해야 한다. 2 다음이 바로 4면 210만을 쓴 해의 축이 400만이 되어
- * 그래프 위쪽 절반이 통째로 빈다. 선이 아래에 눌리면 오르내림이 안 보인다.
- */
-const NICE_STEPS = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
-/** 축 눈금의 최소 단위. 1.5 같은 배수를 써도 절반이 정수로 떨어지게 100으로 둔다. */
-const MIN_AXIS_UNIT = 100;
+/** 축은 100만 단위로 끊는다. 270만보다 300만이 머릿속에 남는다. */
+const AXIS_UNIT = 1000000;
+/** 목표 위로 이만큼 여유를 둔다. 넘겼을 때 얼마나 넘겼는지 보이라고. */
+const HEADROOM = 1.5;
+/** 목표가 아주 작거나 없을 때의 바닥. 없으면 축이 0이 되어 무너진다. */
+const MIN_TOP = AXIS_UNIT;
 
 /** 그 해의 열두 달 키. 1월이 0번이다. */
 export function yearMonthKeys(year) {
@@ -27,15 +22,18 @@ export function yearMonthKeys(year) {
 }
 
 /**
- * 눈금이 떨어지는 꼭대기 값으로 올린다.
- * 187만을 그대로 쓰면 축 라벨이 "1,870,000"처럼 읽기 힘든 숫자가 된다.
+ * 세로 축 꼭대기.
+ *
+ * 지출이 아니라 **목표**에 자를 건다. 지출에 맞추면 목표를 잘 지킨 달일수록
+ * 목표선이 천장에 붙어, 잘하고 있을수록 그래프가 꽉 찬 것처럼 보이는 거꾸로가 된다.
+ * 목표는 1년에 한두 번 바뀌므로 자도 거의 그대로다 — 해를 넘겨도 모양을 견줄 수 있다.
+ *
+ * 기준은 반올림하고 확장은 올림하는 게 중요하다. 지출까지 반올림하면
+ * 305만이 300만 축에 걸려 선이 천장 밖으로 잘린다. 담아야 할 것은 무조건 담는다.
  */
-export function niceCeiling(value) {
-  if (!(value > 0)) return EMPTY_TOP;
-  // 1의 자리로 축을 끊을 일은 없다. 최소 단위를 두면 절반도 언제나 정수로 떨어진다.
-  const unit = Math.max(MIN_AXIS_UNIT, 10 ** Math.floor(Math.log10(value)));
-  const step = NICE_STEPS.find((candidate) => candidate * unit >= value);
-  return step ? step * unit : 10 * unit;
+export function axisTop(maxGoal, maxSpent) {
+  const base = Math.max(MIN_TOP, Math.round(((maxGoal || 0) * HEADROOM) / AXIS_UNIT) * AXIS_UNIT);
+  return Math.max(base, Math.ceil((maxSpent || 0) / AXIS_UNIT) * AXIS_UNIT);
 }
 
 /** 기록이 있는 첫 해부터 올해까지. 그 밖의 해로는 넘어갈 수 없다. */
@@ -87,8 +85,8 @@ export function buildYearSeries(expenses, members, year, today = new Date()) {
     months,
     recorded,
     currentIndex,
-    // 목표선이 축 밖으로 나가면 넘겼는지 지켰는지 볼 수가 없다. 둘 다 덮는다.
-    max: niceCeiling(Math.max(0, ...spent, ...goals)),
+    // 자는 목표가 잡고, 그 해 지출이 넘치면 그때만 늘린다.
+    max: axisTop(Math.max(0, ...goals), Math.max(0, ...spent)),
     series,
   };
 }

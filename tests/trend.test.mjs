@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { availableYears, buildYearSeries, niceCeiling } from "../src/trend.js";
+import { availableYears, axisTop, buildYearSeries } from "../src/trend.js";
 
 const 천웅 = { id: "a", name: "천웅", color: "#20211e", goal: 1800000 };
 const 주연 = { id: "b", name: "주연", color: "#f2674b", goal: 1600000 };
@@ -47,30 +47,37 @@ test("다른 해 지출은 섞이지 않는다", () => {
   assert.equal(buildYearSeries(rows, 둘, 2026, 오늘).series[0].points[7], 10000);
 });
 
-test("세로 축은 목표와 지출 중 큰 쪽을 덮는다", () => {
-  // 목표선이 그래프 밖으로 나가면 넘겼는지 지켰는지 볼 수가 없다.
-  const 적게 = buildYearSeries([지출("2026-08-01", "a", 10000)], 둘, 2026, 오늘);
-  assert.ok(적게.max >= 1800000, "지출이 적어도 목표선은 보여야 한다");
-
-  const 많이 = buildYearSeries([지출("2026-08-01", "a", 5000000)], 둘, 2026, 오늘);
-  assert.ok(많이.max >= 5000000, "목표를 넘긴 달도 잘리면 안 된다");
+test("세로 축은 목표에 자리를 잡는다 — 목표의 1.5배를 100만 단위로 반올림", () => {
+  // 지출에 자를 맞추면, 목표를 잘 지킨 달일수록 목표선이 천장에 붙는다. 거꾸로다.
+  // 목표에 자를 걸면 자가 거의 안 바뀌어 해를 넘겨도 모양을 견줄 수 있다.
+  assert.equal(axisTop(1800000, 0), 3000000, "180만 × 1.5 = 270만 → 300만");
+  assert.equal(axisTop(1000000, 0), 2000000);
+  assert.equal(axisTop(2500000, 0), 4000000);
 });
 
-test("세로 축 꼭대기는 눈금이 떨어지는 값이고 절반도 떨어진다", () => {
-  for (const value of [1, 12345, 187000, 1234567, 9800000]) {
-    const top = niceCeiling(value);
-    assert.ok(top >= value, `${value} 보다 커야 한다`);
-    assert.ok(Number.isInteger(top / 2), "가운데 눈금을 그리려면 절반이 떨어져야 한다");
-  }
-  assert.ok(niceCeiling(0) > 0, "기록이 없어도 축은 있어야 한다");
+test("넘칠 때는 반올림이 아니라 올림으로 늘린다", () => {
+  // 305만을 100만 단위로 반올림하면 300만이 되어 선이 천장 밖으로 잘린다.
+  assert.equal(axisTop(1800000, 3050000), 4000000, "잘리면 안 된다");
+  assert.equal(axisTop(1800000, 2900000), 3000000, "기준 안에 들면 그대로 둔다");
 });
 
-test("세로 축이 지나치게 헐렁하지 않다", () => {
-  // 2 다음이 바로 4면 210만 쓴 해의 축이 400만이 되어 위쪽 절반이 빈다.
-  for (const value of [2100000, 1300000, 620000, 4400000]) {
-    const top = niceCeiling(value);
-    assert.ok(value / top >= 0.7, `${value} → ${top} 은 너무 헐렁하다 (${Math.round((value / top) * 100)}%)`);
-  }
+test("목표가 아주 작거나 없어도 축은 무너지지 않는다", () => {
+  // 30만 × 1.5 = 45만을 100만 단위로 반올림하면 0이 된다.
+  assert.equal(axisTop(300000, 0), 1000000, "최소 100만은 깔아 둔다");
+  assert.equal(axisTop(0, 0), 1000000, "목표를 안 정했어도 그린다");
+  assert.equal(axisTop(0, 2400000), 3000000, "목표가 없으면 지출만 보고 늘린다");
+});
+
+test("축은 그 해 지출로만 늘어난다", () => {
+  // 옛날 폭탄 한 달 때문에 이후 몇 해가 계속 납작해 보이면 안 된다.
+  const rows = [지출("2025-03-01", "a", 9000000), 지출("2026-08-01", "a", 100000)];
+  assert.equal(buildYearSeries(rows, [천웅], 2026, 오늘).max, 3000000, "2025년 폭탄은 2026년 자에 영향 없다");
+  assert.equal(buildYearSeries(rows, [천웅], 2025, 오늘).max, 9000000, "그 해에는 담아야 한다");
+});
+
+test("목표선이 축 밖으로 나가지 않는다", () => {
+  const data = buildYearSeries([지출("2026-08-01", "a", 10000)], 둘, 2026, 오늘);
+  for (const line of data.series) assert.ok(line.goal <= data.max, `${line.name} 목표가 잘린다`);
 });
 
 test("고를 수 있는 해는 첫 기록부터 올해까지다", () => {
