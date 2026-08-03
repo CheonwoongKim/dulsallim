@@ -58,6 +58,9 @@
         <header class="topbar">
         <a class="brand" href="#" aria-label="둘살림 홈">둘살림</a>
         <div class="topbar-actions">
+          <button class="icon-button" type="button" id="open-analysis" aria-label="분석">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>
+          </button>
           <button class="icon-button" type="button" id="open-profile" aria-label="마이페이지">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
           </button>
@@ -184,6 +187,44 @@
         <button class="submit-button" type="submit" id="profile-submit"><span>저장</span></button>
         <button class="ghost-button wide danger-text" type="button" id="sign-out">로그아웃</button>
       </form>
+    </section>
+
+    <section class="page" id="analysis-page" aria-labelledby="analysis-page-title" hidden>
+      <header class="page-head">
+        <button class="icon-button" type="button" data-close-page aria-label="뒤로">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 id="analysis-page-title">분석</h2>
+      </header>
+
+      <div class="page-body">
+        <div class="month-control">
+          <button class="icon-button" type="button" id="analysis-prev" aria-label="이전 달">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <strong class="month-label" id="analysis-month"></strong>
+          <button class="icon-button" type="button" id="analysis-next" aria-label="다음 달">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+
+        <div class="segmented-control" id="analysis-members" role="group" aria-label="누구 지출을 볼지"></div>
+
+        <div class="analysis-total">
+          <p class="eyebrow" id="analysis-scope">함께 쓴 금액</p>
+          <strong id="analysis-amount">0원</strong>
+        </div>
+
+        <dl class="compare-list">
+          <div><dt>지난달</dt><dd id="compare-previous"></dd></div>
+          <div><dt>작년 같은 달</dt><dd id="compare-last-year"></dd></div>
+        </dl>
+
+        <div class="analysis-categories">
+          <p class="eyebrow">분류별</p>
+          <div id="analysis-list"></div>
+        </div>
+      </div>
     </section>
 
     <section class="page" id="settings-page" aria-labelledby="settings-page-title" hidden>

@@ -12,6 +12,7 @@ import {
 } from "./expenses.js";
 import { getMemberGoal, getMemberName, getMembers } from "./members.js";
 import { renderCalendar } from "./ui/calendar-grid.js";
+import { paintAnalysis } from "./features/analysis.js";
 import {
   getDateFilter,
   getExpenses,
@@ -140,4 +141,7 @@ export function render() {
   // 캘린더만 보고 있을 때는 아래 목록을 접어 둔다. 날을 고르면 그날 것만 펼친다.
   elements.list.hidden = calendarMode && !dateFilter;
   if (!elements.list.hidden) renderList(visible);
+
+  // 분석을 열어 둔 채 달이나 사람을 바꿀 수 있다. 같은 자리에서 함께 맞춘다.
+  if (!elements.analysisPage.hidden) paintAnalysis();
 }

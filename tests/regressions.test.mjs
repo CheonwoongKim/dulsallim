@@ -654,3 +654,36 @@ test("캘린더도 목록과 같은 높이에서 시작한다", () => {
   const top = Number(css.match(/\.calendar \{[^}]*margin-top:\s*(\d+)px/)[1]);
   assert.ok(top >= 38 && top <= 44, `margin-top ${top}px — 목록의 41px 과 어긋난다`);
 });
+
+test("진행 중인 달은 몇 일까지 본 숫자인지 밝힌다", () => {
+  // 3일치를 31일치와 견주면 90% 줄었다고 나온다. 같은 날짜까지만 보고, 그 사실을 적는다.
+  assert.match(fn("comparableDay"), /monthKey === toMonthKey\(today\) \? today\.getDate\(\) : null/);
+  assert.match(fn("paintAnalysis"), /compared\.maxDay \? ` · \$\{compared\.maxDay\}일까지` : ""/);
+});
+
+test("견줄 기록이 없으면 증감을 꾸며내지 않는다", () => {
+  // 0원 대비 -100% 는 그럴듯한 거짓말이다.
+  assert.match(fn("compareMonth"), /expenses\.some[\s\S]{0,90}?return null/);
+  assert.match(fn("paintCompare"), /비교할 기록이 없어요/);
+  // 상대가 0원이면 % 를 낼 수 없다. 금액 차이만 말한다.
+  assert.match(fn("formatDiff"), /percent === null \? amount/);
+});
+
+test("분석은 본 화면과 같은 달·같은 사람 필터를 쓴다", () => {
+  const paint = fn("paintAnalysis");
+  assert.match(paint, /getSelectedMonth\(\)/);
+  assert.match(paint, /getMemberFilter\(\)/);
+  assert.match(fn("shiftAnalysisMonth"), /setSelectedMonth\(next\)/, "분석에서 옮긴 달이 본 화면에도 적용된다");
+  // 열어 둔 채 달이나 사람을 바꿔도 같은 자리에서 함께 맞춰진다.
+  assert.match(fn("render"), /!elements\.analysisPage\.hidden\) paintAnalysis\(\)/);
+});
+
+test("분석의 달 이동은 허용 범위를 벗어나지 않는다", () => {
+  assert.match(fn("shiftAnalysisMonth"), /isValidMonthKey\(next\)\) return/);
+  assert.match(fn("paintAnalysis"), /elements\.analysisPrev\.disabled/, "경계에서 버튼도 잠가야 한다");
+});
+
+test("분석 페이지도 다른 전체 화면과 같은 처리를 받는다", () => {
+  assert.match(app, /pages: \[[\s\S]*?#analysis-page[\s\S]*?\]/, "닫기·스크롤 잠금 목록에 있어야 한다");
+  assert.match(html, /<section class="page" id="analysis-page"[^>]*aria-labelledby/);
+});

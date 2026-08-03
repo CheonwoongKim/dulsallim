@@ -1,4 +1,6 @@
-import { toDateKey, toMonthKey } from "./expenses.js";
+import { shiftMonthKey, toDateKey, toMonthKey } from "./expenses.js";
+
+export { shiftMonthKey };
 
 export const MIN_DAY = 1;
 export const MAX_DAY = 31;
@@ -22,11 +24,6 @@ function lastDayOf(monthKey) {
 export function resolveOccurrenceDate(monthKey, day) {
   const clamped = Math.min(day, lastDayOf(monthKey));
   return `${monthKey}-${String(clamped).padStart(2, "0")}`;
-}
-
-export function shiftMonthKey(monthKey, offset) {
-  const [year, month] = monthKey.split("-").map(Number);
-  return toMonthKey(new Date(year, month - 1 + offset, 1));
 }
 
 /**

@@ -59,6 +59,7 @@ import {
   pickColor,
 } from "./features/profile.js";
 import { handleReset, openSettingsPage, syncResetButton } from "./features/settings.js";
+import { openAnalysisPage, shiftAnalysisMonth } from "./features/analysis.js";
 import { closeNotes, handleNoteSubmit, openNotes, receiveNote } from "./features/notes.js";
 import { showToast } from "./ui/toast.js";
 import {
@@ -146,6 +147,20 @@ closeOnPress(elements.closeForm, closeForm);
 
 /* ── 마이페이지 · 설정 ────────────────────────────────────── */
 
+elements.openAnalysis.addEventListener("click", openAnalysisPage);
+elements.analysisPrev.addEventListener("click", () => {
+  shiftAnalysisMonth(-1);
+  render();
+});
+elements.analysisNext.addEventListener("click", () => {
+  shiftAnalysisMonth(1);
+  render();
+});
+elements.analysisMembers.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-member]");
+  // 요약 카드를 누르는 것과 같은 상태다. 여기서 고르면 본 화면 목록에도 그대로 걸린다.
+  if (button) toggleMemberFilter(button.dataset.member || null);
+});
 elements.openProfile.addEventListener("click", openProfilePage);
 elements.openSettings.addEventListener("click", openSettingsPage);
 elements.pages.forEach((page) => {

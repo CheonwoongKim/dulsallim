@@ -1,0 +1,157 @@
+/* 분석 페이지 */
+#analysis-page .month-control {
+  /* 본 화면의 월 이동은 아래에 큰 금액이 오지만, 여기는 바로 필터가 붙는다. */
+  margin: 0;
+}
+
+#analysis-page .month-label {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+#analysis-page .icon-button:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+
+/* 전체 / 사람. 입력 폼의 결제자 선택과 같은 생김새를 쓰되 사람 수만큼 늘어난다. */
+#analysis-members {
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+}
+
+#analysis-members button {
+  display: flex;
+  min-height: 42px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 11px;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+#analysis-members button[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--white);
+  box-shadow: 0 2px 8px rgba(35, 31, 26, 0.08);
+}
+
+.analysis-total {
+  display: grid;
+  padding: 4px 0;
+  gap: 4px;
+}
+
+.analysis-total strong {
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+}
+
+/* 지난달·작년 비교 */
+.compare-list {
+  display: grid;
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 16px;
+  gap: 10px;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+
+.compare-list > div {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.compare-list dt {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.compare-list dd {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* 더 썼으면 눈에 띄게, 덜 썼으면 차분하게. */
+.compare-list dd.is-up {
+  color: var(--accent-dark);
+}
+
+.compare-list dd.is-down {
+  color: var(--sage);
+}
+
+/* 분류별 */
+.analysis-categories {
+  display: grid;
+  gap: 10px;
+}
+
+#analysis-list {
+  display: grid;
+  gap: 12px;
+}
+
+.analysis-row {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  grid-template-columns: 52px 1fr auto;
+}
+
+.analysis-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-bar {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--paper-deep);
+}
+
+.analysis-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--ink);
+}
+
+.analysis-value {
+  color: var(--ink);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.analysis-value b {
+  margin-left: 6px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.analysis-empty {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}

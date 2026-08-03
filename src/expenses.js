@@ -41,6 +41,12 @@ export function isFutureDateKey(value, today = new Date()) {
   return isValidDateKey(value) && value > toDateKey(today);
 }
 
+/** 월 키를 앞뒤로 옮긴다. 연도 경계도 Date가 알아서 넘긴다. */
+export function shiftMonthKey(monthKey, offset) {
+  const [year, month] = monthKey.split("-").map(Number);
+  return toMonthKey(new Date(year, month - 1 + offset, 1));
+}
+
 export function isValidMonthKey(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}$/.test(value)) return false;
   const [year, month] = value.split("-").map(Number);
