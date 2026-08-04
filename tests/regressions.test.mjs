@@ -1497,3 +1497,68 @@ test("다 지우면 시트와 설정 화면을 함께 닫는다", () => {
   assert.match(handler, /closeResetSheet\(\);[\s\S]{0,80}hidePage\(\)/);
   assert.match(handler, /showToast\("모든 기록을 지웠어요"\)/);
 });
+
+test("접힘·펴짐은 배치가 튀는 자리를 이어 붙인다", () => {
+  /*
+   * 펼친 머리는 세로로 쌓이고 접힌 머리는 가로 한 줄이다. block 과 flex 사이에는
+   * 중간 상태가 없어, 클래스를 바꾸는 순간 총액이 205px 순간이동하고 높이도 한 프레임에
+   * 126px 떨어졌다. 접히는 170px 중 126px 이 첫 프레임에 끝나 두 박자로 보였다.
+   */
+  const bridge = fn("bridgeJump");
+  assert.match(bridge, /const before = movers\.map\(centerOf\)/);
+  assert.match(bridge, /change\(\);\s*\n\s*const after = movers\.map\(centerOf\)/, "바꾼 뒤에 다시 재야 한다");
+  assert.match(bridge, /element\.animate\(\[\{ transform: `translate/);
+  // 왼쪽 끝이 같아도 가운데 정렬된 글자는 움직인다.
+  assert.match(fn("centerOf"), /box\.left \+ box\.width \/ 2/);
+  assert.match(fn("setCondensed"), /bridgeJump\(\(\) => \{[\s\S]{0,120}is-condensed/);
+});
+
+test("자리를 이을 때 그 요소의 전환을 끄지 않는다", () => {
+  /*
+   * style.transition = "none" 으로 되돌려 놓으면 그 요소의 전환이 통째로 꺼진다.
+   * 곧바로 레이아웃을 읽는 순간 height 와 font-size 까지 최종값으로 뛰어,
+   * 총액 높이가 30 → 62 로 한 프레임에 튀는 것을 계측했다.
+   */
+  const bridge = fn("bridgeJump");
+  assert.doesNotMatch(bridge, /style\.transition\s*=/, "인라인으로 전환을 끄면 안 된다");
+  assert.doesNotMatch(bridge, /style\.transform\s*=/, "인라인 transform 도 쓰지 않는다");
+  // 겹쳐 돌면 뒤엣것이 앞엣것 위에 얹혀 엉뚱한 데서 출발한다.
+  assert.match(bridge, /bridging\.get\(element\)\?\.cancel\(\)/);
+  // 움직임을 줄여 달라고 했으면 이을 것도 없다.
+  assert.match(bridge, /prefers-reduced-motion: reduce[\s\S]{0,60}change\(\);\s*\n\s*return;/);
+});
+
+test("접힌 머리에서 animation 을 건드리지 않는다", () => {
+  /*
+   * animation: none 을 뒀더니 클래스가 빠지는 순간 값이 none → rise-in 으로 바뀌면서
+   * 620ms 짜리 translateY 연출이 처음부터 다시 돌았다. 펼 때 총액이 42px 튀었다.
+   */
+  // 주석에는 그 사연이 적혀 있다. 실제 선언만 본다.
+  const 선언만 = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const 접힌머리 = 선언만.match(/\.is-condensed \.overview-head \{[^}]*\}/)[0];
+  assert.doesNotMatch(접힌머리, /animation:/, "여기서 animation 을 건드리면 연출이 다시 돈다");
+});
+
+test("머리 높이는 px 로 못 박아 흐르게 한다", () => {
+  // auto 는 전환되지 않는다. 세로 배치가 가로 한 줄이 되며 높이가 한 프레임에 220 → 94 로 떨어졌다.
+  assert.match(css, /\.overview-head \{[^}]*height: 220px/);
+  assert.match(css, /\.is-condensed \.overview-head \{[^}]*height: 50px/);
+});
+
+test("접힘 모션 시간은 한 곳에서 정한다", () => {
+  // 따로 적어 두면 하나만 고치게 되고, 그때부터 서로 다른 박자로 움직인다.
+  assert.match(css, /--condense-ms: 260ms/);
+  assert.match(css, /--condense-fade-ms: 160ms/);
+  // 접힘에 관여하는 전환에 굳은 숫자가 남아 있으면 안 된다.
+  for (const 규칙 of [/\.overview \{[^}]*transition:[^;]*/, /\.overview-head,\n\.total-amount,\n\.eyebrow \{[^}]*transition:[^;]*/]) {
+    assert.doesNotMatch(css.match(규칙)[0], /\d+ms/, "시간을 직접 적지 말고 토큰을 쓴다");
+  }
+  // JS 쪽 값도 같아야 한다.
+  assert.match(app, /const CONDENSE_MS = 260;/);
+});
+
+test("한 프레임에 바뀌던 것들에도 전환을 건다", () => {
+  // 월 이동 줄 아래 여백 38 → 0, 월 라벨 안쪽 여백 10 → 4 가 한 프레임에 끝났다.
+  assert.match(css, /\.overview-head \.month-control \{[^}]*transition: margin var\(--condense-ms\)/);
+  assert.match(css, /\.month-label \{[^}]*transition: padding var\(--condense-ms\)/);
+});

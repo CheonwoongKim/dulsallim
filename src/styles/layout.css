@@ -13,6 +13,15 @@
 
 .overview-head {
   position: relative;
+  /*
+   * 높이를 못 박는 이유는 .total-amount 와 같다 — auto 는 전환되지 않는다.
+   * 접힐 때 세로 배치가 가로 한 줄로 바뀌면서 높이가 한 프레임에 220 → 94 로 떨어졌고,
+   * 그만큼 아래 목록이 통째로 튀어 올랐다. px → px 로 두면 260ms 에 걸쳐 흐른다.
+   *
+   * 220 과 50 은 폭 320~430px 에서 모두 같다. 안쪽이 전부 고정 높이여서다
+   * (월 이동 줄 42 · 설명 15 · 총액 62 + 여백). 안쪽 높이를 바꾸면 여기도 함께 고쳐야 한다.
+   */
+  height: 220px;
   width: min(100%, 780px);
   margin: 0 auto;
   padding: 24px 22px 30px;
@@ -124,7 +133,7 @@ main {
    */
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows 260ms ease, opacity 160ms ease;
+  transition: grid-template-rows var(--condense-ms) ease, opacity var(--condense-fade-ms) ease;
   animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -139,7 +148,7 @@ main {
   margin-inline: -10px;
   padding-inline: 10px;
   overflow: hidden;
-  transition: padding 260ms ease;
+  transition: padding var(--condense-ms) ease;
 }
 
 /*
@@ -180,6 +189,19 @@ main {
 /* 본 화면은 아래에 큰 금액과 요약 카드가 이어져 숨 쉴 자리가 필요하다. */
 .overview-head .month-control {
   margin-bottom: 38px;
+}
+
+/*
+ * 접힐 때 자리를 옮긴다.
+ *
+ * 세로로 쌓인 배치와 가로 한 줄 배치 사이에는 중간 상태가 없어서, 클래스가 바뀌는
+ * 순간 총액이 200px 넘게, 월 이동 줄이 80px 넘게 순간이동했다.
+ * 옮기는 일만 transform 에 맡겨 이어 붙인다 — ui/condense.js 의 bridgeJump 가
+ * Web Animations 로 직접 건다. 여기에 transform 전환을 적을 필요는 없다.
+ * 아래 여백은 이 자리에서 흐르게 둔다.
+ */
+.overview-head .month-control {
+  transition: margin var(--condense-ms) ease;
 }
 
 .icon-button,
@@ -225,6 +247,7 @@ main {
   padding: 10px 8px;
   font-size: 15px;
   font-weight: 700;
+  transition: padding var(--condense-ms) ease;
 }
 
 .eyebrow {
@@ -402,18 +425,26 @@ main {
 .overview-head,
 .total-amount,
 .eyebrow {
-  transition: height 260ms ease, padding 260ms ease, margin 260ms ease,
-    font-size 260ms ease, opacity 140ms ease;
+  transition: height var(--condense-ms) ease, padding var(--condense-ms) ease,
+    margin var(--condense-ms) ease, font-size var(--condense-ms) ease,
+    opacity var(--condense-fade-ms) ease;
 }
 
 .is-condensed .overview-head {
   display: flex;
+  height: 50px;
   padding: 0 22px 8px;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  /* 접힐 때 다시 떠오르는 연출이 겹치면 어지럽다. 처음 열 때만 쓰는 애니메이션이다. */
-  animation: none;
+  /*
+   * 여기서 animation 을 건드리면 안 된다.
+   *
+   * 처음 열 때 떠오르는 rise-in 이 겹칠까 봐 animation: none 을 뒀었는데, 그게 오히려
+   * 겹침을 만들었다. 클래스가 빠지는 순간 animation 값이 none → rise-in 으로 바뀌면서
+   * 620ms 짜리 translateY(16px) 연출이 처음부터 다시 돌아, 펼 때 총액이 42px 튀었다.
+   * 값을 그대로 두면 애니메이션은 처음 한 번만 돌고 이후 토글에는 반응하지 않는다.
+   */
 }
 
 /* 총액 위 설명은 접었을 때 없어도 안다 — 큰 숫자 하나뿐이다.
@@ -446,7 +477,9 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .overview-head,
   .total-amount,
-  .eyebrow {
+  .eyebrow,
+  .month-label,
+  .overview-head .month-control {
     transition: none;
   }
 }

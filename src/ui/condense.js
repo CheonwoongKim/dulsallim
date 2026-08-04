@@ -33,10 +33,72 @@ function syncHeaderHeight() {
   document.documentElement.style.setProperty("--header-h", `${height}px`);
 }
 
+/** layout.css 의 --condense-ms 와 같은 값이다. */
+const CONDENSE_MS = 260;
+
+/** 이어 붙이는 중인 애니메이션. 다시 부를 때 앞엣것을 세운다. */
+const bridging = new WeakMap();
+
+/** 상자는 가운데를 기준으로 잰다. 안의 글자가 가운데 정렬이라 왼쪽 끝이 같아도 글자는 움직인다. */
+function centerOf(element) {
+  const box = element.getBoundingClientRect();
+  return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+}
+
+/**
+ * 배치가 바뀌며 튀는 자리를 이어 붙인다 (FLIP).
+ *
+ * 펼친 머리는 세로로 쌓이고 접힌 머리는 가로 한 줄이다. block 과 flex 사이에는 중간 상태가
+ * 없어서, 클래스를 바꾸는 순간 총액이 200px 넘게, 월 이동 줄이 80px 넘게 순간이동했다.
+ * 높이·글자 크기만 260ms 동안 흐르니 "툭 자리를 잡은 뒤 상자만 줄어드는" 두 박자가 됐다.
+ *
+ * 바꾼 뒤 위치를 다시 재서, 옛 자리에서 새 자리로 가는 transform 애니메이션을 건다.
+ * 옮기는 일은 transform 이 맡으므로 레이아웃을 다시 계산하지 않는다.
+ *
+ * 인라인 style 로 하지 않고 Web Animations 로 거는 이유가 있다.
+ * 되돌려 놓을 때 style.transition = "none" 을 쓰면 그 요소의 전환이 통째로 꺼져,
+ * 곧바로 레이아웃을 읽는 순간 height 와 font-size 까지 최종값으로 뛰어 버린다
+ * (총액 높이가 30 → 62 로 한 프레임에 튀는 것을 계측했다).
+ * animate() 는 인라인 style 을 건드리지 않으므로 CSS 전환이 그대로 살아 있다.
+ *
+ * 머리 높이는 여기서 다루지 않는다 — layout.css 에서 220px ↔ 50px 로 못 박아 두었다.
+ *
+ * @param {() => void} change 배치를 바꾸는 일
+ */
+function bridgeJump(change) {
+  const movers = [elements.overviewMonthControl, elements.totalAmount].filter(Boolean);
+  // 움직임을 줄여 달라고 했으면 이을 것도 없다. 전환이 없는데 되돌려 놓으면 되레 한 프레임 튄다.
+  if (!movers.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    change();
+    return;
+  }
+
+  // 아직 흐르는 중이면 지금 눈에 보이는 자리가 시작점이다 — 도는 애니메이션이 반영된 값이 나온다.
+  const before = movers.map(centerOf);
+  change();
+  const after = movers.map(centerOf);
+
+  movers.forEach((element, index) => {
+    const dx = before[index].x - after[index].x;
+    const dy = before[index].y - after[index].y;
+    // 겹쳐 돌면 뒤엣것이 앞엣것 위에 얹혀 엉뚱한 데서 출발한다.
+    bridging.get(element)?.cancel();
+    bridging.set(
+      element,
+      element.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
+        duration: CONDENSE_MS,
+        easing: "ease",
+      }),
+    );
+  });
+}
+
 function setCondensed(next) {
   if (next === condensed) return;
   condensed = next;
-  elements.appShell.classList.toggle("is-condensed", next);
+  bridgeJump(() => {
+    elements.appShell.classList.toggle("is-condensed", next);
+  });
   /*
    * 접힌 요약 카드는 눈에서만 사라진다.
    * opacity 0 · 높이 0 · pointer-events none 중 어느 것도 탭 순서와 낭독기에서 빼 주지 않아,
