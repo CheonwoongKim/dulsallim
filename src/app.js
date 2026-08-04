@@ -94,7 +94,7 @@ import {
   openNotes,
   receiveNote,
 } from "./features/notes.js";
-import { watchScroll } from "./ui/condense.js";
+import { watchHeaderSummary } from "./ui/header-summary.js";
 import { watchKeyboard } from "./ui/keyboard-inset.js";
 import { showToast } from "./ui/toast.js";
 import {
@@ -531,7 +531,7 @@ async function startApp() {
   elements.dataGate.hidden = true;
   showApp();
   wireOnce();
-  watchScroll();
+  watchHeaderSummary();
   watchKeyboard();
   paintMembers();
 

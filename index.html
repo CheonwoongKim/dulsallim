@@ -76,7 +76,8 @@
         </div>
       </header>
 
-        <div class="overview-head" role="group" aria-labelledby="month-title">
+        <!-- 달 이동은 늘 손 닿는 곳에 둔다. 월 라벨이 달 선택 시트를 여는 버튼이기도 하다. -->
+        <div class="month-bar" role="group" aria-labelledby="month-title">
           <div class="month-control">
             <button class="icon-button" type="button" id="prev-month" aria-label="이전 달">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
@@ -88,13 +89,17 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </button>
           </div>
-
-          <p class="eyebrow">함께 쓴 금액</p>
-          <h1 class="total-amount"><span id="monthly-total">0</span><span class="currency">원</span></h1>
+          <!-- 큰 금액이 위로 사라지면 여기 작게 나타난다. 화면에서 총액이 없어지는 순간이 없도록. -->
+          <p class="compact-total" id="compact-total" aria-hidden="true"></p>
         </div>
       </div>
 
       <main>
+        <div class="hero">
+          <p class="eyebrow">함께 쓴 금액</p>
+          <h1 class="total-amount"><span id="monthly-total">0</span><span class="currency">원</span></h1>
+        </div>
+
         <div class="overview">
           <div class="member-summary" aria-label="사람별 지출 합계">
             <!-- 이름은 로그인 후 서버에서 채운다. 코드에 사람 이름을 박아 두지 않는다. -->

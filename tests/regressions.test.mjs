@@ -1124,7 +1124,7 @@ test("월 이동 줄은 스스로 아래 여백을 갖지 않는다", () => {
   // 그 화면만 훌쩍 벌어진다. 추이 시트에서 실제로 38px 이 그대로 남아 있었다.
   const 기본 = css.match(/\n\.month-control \{[^}]*\}/)[0];
   assert.doesNotMatch(기본, /margin-bottom|margin:\s*[^;]*\d+px/, "여백은 쓰는 자리가 정한다");
-  assert.match(css, /\.overview-head \.month-control \{[^}]*margin-bottom/, "본 화면에서만 띄운다");
+  assert.match(css, /\.month-bar \{[^}]*padding: 0 22px 8px/, "본 화면에서는 감싸는 줄이 띄운다");
 });
 
 test("추이 그래프로 달을 옮기면 본 화면도 함께 따라온다", () => {
@@ -1224,55 +1224,69 @@ test("README 기능 목록이 실제 화면과 어긋나지 않는다", async ()
   }
 });
 
-/* ── 스크롤하면 머리를 접는다 ─────────────────────────────────── */
+/* ── 머리는 높이가 변하지 않는다 ──────────────────────────────── */
 
-test("접는 지점과 펴는 지점이 다르다", () => {
-  // 같으면 경계에서 폈다 접었다를 반복한다. 접히면 문서가 짧아지므로 더 잘 터진다.
-  const 접기 = Number(app.match(/const CONDENSE_AT = (\d+)/)[1]);
-  const 펴기 = Number(app.match(/const EXPAND_AT = (\d+)/)[1]);
-  assert.ok(펴기 < 접기, `펴는 지점 ${펴기} 이 접는 지점 ${접기} 보다 낮아야 한다`);
-});
-
-test("어느 화면에서나 스크롤할 여지를 남겨 둔다", () => {
+test("머리 높이를 바꾸는 규칙이 없다", () => {
   /*
-   * 내용이 화면을 못 채우면 스크롤할 거리가 없어 머리가 접히지도 펴지지도 않는다.
-   * 계측: 사람 필터를 걸면 24px, 캘린더로 보면 접은 뒤 0px 까지 줄었다.
-   * 손가락을 밀어도 아무 일이 없거나, 접힌 채 되돌릴 방법이 사라졌다.
+   * 이 한 줄이 버그 여덟 개의 뿌리였다. 스크롤에 따라 머리를 접으면
+   * 머리 높이 → 문서 길이 → 스크롤 위치 → 다시 머리 높이 로 도는 고리가 생긴다.
+   * 짧은 달·사람 필터·캘린더·시트 열림에서 그 고리가 갇히거나 튕겼다.
    *
-   * 접기를 막는 대신 여지를 남긴다. 96px 은 접는 지점(72px)을 넘기고,
-   * 접힌 뒤의 48px 은 펴는 지점(24px)을 넉넉히 넘기되 접는 지점에는 닿지 않는다.
+   * 그래서 머리 안의 줄은 높이가 고정이고, 상태 클래스는 자리를 건드리지 않는다.
+   * 바뀌는 것은 색과 투명도뿐이다.
    */
-  assert.match(css, /\.app-shell \{[^}]*min-height: calc\(100svh \+ 96px\)/);
-  assert.match(css, /\.app-shell\.is-condensed \{[^}]*min-height: calc\(100svh \+ 48px\)/);
-  assert.match(fn("measure"), /!condensed && y > CONDENSE_AT\) setCondensed\(true\)/);
+  assert.match(css, /\.month-bar \{[^}]*height: 56px/);
+  assert.doesNotMatch(css, /is-condensed/, "접는 장치는 통째로 걷어냈다");
+
+  const 상태규칙 = css.match(/\.is-(?:scrolled|stuck)[^{]*\{[^}]*\}/g) ?? [];
+  assert.ok(상태규칙.length > 0, "상태 규칙을 하나도 못 찾았다면 정규식이 틀린 것이다");
+  for (const 규칙 of 상태규칙) {
+    // ::after 는 절대 위치라 자리를 밀지 않는다.
+    if (규칙.includes("::")) continue;
+    assert.doesNotMatch(규칙, /height:|padding|margin|display:|font-size/,
+      `상태가 자리를 바꾸면 스크롤이 밀린다: ${규칙}`);
+  }
 });
 
-test("되감긴 것을 사용자가 올린 것으로 읽지 않는다", () => {
-  // 접히면 문서가 짧아져 브라우저가 스크롤을 되감는다. 그걸 "위로 올렸다"로 읽으면
-  // 곧바로 도로 펴진다 — 접었다 펴지는 튕김이다. 막을 곳은 접는 쪽이 아니라 펴는 쪽이다.
-  //
-  // 스크롤할 수 있는 거리가 펴는 지점에도 못 미치면 밀려난 것이지 올린 것이 아니다.
-  assert.match(fn("userIsAtTop"), /maxScrollable\(\) >= EXPAND_AT && window\.scrollY < EXPAND_AT/);
-  assert.match(fn("measure"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
-  // 다시 그리는 순간의 scrollY 로는 판단하지 않는다 — 아래 검사 참고.
-  assert.doesNotMatch(fn("recheckAfterRender"), /setCondensed/);
+test("머리는 스크롤 값을 읽지 않는다", () => {
+  /*
+   * scrollY 로 판단하면 그 값을 바꾸는 것이 무엇이든 — 시트가 잠글 때, 캘린더로 바꿔
+   * 문서가 짧아질 때, 브라우저가 스스로 되감을 때 — 머리에 영향을 준다.
+   * 관찰자는 "화면에 보이나"만 알려 주므로 그런 경로가 아예 없다.
+   */
+  const 감시 = fn("watch") + fn("rewatch") + fn("watchHeaderSummary");
+  assert.match(감시, /new IntersectionObserver\(/);
+  assert.doesNotMatch(감시, /scrollY|scrollHeight|getBoundingClientRect/);
+  assert.doesNotMatch(app, /window\.addEventListener\("scroll"/, "스크롤 이벤트는 쓰지 않는다");
 });
 
-test("접어도 달 이동은 남긴다", () => {
-  // 월 라벨은 달 선택 시트를 여는 버튼이기도 하다. 감추면 달을 바꾸려고 스크롤을 도로 올려야 한다.
-  assert.doesNotMatch(css, /\.is-condensed[^{]*\.month-control \{[^}]*display: none/);
-  assert.match(css, /\.is-condensed \.eyebrow \{[^}]*height: 0/, "설명 문구는 접을 때 없어도 된다");
+test("총액이 어디에도 없는 순간이 없다", () => {
+  /*
+   * 지켜보는 것은 큰 금액 그 자체다. 감싸는 블록을 보면 아래 여백만큼 어긋나,
+   * 큰 금액이 머리 뒤로 숨은 뒤에도 작은 총액이 아직 안 뜬 구간이 생긴다.
+   * 계측: 캘린더 화면에서 끝까지 내렸을 때 총액이 어디에도 없었다.
+   *
+   * 머리는 불투명하게 붙어 있으므로 창을 머리 높이만큼 깎아 두고 본다.
+   * SLACK 만큼 미리 바꿔 둘 다 잠깐 보이게 한다 — 껌뻑임도 이걸로 막는다.
+   */
+  assert.match(fn("rewatch"), /watch\(elements\.totalAmount, headerHeight/);
+  assert.match(app, /const SLACK = \d+;/);
+  assert.match(fn("watch"), /rootMargin: `-\$\{headerHeight \+ SLACK\}px 0px 0px 0px`/);
 });
 
-test("머리 높이는 접히는 동안에도 따라 잰다", () => {
-  // 클래스를 바꾼 직후 한 번만 재면 애니메이션 도중의 값을 잡아,
-  // 지출 내역 제목이 머리보다 아래에 붙어 빈 띠가 생긴다(실제로 194px 을 쟀다).
-  assert.match(app, /new ResizeObserver\(\(\) => \{\s*syncHeaderHeight\(\);\s*syncStuck\(\);\s*\}\)\.observe\(elements\.appHeader\)/);
+test("달 이동은 스크롤해도 남는다", () => {
+  // 월 라벨은 달 선택 시트를 여는 버튼이기도 하다. 사라지면 달을 바꾸려고 스크롤을 도로 올려야 한다.
+  assert.match(html, /<div class="app-header">[\s\S]*?<div class="month-bar"[\s\S]{0,300}?class="month-control"/,
+    "머리 안에 있어야 늘 보인다");
+  assert.doesNotMatch(css, /\.month-bar[^{]*\{[^}]*display: none/);
+});
+
+test("머리 높이는 화면이 바뀌면 다시 잰다", () => {
+  // 지출 내역 제목은 머리 바로 밑에 붙는다. 가로로 돌리거나 글자 크기가 바뀌어
+  // 머리가 두꺼워지면, 옛 높이로는 제목이 머리 밑에 깔리거나 빈 띠가 생긴다.
+  assert.match(fn("watchHeaderSummary"), /new ResizeObserver\(rewatch\)\.observe\(appHeader\)/);
+  assert.match(fn("rewatch"), /const headerHeight = syncHeaderHeight\(\)/);
   assert.match(css, /\.section-heading \{[^}]*top: var\(--header-h/);
-});
-
-test("스크롤 감시는 화면을 붙잡지 않는다", () => {
-  assert.match(fn("watchScroll"), /"scroll", onScroll, \{ passive: true \}/);
 });
 
 test("검사에서 빠진 소스 파일이 없다", async () => {
@@ -1293,27 +1307,16 @@ test("검사에서 빠진 소스 파일이 없다", async () => {
   assert.deepEqual(빠진것, [], `helpers/source.mjs 에 등록되지 않은 파일: ${빠진것.join(", ")}`);
 });
 
-test("접히는 높이는 글자 크기가 아니라 px 이 끌고 간다", () => {
-  // font-size 를 애니메이션하면 글자 상자 높이가 폰트 지표 단위로 끊긴다.
-  // 프레임은 멀쩡한데 높이가 2px 갔다 13px 가는 식이라 "단계별로 끊어지는" 느낌이 된다.
-  // 상자에 명시적 height 를 주면 px→px 라 선형으로 흐른다. (측정: 가장 큰 걸음 13px → 6px)
-  assert.match(css, /\n\.total-amount \{[^}]*\n  height: \d+px;/, "min-height 면 글자 지표를 따라간다");
-  assert.match(css, /\.is-condensed \.total-amount \{[^}]*height: \d+px/);
-  assert.match(css, /\n\.eyebrow \{[^}]*\n  height: \d+px;/);
-  // 한 프레임에 사라지면 그 높이만큼 툭 끊긴다.
-  assert.doesNotMatch(css, /\.is-condensed \.eyebrow \{[^}]*display: none/);
+test("머리 밑으로 들어가는 줄은 글자 한가운데서 잘리지 않는다", () => {
+  // 요약 카드가 머리 밑으로 밀려 들어가면 이름 줄이 반쯤 잘린 채 삐져나왔다.
+  assert.match(css, /\.app-shell:not\(\.is-stuck\) \.app-header::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
+  // 제목이 붙은 뒤에는 그 위에 얹혀 제목을 흐리게 만든다. 그때는 제목이 알아서 한다.
+  assert.doesNotMatch(css, /\n\.app-header::after/);
 });
 
-test("접힌 줄에서 달 이름은 두 줄로 깨지지 않는다", () => {
-  // 총액과 한 줄에 서면 폭이 좁아진다. 실제로 "2026년 8 / 월" 로 깨졌다.
-  assert.match(css, /\.is-condensed \.month-label \{[^}]*white-space: nowrap/);
-});
-
-test("시트가 열려 있는 동안에는 머리를 건드리지 않는다", () => {
-  // 시트를 열면 본 화면 스크롤이 잠겨 scrollY 가 0 이 된다. 그걸 "맨 위"로 읽으면
-  // 달 선택 시트를 여는 순간 뒤에서 머리가 펴진다 — 닫고 돌아오면 화면이 커져 있다.
-  assert.match(fn("measure"), /if \(isPageScrollLocked\(\)\) return/);
-  assert.match(app, /export function isPageScrollLocked/);
+test("한 줄에 선 달 이름은 두 줄로 깨지지 않는다", () => {
+  // 작은 총액과 한 줄에 서면 폭이 좁아진다. 실제로 "2026년 8 / 월" 로 깨졌다.
+  assert.match(css, /\.month-label \{[^}]*white-space: nowrap/);
 });
 
 test("붙어 있는 제목 아래로 목록이 비치지 않는다", () => {
@@ -1324,12 +1327,11 @@ test("붙어 있는 제목 아래로 목록이 비치지 않는다", () => {
   assert.match(규칙, /background: var\(--paper\)/);
   assert.doesNotMatch(규칙, /margin-bottom/, "여백은 padding 으로 줘야 배경이 덮는다");
   // 딱 자르면 반쯤 잘린 글자가 남는다. 배경색으로 녹여 보낸다.
-  // 조건은 "접혔나"가 아니라 "붙었나"다 — 접힘은 72px 부터인데 제목이 붙는 건 180px 쯤부터라,
-  // 그 사이에는 지나가는 줄이 없는데도 첫 줄 위 20px 이 흐려져 까닭 없이 잘려 보였다.
+  // 붙기 전에는 지나가는 줄이 없는데도 첫 줄 위 20px 이 흐려져 까닭 없이 잘려 보인다.
   assert.match(css, /\.is-stuck \.section-heading::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
-  assert.doesNotMatch(css, /\.is-condensed \.section-heading::after/);
-  assert.match(fn("syncStuck"), /getBoundingClientRect\(\)\.top - headerHeight/);
-  assert.match(fn("measure"), /syncStuck\(\)/);
+  // 머리 높이만큼 깎은 창에서 제목이 온전히 보이지 않으면 붙은 것이다.
+  assert.match(fn("rewatch"), /watch\(elements\.sectionHeading, headerHeight/);
+  assert.match(fn("rewatch"), /intersectionRatio < 1/);
 });
 
 test("제목 글자가 바뀌면 붙어 있는 제목을 다시 그리게 한다", () => {
@@ -1356,43 +1358,12 @@ test("시트를 열면 포커스가 모달 안으로 들어간다", () => {
     "이미 열린 시트의 내부 화면을 바꿔도 포커스를 되돌려야 한다");
 });
 
-test("접히면 사용자별 현황도 함께 접는다", () => {
-  // 스크롤로만 올려 보내면 문서 길이에 따라 반쯤 걸린 채 멈춘다. 사람 필터를 걸어
-  // 목록이 짧아진 달에서는 더 내려갈 데가 없어 이름과 금액이 머리에 가리고
-  // 맨 아랫줄만 남았다 — 카드가 잘려 보이는 정체다.
-  // 전부 보이거나 전부 접히거나, 둘 중 하나여야 한다.
-  assert.match(css, /\.is-condensed \.overview \{[^}]*grid-template-rows: 0fr/);
-  assert.match(css, /\n\.overview \{[^}]*grid-template-rows: 1fr/);
-  // height: auto 는 애니메이션되지 않고, 이 칸 높이는 목표 표시 유무로 달라져 px 로 못 박는다.
-  assert.doesNotMatch(css, /\.is-condensed \.overview \{[^}]*height: 0/);
-  assert.match(css, /\.overview > \.member-summary \{[^}]*overflow: hidden/);
-  // 테두리 기준에서는 높이가 안쪽 여백 밑으로 안 내려간다. 여백도 함께 접어야 0 이 된다.
-  assert.match(css, /\.is-condensed \.overview > \.member-summary \{[^}]*padding-top: 0/);
-});
-
-test("사람을 고른 강조가 잘리지 않는다", () => {
-  // 강조는 10px 바깥으로 번지는 box-shadow 다. 접기용 overflow: hidden 이 그대로면
-  // 그 번짐이 잘려 모서리가 각지고 잘린 것처럼 보인다.
-  const 번짐 = Number(css.match(/aria-pressed="true"\]\s*\{[^}]*box-shadow: 0 0 0 (\d+)px/)[1]);
-  const 넓힘 = Number(css.match(/\.overview > \.member-summary \{[^}]*padding-inline: (\d+)px/)[1]);
-  assert.ok(넓힘 >= 번짐, `잘리는 상자를 ${번짐}px 만큼은 넓혀야 한다 (지금 ${넓힘}px)`);
-  assert.match(css, /\.overview > \.member-summary \{[^}]*margin-inline: -\d+px/, "넓힌 만큼 자리는 되돌린다");
-});
-
 test("목록·캘린더 토글은 보이는 크기보다 넓게 눌린다", () => {
   // 알약을 크게 그리면 제목 줄이 두꺼워진다. 보이는 크기는 두고 누를 자리만 넓힌다.
   // 가로로도 넓히면 두 버튼의 자리가 겹쳐 경계에서 어느 쪽이 눌릴지 알 수 없어진다.
   const 높이 = Number(css.match(/\.view-toggle button \{[^}]*height: (\d+)px/)[1]);
   const 넓힘 = Number(css.match(/\.view-toggle button::after \{[^}]*inset: -(\d+)px 0/)[1]);
   assert.ok(높이 + 넓힘 * 2 >= 44, `누를 자리가 ${높이 + 넓힘 * 2}px 로 44px 에 못 미친다`);
-});
-
-test("스크롤 측정은 한 프레임에 한 번만 한다", () => {
-  // scrollHeight·getBoundingClientRect 는 읽을 때마다 레이아웃을 다시 계산하게 만든다.
-  // passive 는 스크롤을 막지 않겠다는 약속일 뿐, 읽는 값이 비싸다는 사실은 바꾸지 않는다.
-  const scroll = fn("onScroll");
-  assert.match(scroll, /if \(queued\) return/);
-  assert.match(scroll, /requestAnimationFrame\(\(\) => \{[\s\S]*?queued = false;[\s\S]*?measure\(\)/);
 });
 
 test("밀린 고정비를 한 건씩 줄 세우지 않는다", () => {
@@ -1412,11 +1383,6 @@ test("전체 화면을 열면 뒤의 가계부는 탭에서 빠진다", () => {
   assert.match(fn("showPage"), /page\.focus\(\{ preventScroll: true \}\)/);
   assert.match(fn("hidePage"), /elements\.appShell\.inert = false/);
   assert.match(fn("closePageNow"), /elements\.appShell\.inert = false/);
-});
-
-test("접힌 요약 카드는 탭 순서에서도 빠진다", () => {
-  // opacity 0 · 높이 0 · pointer-events none 중 어느 것도 포커스를 막지 못한다.
-  assert.match(fn("setCondensed"), /elements\.overview\.inert = next/);
 });
 
 test("지출 내용면은 키보드로도 누를 수 있다", () => {
@@ -1502,71 +1468,6 @@ test("다 지우면 시트와 설정 화면을 함께 닫는다", () => {
   assert.match(handler, /showToast\("모든 기록을 지웠어요"\)/);
 });
 
-test("접힘·펴짐은 배치가 튀는 자리를 이어 붙인다", () => {
-  /*
-   * 펼친 머리는 세로로 쌓이고 접힌 머리는 가로 한 줄이다. block 과 flex 사이에는
-   * 중간 상태가 없어, 클래스를 바꾸는 순간 총액이 205px 순간이동하고 높이도 한 프레임에
-   * 126px 떨어졌다. 접히는 170px 중 126px 이 첫 프레임에 끝나 두 박자로 보였다.
-   */
-  const bridge = fn("bridgeJump");
-  assert.match(bridge, /const before = movers\.map\(centerOf\)/);
-  assert.match(bridge, /change\(\);\s*\n\s*const after = movers\.map\(centerOf\)/, "바꾼 뒤에 다시 재야 한다");
-  assert.match(bridge, /element\.animate\(\[\{ transform: `translate/);
-  // 왼쪽 끝이 같아도 가운데 정렬된 글자는 움직인다.
-  assert.match(fn("centerOf"), /box\.left \+ box\.width \/ 2/);
-  assert.match(fn("setCondensed"), /bridgeJump\(\(\) => \{[\s\S]{0,120}is-condensed/);
-});
-
-test("자리를 이을 때 그 요소의 전환을 끄지 않는다", () => {
-  /*
-   * style.transition = "none" 으로 되돌려 놓으면 그 요소의 전환이 통째로 꺼진다.
-   * 곧바로 레이아웃을 읽는 순간 height 와 font-size 까지 최종값으로 뛰어,
-   * 총액 높이가 30 → 62 로 한 프레임에 튀는 것을 계측했다.
-   */
-  const bridge = fn("bridgeJump");
-  assert.doesNotMatch(bridge, /style\.transition\s*=/, "인라인으로 전환을 끄면 안 된다");
-  assert.doesNotMatch(bridge, /style\.transform\s*=/, "인라인 transform 도 쓰지 않는다");
-  // 겹쳐 돌면 뒤엣것이 앞엣것 위에 얹혀 엉뚱한 데서 출발한다.
-  assert.match(bridge, /bridging\.get\(element\)\?\.cancel\(\)/);
-  // 움직임을 줄여 달라고 했으면 이을 것도 없다.
-  assert.match(bridge, /prefers-reduced-motion: reduce[\s\S]{0,60}change\(\);\s*\n\s*return;/);
-});
-
-test("접힌 머리에서 animation 을 건드리지 않는다", () => {
-  /*
-   * animation: none 을 뒀더니 클래스가 빠지는 순간 값이 none → rise-in 으로 바뀌면서
-   * 620ms 짜리 translateY 연출이 처음부터 다시 돌았다. 펼 때 총액이 42px 튀었다.
-   */
-  // 주석에는 그 사연이 적혀 있다. 실제 선언만 본다.
-  const 선언만 = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const 접힌머리 = 선언만.match(/\.is-condensed \.overview-head \{[^}]*\}/)[0];
-  assert.doesNotMatch(접힌머리, /animation:/, "여기서 animation 을 건드리면 연출이 다시 돈다");
-});
-
-test("머리 높이는 px 로 못 박아 흐르게 한다", () => {
-  // auto 는 전환되지 않는다. 세로 배치가 가로 한 줄이 되며 높이가 한 프레임에 220 → 94 로 떨어졌다.
-  assert.match(css, /\.overview-head \{[^}]*height: 220px/);
-  assert.match(css, /\.is-condensed \.overview-head \{[^}]*height: 50px/);
-});
-
-test("접힘 모션 시간은 한 곳에서 정한다", () => {
-  // 따로 적어 두면 하나만 고치게 되고, 그때부터 서로 다른 박자로 움직인다.
-  assert.match(css, /--condense-ms: 260ms/);
-  assert.match(css, /--condense-fade-ms: 160ms/);
-  // 접힘에 관여하는 전환에 굳은 숫자가 남아 있으면 안 된다.
-  for (const 규칙 of [/\.overview \{[^}]*transition:[^;]*/, /\.overview-head,\n\.total-amount,\n\.eyebrow \{[^}]*transition:[^;]*/]) {
-    assert.doesNotMatch(css.match(규칙)[0], /\d+ms/, "시간을 직접 적지 말고 토큰을 쓴다");
-  }
-  // JS 쪽 값도 같아야 한다.
-  assert.match(app, /const CONDENSE_MS = 260;/);
-});
-
-test("한 프레임에 바뀌던 것들에도 전환을 건다", () => {
-  // 월 이동 줄 아래 여백 38 → 0, 월 라벨 안쪽 여백 10 → 4 가 한 프레임에 끝났다.
-  assert.match(css, /\.overview-head \.month-control \{[^}]*transition: margin var\(--condense-ms\)/);
-  assert.match(css, /\.month-label \{[^}]*transition: padding var\(--condense-ms\)/);
-});
-
 test("화면으로 돌아오면 다시 읽는다", () => {
   /*
    * 폰이 앱을 재우면 실시간 연결이 끊긴다. 다시 이어져도 자는 동안 있었던 일은
@@ -1598,19 +1499,15 @@ test("돌아왔는데 못 읽어도 보던 화면은 지키다", () => {
   assert.doesNotMatch(catchUp, /showDataGate/);
 });
 
-test("캘린더에서 날짜를 골라도 접힘이 저절로 풀리지 않는다", () => {
+test("무엇을 그리든 머리 상태는 건드리지 않는다", () => {
   /*
-   * 캘린더로 바꾸면 목록이 숨어 문서가 짧아지고, 스크롤할 데가 없어지면 브라우저가
-   * 위치를 0 으로 되감는다. 그 뒤 날짜를 고르면 목록이 나오며 문서만 길어지는데,
-   * 그때 scrollY 0 을 "맨 위로 올렸다"로 읽어 머리가 저절로 펴졌다.
-   * 펴지면서 레이아웃이 350px 자라 스크롤이 되돌아간 것처럼도 보였다.
-   * 계측: 접힘 → scrollY 252 → 캘린더에서 0 → 날짜 선택 후 스크롤 가능량 812 로 늘며 펴짐.
+   * 예전에는 캘린더로 바꾸면 문서가 짧아져 브라우저가 스크롤을 0 으로 되감았고,
+   * 그 0 을 "맨 위로 올렸다"로 읽어 머리가 저절로 펴졌다. 사람 필터도 같은 길이었다.
+   * 지금은 머리 상태를 정하는 곳이 관찰자 두 개뿐이라, 그리는 쪽에서 닿을 길이 없다.
    */
-  assert.doesNotMatch(fn("recheckAfterRender"), /setCondensed|userIsAtTop/,
-    "다시 그리는 순간의 scrollY 로는 펴는 판단을 하지 않는다");
-  // 펴는 판단은 실제 스크롤에만 맡긴다.
-  assert.match(fn("measure"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
-  assert.doesNotMatch(app, /recheckCondense/, "옛 이름이 남아 있으면 무엇을 하는지 오해한다");
+  const 손대는곳 = app.match(/classList\.(?:toggle|add|remove)\("is-(?:scrolled|stuck)"/g) ?? [];
+  assert.deepEqual(손대는곳.length, 2, `머리 상태를 ${손대는곳.length} 군데서 바꾼다 — 관찰자 둘만이어야 한다`);
+  assert.doesNotMatch(app, /condense|recheckAfterRender/i, "옛 이름이 남아 있으면 무엇을 하는지 오해한다");
 });
 
 test("키보드가 올라오면 시트를 그 위로 올린다", () => {
@@ -1632,21 +1529,3 @@ test("키보드가 올라오면 시트를 그 위로 올린다", () => {
   assert.match(fn("watchKeyboard"), /if \(!viewport\) return/);
   assert.match(fn("watchKeyboard"), /addEventListener\("resize", sync\)[\s\S]{0,80}addEventListener\("scroll", sync\)/);
 });
-
-test("펴질 때 브라우저가 스크롤을 되돌려 도로 접히지 않게 한다", () => {
-  /*
-   * 펴지면 머리와 요약 카드가 되살아나 목록 위로 300px 넘게 끼어든다.
-   * 브라우저는 보고 있던 줄을 제자리에 두려고 스크롤을 그만큼 내리는데(scroll anchoring),
-   * 그걸 "사용자가 아래로 내렸다"로 읽으면 곧바로 도로 접힌다.
-   * 계측: 끄기 전 4회 중 3회 갇힘 → 끈 뒤 0회. 목록이 짧은 달일수록 잘 걸린다
-   * (접으면 스크롤 거리가 389px → 61px 로 줄어 되돌려진 위치가 접는 지점을 넘긴다).
-   */
-  assert.match(fn("setCondensed"), /suspendScrollAnchoring\(\)/);
-  const suspend = fn("suspendScrollAnchoring");
-  assert.match(suspend, /overflowAnchor = "none"/);
-  // 전환이 끝나면 되돌린다. 평소에는 목록이 바뀔 때 보던 자리를 지켜 주는 기능이다.
-  assert.match(suspend, /removeProperty\("overflow-anchor"\)/);
-  assert.match(suspend, /setTimeout\([\s\S]{0,120}CONDENSE_MS\)/);
-});
-
-

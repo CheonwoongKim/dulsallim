@@ -23,7 +23,7 @@ const SOURCE_FILES = [
   "ui/trend-chart.js",
   "ui/ledger.js",
   "ui/scroll-lock.js",
-  "ui/condense.js",
+  "ui/header-summary.js",
   "ui/keyboard-inset.js",
   "ui/sheet.js",
   "ui/swipe.js",

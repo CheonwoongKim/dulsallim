@@ -1,22 +1,7 @@
-/*
- * 화면보다 조금 길게 잡아 둔다.
- *
- * 내용이 화면을 못 채우면 스크롤할 거리가 없어 머리가 접히지도 펴지지도 않는다.
- * 사람 필터를 걸거나(계측: 24px) 캘린더로 보면 그렇게 된다 — 손가락을 밀어도
- * 아무 일도 일어나지 않아 고장처럼 보인다.
- *
- * 96px 은 접는 지점(72px)을 넘기고, 접힌 뒤의 48px 은 펴는 지점(24px)을 넉넉히 넘긴다.
- * 그런 화면은 어차피 아래가 비어 있어 늘어난 만큼이 눈에 띄지 않는다.
- */
 .app-shell {
   position: relative;
   width: 100%;
-  min-height: calc(100svh + 96px);
-}
-
-/* 접힌 뒤에는 조금만 남긴다. 되돌아갈 만큼이면 되고, 접는 지점에는 닿지 않아야 한다. */
-.app-shell.is-condensed {
-  min-height: calc(100svh + 48px);
+  min-height: 100svh;
 }
 
 .app-header {
@@ -26,20 +11,35 @@
   background: var(--paper);
 }
 
-.overview-head {
+/*
+ * 머리는 불투명하다. 그 밑으로 들어가는 줄이 글자 한가운데서 뚝 잘리면 지저분하다.
+ * 배경색으로 녹여 보낸다.
+ *
+ * 제목이 머리에 붙은 뒤에는 걸지 않는다. 그때는 머리 바로 밑이 불투명한 제목이라
+ * 이 그림자가 그 위에 얹혀 제목 윗부분을 흐리게 만든다. 그 구간은 제목이 알아서 한다.
+ */
+.app-shell:not(.is-stuck) .app-header::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 18px;
+  background: linear-gradient(var(--paper), transparent);
+  pointer-events: none;
+}
+
+/*
+ * 큰 금액은 머리에 붙어 있지 않고 그냥 함께 스크롤된다.
+ *
+ * 예전에는 이 블록이 머리 안에 있어서, 스크롤에 따라 높이를 줄였다. 그러면 문서 길이가
+ * 바뀌고 → 스크롤 위치가 밀리고 → 그걸 다시 읽어 높이를 정하는 고리가 생긴다.
+ * 그 고리 때문에 갇히거나 튕기는 버그가 여덟 번 났다. 머리 높이를 고정하니 고리가 끊겼다.
+ */
+.hero {
   position: relative;
-  /*
-   * 높이를 못 박는 이유는 .total-amount 와 같다 — auto 는 전환되지 않는다.
-   * 접힐 때 세로 배치가 가로 한 줄로 바뀌면서 높이가 한 프레임에 220 → 94 로 떨어졌고,
-   * 그만큼 아래 목록이 통째로 튀어 올랐다. px → px 로 두면 260ms 에 걸쳐 흐른다.
-   *
-   * 220 과 50 은 폭 320~430px 에서 모두 같다. 안쪽이 전부 고정 높이여서다
-   * (월 이동 줄 42 · 설명 15 · 총액 62 + 여백). 안쪽 높이를 바꾸면 여기도 함께 고쳐야 한다.
-   */
-  height: 220px;
-  width: min(100%, 780px);
-  margin: 0 auto;
-  padding: 24px 22px 30px;
+  padding: 4px 0 26px;
+  text-align: center;
   animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -136,57 +136,7 @@ main {
 }
 
 .overview {
-  /*
-   * 접힐 때 사용자별 현황을 통째로 접는다.
-   *
-   * 그냥 스크롤로 올려 보내면 문서 길이에 따라 반쯤 걸린 채 멈춘다. 사람 필터를 걸어
-   * 목록이 짧아진 달에서는 더 이상 내려갈 데가 없어, 이름과 금액은 머리에 가리고
-   * 맨 아랫줄만 남아 카드가 잘려 보였다. 전부 보이거나 전부 접히거나 둘 중 하나로 둔다.
-   *
-   * 높이를 0 으로 바꾸는 대신 그리드 줄을 1fr → 0fr 로 접는다. height: auto 는
-   * 애니메이션되지 않는데, 이 칸의 높이는 목표 표시 유무에 따라 달라져 px 로 못 박을 수 없다.
-   */
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows var(--condense-ms) ease, opacity var(--condense-fade-ms) ease;
   animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/*
- * overflow: hidden 은 접을 때 필요하다(줄이 0fr 로 줄어도 내용이 삐져나오면 안 된다).
- * 그런데 사람을 고르면 강조가 10px 바깥으로 번지는 box-shadow 로 그려져서,
- * 그대로 두면 그 번짐이 잘려 모서리가 각지고 잘린 것처럼 보인다.
- * 잘리는 상자를 번짐만큼 넓히고 같은 크기의 바깥 여백으로 되돌린다 — 자리는 그대로다.
- */
-.overview > .member-summary {
-  min-height: 0;
-  margin-inline: -10px;
-  padding-inline: 10px;
-  overflow: hidden;
-  transition: padding var(--condense-ms) ease;
-}
-
-/*
- * 안쪽 여백도 함께 접는다.
- * 테두리 기준(border-box)에서는 높이가 안쪽 여백 밑으로 내려가지 않아,
- * 줄을 0fr 로 접어도 위아래 여백 46px 이 그대로 남는다.
- */
-.is-condensed .overview > .member-summary {
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-.is-condensed .overview {
-  grid-template-rows: 0fr;
-  opacity: 0;
-  /* 접힌 동안에는 사람 필터를 누를 수 없다. 맨 위로 올리면 다시 나온다. */
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .overview {
-    transition: none;
-  }
 }
 
 .month-control {
@@ -201,22 +151,19 @@ main {
   gap: 5px;
 }
 
-/* 본 화면은 아래에 큰 금액과 요약 카드가 이어져 숨 쉴 자리가 필요하다. */
-.overview-head .month-control {
-  margin-bottom: 38px;
-}
-
 /*
- * 접힐 때 자리를 옮긴다.
- *
- * 세로로 쌓인 배치와 가로 한 줄 배치 사이에는 중간 상태가 없어서, 클래스가 바뀌는
- * 순간 총액이 200px 넘게, 월 이동 줄이 80px 넘게 순간이동했다.
- * 옮기는 일만 transform 에 맡겨 이어 붙인다 — ui/condense.js 의 bridgeJump 가
- * Web Animations 로 직접 건다. 여기에 transform 전환을 적을 필요는 없다.
- * 아래 여백은 이 자리에서 흐르게 둔다.
+ * 달 이동과 작은 총액이 한 줄에 선다. 이 줄의 높이는 늘 같아야 한다 —
+ * 머리 높이가 변하는 순간 스크롤 위치가 밀리고, 그때부터 되먹임 고리가 생긴다.
  */
-.overview-head .month-control {
-  transition: margin var(--condense-ms) ease;
+.month-bar {
+  display: flex;
+  width: min(100%, 780px);
+  height: 56px;
+  margin: 0 auto;
+  padding: 0 22px 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .icon-button,
@@ -262,7 +209,37 @@ main {
   padding: 10px 8px;
   font-size: 15px;
   font-weight: 700;
-  transition: padding var(--condense-ms) ease;
+  /* 작은 총액과 한 줄에 서면 폭이 좁아진다. "2026년 8 / 월" 로 깨진 적이 있다. */
+  white-space: nowrap;
+}
+
+/*
+ * 큰 금액이 위로 사라지면 그 자리를 대신한다.
+ *
+ * 나타나고 사라지는 것은 opacity 뿐이다. 자리는 늘 잡혀 있어(month-bar 가 고정 높이)
+ * 나타나도 아무것도 밀지 않는다. 밀지 않으니 스크롤도 흔들리지 않는다.
+ */
+.compact-total {
+  margin: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+
+.is-scrolled .compact-total {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compact-total {
+    transition: none;
+  }
 }
 
 .eyebrow {
@@ -275,7 +252,7 @@ main {
   letter-spacing: 0.04em;
 }
 
-.overview-head > .eyebrow,
+.hero > .eyebrow,
 .total-amount {
   text-align: center;
 }
@@ -423,78 +400,3 @@ main {
   font-weight: 700;
 }
 
-/* ── 스크롤하면 머리를 접는다 ─────────────────────────────────
-   작은 폰에서 상단바와 총액이 화면의 45%를 먹어 목록이 다섯 줄밖에 안 보인다.
-   스크롤은 "목록을 보겠다"는 뜻이므로 그때는 한 줄로 줄여 자리를 내준다.
-   월 이동은 남긴다 — 월 라벨이 달 선택 시트를 여는 버튼이기도 하다. */
-
-/*
- * 높이는 px 로만 움직이게 한다.
- *
- * font-size 를 애니메이션하면 글자 상자 높이가 폰트 지표 단위로 뚝뚝 끊겨,
- * 머리 높이가 2px 갔다 13px 가는 식으로 고르지 않게 변한다. 프레임은 안 끊기는데
- * 단계별로 툭툭 끊겨 보이는 이유가 이것이다.
- * 상자에 명시적인 height 를 주면 px→px 라 선형으로 흐르고, 글자 크기는 그 안에서
- * 따로 줄어들 뿐 높이에 관여하지 않는다.
- */
-.overview-head,
-.total-amount,
-.eyebrow {
-  transition: height var(--condense-ms) ease, padding var(--condense-ms) ease,
-    margin var(--condense-ms) ease, font-size var(--condense-ms) ease,
-    opacity var(--condense-fade-ms) ease;
-}
-
-.is-condensed .overview-head {
-  display: flex;
-  height: 50px;
-  padding: 0 22px 8px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  /*
-   * 여기서 animation 을 건드리면 안 된다.
-   *
-   * 처음 열 때 떠오르는 rise-in 이 겹칠까 봐 animation: none 을 뒀었는데, 그게 오히려
-   * 겹침을 만들었다. 클래스가 빠지는 순간 animation 값이 none → rise-in 으로 바뀌면서
-   * 620ms 짜리 translateY(16px) 연출이 처음부터 다시 돌아, 펼 때 총액이 42px 튀었다.
-   * 값을 그대로 두면 애니메이션은 처음 한 번만 돌고 이후 토글에는 반응하지 않는다.
-   */
-}
-
-/* 총액 위 설명은 접었을 때 없어도 안다 — 큰 숫자 하나뿐이다.
-   display: none 으로 지우면 그 높이가 한 프레임에 사라져 툭 끊긴다. 높이를 줄여 없앤다. */
-.is-condensed .eyebrow {
-  height: 0;
-  margin-bottom: 0;
-  opacity: 0;
-}
-
-.is-condensed .total-amount {
-  height: 30px;
-  font-size: 24px;
-  letter-spacing: -0.05em;
-}
-
-.is-condensed .month-control {
-  margin-bottom: 0;
-}
-
-/* 글자 크기는 그대로 둔다. 이것까지 줄이면 월 이동 줄의 높이가 또 끊긴다.
-   대신 줄바꿈은 막는다 — 총액과 한 줄에 서면서 폭이 좁아져 "2026년 8 / 월" 로 깨졌다. */
-.is-condensed .month-label {
-  min-width: 0;
-  padding: 4px;
-  white-space: nowrap;
-}
-
-/* 접히는 동안 글자 크기가 뛰는 게 보이면 산만하다. 애니메이션을 줄여 달라는 설정은 따른다. */
-@media (prefers-reduced-motion: reduce) {
-  .overview-head,
-  .total-amount,
-  .eyebrow,
-  .month-label,
-  .overview-head .month-control {
-    transition: none;
-  }
-}

@@ -41,7 +41,6 @@ test("같은 소유자가 스크롤을 두 번 잠가도 한 번의 해제로 �
   scrollLock.lockPageScroll(sheet);
   scrollLock.unlockPageScroll(sheet);
 
-  assert.equal(scrollLock.isPageScrollLocked(), false);
   assert.equal(root.classList.contains("sheet-open"), false);
   assert.equal(body.classList.contains("sheet-open"), false);
   assert.equal(body.style.position, undefined);
@@ -58,13 +57,12 @@ test("서로 다른 화면이 잠갔다면 마지막 화면이 닫힐 때까지 
   scrollLock.lockPageScroll(sheet);
   scrollLock.unlockPageScroll(sheet);
 
-  assert.equal(scrollLock.isPageScrollLocked(), true);
   assert.equal(root.classList.contains("sheet-open"), true);
   assert.equal(body.style.position, "fixed");
   assert.deepEqual(scrollCalls, []);
 
   scrollLock.unlockPageScroll(page);
-  assert.equal(scrollLock.isPageScrollLocked(), false);
+  assert.equal(body.style.position, undefined);
   assert.deepEqual(scrollCalls, [[0, 240]]);
 });
 

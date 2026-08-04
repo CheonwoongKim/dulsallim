@@ -20,16 +20,12 @@
       linear-gradient(90deg, #e8e2d8 0, #f7f3eb calc(50% - 390px), #f7f3eb calc(50% + 390px), #e8e2d8 100%);
   }
 
-  .overview-head {
-    padding: 38px 68px 36px;
+  .hero {
+    padding: 10px 0 36px;
   }
 
   main {
     padding: 0 68px 100px;
-  }
-
-  .overview-head .month-control {
-    margin-bottom: 45px;
   }
 
   .floating-add {
