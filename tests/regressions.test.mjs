@@ -91,6 +91,18 @@ test("연도와 월 이동에는 상한·하한이 있다", () => {
   assert.match(app, /elements\.prevYear\.disabled/, "경계에서 버튼을 비활성화해 시각적으로도 알려야 한다");
 });
 
+test("시트는 화면 바닥에 붙는다", () => {
+  /*
+   * <dialog> 기본값은 top: 0 이다. 아래(bottom)와 함께 위(top)까지 정해지면
+   * margin: auto 가 남는 자리를 위아래로 똑같이 나눠 시트를 화면 한가운데로 밀어 올린다.
+   * 계측: 위 137px 아래 137px 로 떠서, 시트와 화면 바닥 사이에 빈 띠가 생겼다.
+   * <section> 이던 시절에는 top 이 원래 auto 라 드러나지 않던 자리다.
+   */
+  const 시트 = css.match(/\n\.sheet \{[^}]*\}/)[0];
+  assert.match(시트, /top: auto/, "위를 놓아 두어야 바닥에 붙는다");
+  assert.match(시트, /bottom: var\(--keyboard-inset/);
+});
+
 test("시트는 브라우저가 가둬 준다", () => {
   /*
    * 예전에는 Tab 순환을 손으로 가두고(trapTab), 다른 길로 새어 나간 포커스도

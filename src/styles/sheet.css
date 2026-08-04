@@ -30,6 +30,12 @@
   color: inherit;
   position: fixed;
   z-index: 50;
+  /*
+   * <dialog> 기본값은 top: 0 이다. 아래(bottom)와 함께 위(top)까지 정해지면
+   * margin: auto 가 남는 자리를 위아래로 똑같이 나눠 시트를 화면 한가운데로 밀어 올린다
+   * (계측: 위 137px 아래 137px 로 떠 있었다). 위는 놓아 두어야 바닥에 붙는다.
+   */
+  top: auto;
   right: 0;
   /*
    * 키보드가 올라온 만큼 띄운다. 가려진 채로 두면 Safari 가 입력칸을 보이게 하려고
