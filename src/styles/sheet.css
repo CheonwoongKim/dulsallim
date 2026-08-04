@@ -141,11 +141,6 @@
   flex: 1 1 auto;
 }
 
-/* 키보드가 내려가며 시트가 움직이는 동안 탭이 엉뚱한 입력에 새지 않게 한다. */
-.sheet-scroll.is-settling {
-  pointer-events: none;
-}
-
 /* 닫히는 중. 손가락 밑으로 다른 요소가 들어와 대신 눌리는 것을 막는다. */
 .sheet.is-closing {
   pointer-events: none;
