@@ -94,6 +94,7 @@ import {
   openNotes,
   receiveNote,
 } from "./features/notes.js";
+import { fillCategoryOptions } from "./ui/category-options.js";
 import { watchHeaderSummary } from "./ui/header-summary.js";
 import { watchKeyboard } from "./ui/keyboard-inset.js";
 import { showToast } from "./ui/toast.js";
@@ -555,6 +556,9 @@ async function startApp() {
 elements.retryLoad.addEventListener("click", () => (getProfile() ? startApp() : boot()));
 
 async function boot() {
+  // 폼을 건드리는 것이 아무것도 없을 때 채운다. 비어 있는 select 에 값을 넣으면 조용히 무시된다.
+  fillCategoryOptions();
+
   if (!isReady()) {
     showConfigError();
     return;

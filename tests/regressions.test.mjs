@@ -589,7 +589,7 @@ test("저장소를 못 쓰는 브라우저에서도 로그인은 된다", () => 
   assert.match(fn("rememberEmail"), /try \{[\s\S]*catch/);
 });
 
-test("분류 목록은 화면·마크업·DB 세 곳이 정확히 같다", async () => {
+test("분류 목록은 화면과 DB 두 곳이 정확히 같다", async () => {
   // 한 곳만 늘리면 고를 수는 있는데 저장이 거절되거나(DB 누락),
   // 저장된 값을 화면이 '기타'로 뭉개 버린다(JS 누락).
   const { readFile } = await import("node:fs/promises");
@@ -605,22 +605,24 @@ test("분류 목록은 화면·마크업·DB 세 곳이 정확히 같다", async
     assert.deepEqual(allowed, keys, `${file}의 허용 목록이 CATEGORIES와 다르다`);
   }
 
-  // 지출 폼과 고정비 폼 두 곳 모두
+  /*
+   * 마크업은 더 이상 세 번째 벌이 아니다 — 선택지는 CATEGORIES 에서 만들어 넣는다.
+   * 그래서 여기서는 값이 맞는지가 아니라, 채워 넣을 자리가 두 곳 다 있는지만 본다.
+   */
   const selects = [...html.matchAll(/<select[^>]*name="category"[^>]*>([\s\S]*?)<\/select>/g)];
   assert.equal(selects.length, 2, "분류 선택 상자는 지출 폼과 고정비 폼 두 곳이다");
-  for (const [, body] of selects) {
-    const options = [...body.matchAll(/<option value="([^"]+)"[^>]*>([^<]+)<\/option>/g)];
-    assert.deepEqual(options.map((o) => o[1]), keys, "선택지 값이 CATEGORIES와 다르다");
-    assert.deepEqual(options.map((o) => o[2]), keys.map((k) => CATEGORIES[k].label), "선택지 이름이 다르다");
+  for (const [전체, body] of selects) {
+    assert.match(전체, /data-categories=/, "채워 넣을 자리라고 표시해 둬야 한다");
+    assert.equal(body.trim(), "", "선택지를 손으로 적어 두지 않는다");
   }
 });
 
-test("기타는 언제나 마지막이다", () => {
+test("기타는 언제나 마지막이다", async () => {
   // 목록에서 '기타'가 중간에 끼면 고를 때 눈이 한 번 더 멈춘다.
-  for (const [, body] of html.matchAll(/<select[^>]*name="category"[^>]*>([\s\S]*?)<\/select>/g)) {
-    const keys = [...body.matchAll(/<option value="([^"]+)"/g)].map((m) => m[1]);
-    assert.equal(keys[keys.length - 1], "etc");
-  }
+  // 선택지는 적어 둔 순서 그대로 만들어지므로 순서는 여기서 정해진다.
+  const { CATEGORIES } = await import("../src/expenses.js");
+  const keys = Object.keys(CATEGORIES);
+  assert.equal(keys[keys.length - 1], "etc");
 });
 
 test("보낸 메시지는 시트를 다시 열지 않아도 바로 보인다", () => {
@@ -1317,6 +1319,22 @@ test("머리 밑으로 들어가는 줄은 글자 한가운데서 잘리지 않�
    */
   assert.doesNotMatch(css, /\n\.app-header::after/);
   assert.doesNotMatch(css, /\.app-shell:not\(\.is-stuck\) \.app-header::after/);
+});
+
+test("분류 선택지는 한 곳에서 만든다", () => {
+  /*
+   * 예전에는 같은 목록이 세 벌이었다 — CATEGORIES, 지출 폼의 <option> 10개, 고정비 폼의 10개.
+   * 분류를 하나 더하려면 세 곳을 고쳐야 하고, 한 곳을 빠뜨리면 그 화면에서만 조용히 안 보인다.
+   * 셋이 같은지 봐 주는 것도 없었다.
+   */
+  assert.doesNotMatch(html, /<option value="food"/, "선택지를 손으로 적어 두지 않는다");
+  assert.match(html, /<select id="expense-category"[^>]*data-categories=""/);
+  assert.match(fn("fillCategoryOptions"), /Object\.entries\(CATEGORIES\)/);
+  // 고정비는 주거가 처음부터 골라져 있었다. 옮기면서 잃으면 안 된다.
+  assert.match(html, /<select id="fixed-category"[^>]*data-categories="housing"/);
+  assert.match(fn("fillCategoryOptions"), /option\.selected = value === 처음값/);
+  // 비어 있는 select 에 값을 넣으면 조용히 무시된다. 폼을 건드리기 전에 채워야 한다.
+  assert.match(fn("boot"), /^function boot\(\) \{[^;]*fillCategoryOptions\(\);/);
 });
 
 test("맨 위에서 달 이동 줄은 가운데에 선다", () => {
