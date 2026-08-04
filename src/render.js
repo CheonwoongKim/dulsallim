@@ -14,7 +14,7 @@ import { getMemberGoal, getMemberName, getMembers } from "./members.js";
 import { renderCalendar } from "./ui/calendar-grid.js";
 import { paintAnalysis } from "./features/analysis.js";
 import { refreshTrend } from "./features/trend.js";
-import { recheckCondense } from "./ui/condense.js";
+import { recheckAfterRender } from "./ui/condense.js";
 import {
   getDateFilter,
   getExpenses,
@@ -189,8 +189,8 @@ export function render() {
   elements.list.hidden = calendarMode && !dateFilter;
   if (!elements.list.hidden) renderList(visible);
 
-  // 목록이 바뀌면 문서 길이도 바뀐다. 맨 위로 밀려났으면 머리를 편다.
-  recheckCondense();
+  // 목록이 바뀌면 제목이 머리에 붙었는지도 달라진다.
+  recheckAfterRender();
   // 분석을 열어 둔 채 달이나 사람을 바꿀 수 있다. 같은 자리에서 함께 맞춘다.
   if (!elements.analysisPage.hidden) paintAnalysis();
   if (!elements.trendSheet.hidden) refreshTrend();

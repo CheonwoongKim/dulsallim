@@ -1247,8 +1247,8 @@ test("되감긴 것을 사용자가 올린 것으로 읽지 않는다", () => {
   // 스크롤할 수 있는 거리가 펴는 지점에도 못 미치면 밀려난 것이지 올린 것이 아니다.
   assert.match(fn("userIsAtTop"), /maxScroll >= EXPAND_AT && window\.scrollY < EXPAND_AT/);
   assert.match(fn("measure"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
-  // 목록이 바뀔 때도 같은 잣대를 쓴다.
-  assert.match(fn("recheckCondense"), /userIsAtTop\(\)/);
+  // 다시 그리는 순간의 scrollY 로는 판단하지 않는다 — 아래 검사 참고.
+  assert.doesNotMatch(fn("recheckAfterRender"), /setCondensed/);
 });
 
 test("접어도 달 이동은 남긴다", () => {
@@ -1593,4 +1593,19 @@ test("돌아왔는데 못 읽어도 보던 화면은 지키다", () => {
   // 돌아오자마자 오류 화면을 띄우지 않는다.
   assert.match(catchUp, /catch \{[\s\S]{0,140}?return;\n\s*\} finally \{[\s\S]{0,60}catchingUp = false/);
   assert.doesNotMatch(catchUp, /showDataGate/);
+});
+
+test("캘린더에서 날짜를 골라도 접힘이 저절로 풀리지 않는다", () => {
+  /*
+   * 캘린더로 바꾸면 목록이 숨어 문서가 짧아지고, 스크롤할 데가 없어지면 브라우저가
+   * 위치를 0 으로 되감는다. 그 뒤 날짜를 고르면 목록이 나오며 문서만 길어지는데,
+   * 그때 scrollY 0 을 "맨 위로 올렸다"로 읽어 머리가 저절로 펴졌다.
+   * 펴지면서 레이아웃이 350px 자라 스크롤이 되돌아간 것처럼도 보였다.
+   * 계측: 접힘 → scrollY 252 → 캘린더에서 0 → 날짜 선택 후 스크롤 가능량 812 로 늘며 펴짐.
+   */
+  assert.doesNotMatch(fn("recheckAfterRender"), /setCondensed|userIsAtTop/,
+    "다시 그리는 순간의 scrollY 로는 펴는 판단을 하지 않는다");
+  // 펴는 판단은 실제 스크롤에만 맡긴다.
+  assert.match(fn("measure"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
+  assert.doesNotMatch(app, /recheckCondense/, "옛 이름이 남아 있으면 무엇을 하는지 오해한다");
 });
