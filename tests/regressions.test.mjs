@@ -282,6 +282,19 @@ test("프로필 수정 권한은 정해진 열로만 열려 있다", async () =>
   }
 });
 
+test("직접 선택 칸도 다른 색과 같은 원이다", () => {
+  /*
+   * 미리보기를 흐름 안에 두고 height: 100% 를 주면, 부모 높이는 aspect-ratio 로 정해지는데
+   * 자식이 그 높이를 되받아 순환이 생긴다. 이 칸만 40×46 세로 타원이 됐다.
+   * 자리에서 빼 두면 부모 높이는 오로지 aspect-ratio 가 정한다.
+   */
+  const 미리보기 = css.match(/\.custom-swatch-preview \{[^}]*\}/)[0];
+  assert.match(미리보기, /position: absolute/);
+  assert.doesNotMatch(미리보기, /height: 100%/, "부모 높이를 되받으면 순환이 생긴다");
+  // 원 모양은 여섯 개와 한 규칙에서 나온다.
+  assert.match(css, /\.swatch,\n\.custom-swatch \{[^}]*aspect-ratio: 1/);
+});
+
 test("서버가 준 아바타 색을 그대로 화면에 끼워 넣지 않는다", async () => {
   /*
    * 이 색은 추이 범례에서 style 속성 안에 이스케이프 없이 들어간다.
