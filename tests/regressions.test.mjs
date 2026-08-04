@@ -91,11 +91,19 @@ test("연도와 월 이동에는 상한·하한이 있다", () => {
   assert.match(app, /elements\.prevYear\.disabled/, "경계에서 버튼을 비활성화해 시각적으로도 알려야 한다");
 });
 
-test("모달 시트에 포커스 트랩이 있다", () => {
-  assert.match(html, /aria-modal="true"/);
-  assert.match(fn("trapTab"), /event\.preventDefault\(\)/);
-  assert.match(fn("keepFocusInSheet"), /sheet\.contains\(event\.target\)/);
-  assert.match(app, /document\.addEventListener\("focusin", keepFocusInSheet\)/);
+test("시트는 브라우저가 가둬 준다", () => {
+  /*
+   * 예전에는 Tab 순환을 손으로 가두고(trapTab), 다른 길로 새어 나간 포커스도
+   * 되돌려 놓았다(keepFocusInSheet). <dialog> 를 showModal 로 열면 브라우저가
+   * 포커스를 가두고, 바깥을 통째로 못 만지게 하고, 배경까지 그려 준다.
+   * role="dialog" 와 aria-modal 도 요소 자체가 갖는다.
+   */
+  assert.match(fn("showSheet"), /if \(!sheet\.open\) sheet\.showModal\(\)/);
+  assert.doesNotMatch(app, /function trapTab|function keepFocusInSheet/, "손으로 가두던 장치는 없앴다");
+  assert.doesNotMatch(html, /aria-modal|role="dialog"/, "<dialog> 가 스스로 갖는 것을 또 적지 않는다");
+  for (const id of ["entry-sheet", "month-sheet", "fixed-sheet", "nag-sheet", "trend-sheet", "reset-sheet", "notes-sheet"]) {
+    assert.match(html, new RegExp(`<dialog class="sheet[^"]*" id="${id}"`), `${id} 가 <dialog> 가 아니다`);
+  }
 });
 
 test("로그아웃하면 앞사람 기록이 화면에 남지 않는다", () => {
@@ -192,7 +200,7 @@ test("고정비 시트도 다른 시트와 같은 처리를 받는다", () => {
   assert.match(app, /SHEETS = \[[^\]]*elements\.fixedSheet[^\]]*\]/, "고정비 시트가 공통 배선 목록에 있어야 한다");
   assert.match(fn("closeActiveSheet"), /closeFixedSheet\(\)/);
   assert.match(app, /closeOnPress\(elements\.closeFixedSheet, closeFixedSheet\)/);
-  assert.match(html, /<section class="sheet" id="fixed-sheet"[^>]*aria-modal="true"/);
+  assert.match(html, /<dialog class="sheet" id="fixed-sheet"/);
 });
 
 test("고정비 수정은 id와 시작월을 유지한다", () => {
@@ -361,10 +369,14 @@ test("아바타 색은 서버 값에서 오고 막대와 짝을 이룬다", () =
 });
 
 test("전체 화면은 시트보다 아래에 깔린다", () => {
-  // 설정 화면에서 고정비 시트를 열 수 있어야 한다.
-  const pageZ = Number(css.match(/\.page \{[^}]*z-index:\s*(\d+)/)[1]);
-  const backdropZ = Number(css.match(/\.sheet-backdrop \{[^}]*z-index:\s*(\d+)/)[1]);
-  assert.ok(pageZ < backdropZ, `page(${pageZ})가 시트 배경(${backdropZ})보다 위에 있으면 고정비를 열 수 없다`);
+  /*
+   * 설정 화면에서 고정비 시트를 열 수 있어야 한다.
+   * 이제 z-index 로 겨루지 않는다 — showModal 로 연 시트는 top layer 로 올라가
+   * 문서 안의 어떤 z-index 보다도 위다. 겹칠 일이 구조적으로 없다.
+   */
+  assert.match(fn("showSheet"), /showModal\(\)/);
+  assert.doesNotMatch(css, /\.sheet-backdrop/, "공용 배경 요소는 없앴다");
+  assert.match(css, /\.sheet::backdrop \{/, "배경은 시트마다 브라우저가 그린다");
 });
 
 test("스와이프 끝의 click은 대화를 열지 않는다", () => {
@@ -958,7 +970,7 @@ test("잔소리 입력은 목록에 밀리지 않는 자리에 있다", () => {
   // 목록 아래에 폼을 두면 다섯 개가 쌓였을 때 화면 밖으로 밀린다.
   assert.match(html, /<header class="page-head">[\s\S]*?id="add-nag"[\s\S]*?<\/header>/, "머리에 추가 버튼이 있어야 한다");
   assert.match(css, /\.page-head \{[^}]*position: sticky/, "머리가 붙어 있어야 늘 닿는다");
-  assert.match(html, /<section class="sheet" id="nag-sheet"[^>]*aria-modal="true"/);
+  assert.match(html, /<dialog class="sheet" id="nag-sheet"/);
   assert.match(app, /SHEETS = \[[\s\S]*?elements\.nagSheet[\s\S]*?\]/, "다른 시트와 같은 처리를 받아야 한다");
   assert.match(app, /closeOnPress\(elements\.closeNagSheet, closeNagSheet\)/);
 });
@@ -1104,7 +1116,7 @@ test("서버 함수는 비로그인이 부를 수 없다", async () => {
 /* ── 한 해 추이 시트 ──────────────────────────────────────────── */
 
 test("추이 시트도 다른 시트와 같은 처리를 받는다", () => {
-  assert.match(html, /<section class="sheet" id="trend-sheet"[^>]*aria-modal="true"/);
+  assert.match(html, /<dialog class="sheet" id="trend-sheet"/);
   assert.match(app, /SHEETS = \[[\s\S]*?elements\.trendSheet[\s\S]*?\]/, "공통 배선 목록에 있어야 한다");
   assert.match(fn("closeActiveSheet"), /closeTrendSheet\(\)/);
   assert.match(app, /closeOnPress\(elements\.closeTrendSheet, closeTrendSheet\)/);
@@ -1443,14 +1455,18 @@ test("JS 가 넣는 길이 값에는 타입이 밝혀져 있다", () => {
    * 타입을 밝히면 이상한 값은 무시되고 initial-value 로 돌아간다.
    * 계측: 쓰레기값을 넣어도 제목 top 이 132 → 0px 로 돌아갈 뿐 규칙은 살아 있다.
    */
-  const 넣는것 = [...app.matchAll(/setProperty\("(--[a-z-]+)"/g)].map((m) => m[1]);
-  const 길이값 = [...new Set(넣는것)].filter((이름) => 이름 !== "--custom-color");
-  for (const 이름 of 길이값) {
-    assert.match(css, new RegExp(`@property ${이름} \\{[^}]*syntax: "<length>"`),
+  const 넣는것 = [...new Set([...app.matchAll(/setProperty\("(--[a-z-]+)"/g)].map((m) => m[1]))];
+  /*
+   * --custom-color 만 빼 둔다. 기본값이 var(--line) 인데 initial-value 에는 var() 를
+   * 쓸 수 없어, 등록하려면 선 색을 한 번 더 적어야 한다. 값이 두 곳이 되느니 안 밝힌다.
+   */
+  const 밝힐것 = 넣는것.filter((이름) => 이름 !== "--custom-color");
+  for (const 이름 of 밝힐것) {
+    assert.match(css, new RegExp(`@property ${이름} \\{[^}]*syntax: "<(?:length|number)>"`),
       `${이름} 에 타입이 없다`);
     assert.match(css, new RegExp(`@property ${이름} \\{[^}]*initial-value:`));
   }
-  assert.ok(길이값.length >= 4, `길이 값이 ${길이값.length}개뿐이다 — 정규식을 확인할 것`);
+  assert.ok(밝힐것.length >= 5, `밝힐 값이 ${밝힐것.length}개뿐이다 — 정규식을 확인할 것`);
 });
 
 test("목록과 캘린더는 툭 바뀌지 않고 이어진다", () => {
@@ -1573,7 +1589,7 @@ test("밀린 고정비를 한 건씩 줄 세우지 않는다", () => {
 });
 
 test("전체 화면을 열면 뒤의 가계부는 탭에서 빠진다", () => {
-  // 시트에는 Tab 을 가두는 trapTab 이 있지만 화면에는 없어 커서가 덮인 목록 속으로 사라졌다.
+  // 시트는 <dialog> 라 브라우저가 가둬 주지만 화면은 아니라, 커서가 덮인 목록 속으로 사라졌다.
   assert.match(fn("showPage"), /elements\.appShell\.inert = true/);
   assert.match(fn("showPage"), /page\.focus\(\{ preventScroll: true \}\)/);
   assert.match(fn("hidePage"), /elements\.appShell\.inert = false/);
@@ -1643,10 +1659,10 @@ test("초기화는 설정 화면에 펼쳐 두지 않는다", () => {
   assert.doesNotMatch(설정, /id="reset-submit"/, "삭제 버튼이 설정 화면에 그대로 있다");
   assert.match(설정, /id="open-reset-sheet"[\s\S]{0,200}데이터 초기화/, "여는 메뉴가 없다");
   // 폼은 시트 안으로 갔다.
-  const 시트 = html.match(/<section class="sheet" id="reset-sheet"[\s\S]*?<\/section>/)[0];
+  const 시트 = html.match(/<dialog class="sheet" id="reset-sheet"[\s\S]*?<\/dialog>/)[0];
   assert.match(시트, /id="reset-form"/);
   assert.match(시트, /id="reset-submit" disabled/, "처음에는 버튼이 잠겨 있어야 한다");
-  assert.match(시트, /role="dialog" aria-modal="true"/);
+  // role·aria-modal 은 <dialog> 가 스스로 갖는다.
 });
 
 test("초기화 시트도 다른 시트와 같은 장치를 받는다", () => {

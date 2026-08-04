@@ -4,8 +4,6 @@ import { createDragTracker } from "./drag-tracker.js";
 import { lockPageScroll, unlockPageScroll } from "./scroll-lock.js";
 
 const DISMISS_DISTANCE = 96;
-const FOCUSABLE =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** 열릴 수 있는 시트 전부. 포커스 가두기와 드래그 배선이 이 목록을 따른다. */
 export const SHEETS = [
@@ -34,14 +32,6 @@ function getSheetState(sheet) {
     sheetStates.set(sheet, state);
   }
   return state;
-}
-
-function hasInteractiveSheet(except = null) {
-  return SHEETS.some((sheet) => {
-    if (sheet === except) return false;
-    const phase = getSheetState(sheet).phase;
-    return phase === "opening" || phase === "open";
-  });
 }
 
 function moveFocusIntoSheet(sheet) {
@@ -87,13 +77,17 @@ export function showSheet(sheet) {
   lockPageScroll(sheet);
   sheet.classList.remove("is-closing");
   sheet.style.removeProperty("--drag-y");
-  elements.backdrop.style.removeProperty("opacity");
-  elements.backdrop.hidden = false;
+  sheet.style.removeProperty("--backdrop-fade");
   sheet.hidden = false;
+  /*
+   * showModal 이 시트를 top layer 로 올린다. 그러면 브라우저가 배경(::backdrop)을 그려 주고,
+   * 바깥을 통째로 못 만지게 하고, 포커스를 안에 가둬 준다. Esc 도 브라우저가 받는다.
+   * 우리가 손으로 하던 일이 전부 여기로 넘어갔다 — 배경 스크롤 잠금만 빼고.
+   */
+  if (!sheet.open) sheet.showModal();
 
   requestAnimationFrame(() => {
     if (state.phase !== "opening") return;
-    elements.backdrop.classList.add("is-visible");
     sheet.classList.add("is-visible");
     state.phase = "open";
     moveFocusIntoSheet(sheet);
@@ -112,7 +106,6 @@ export function hideSheet(sheet, onHidden) {
   const focused = document.activeElement;
   if (focused instanceof HTMLElement && sheet.contains(focused)) focused.blur();
 
-  if (!hasInteractiveSheet(sheet)) elements.backdrop.classList.remove("is-visible");
   sheet.classList.remove("is-visible");
 
   state.stopWaiting?.();
@@ -121,9 +114,11 @@ export function hideSheet(sheet, onHidden) {
     if (state.phase !== "closing") return;
     state.phase = "closed";
     state.stopWaiting = null;
+    if (sheet.open) sheet.close();
     sheet.hidden = true;
     sheet.classList.remove("is-closing");
     sheet.style.removeProperty("--drag-y");
+    sheet.style.removeProperty("--backdrop-fade");
     mountedSheets.delete(sheet);
     unlockPageScroll(sheet);
 
@@ -133,51 +128,9 @@ export function hideSheet(sheet, onHidden) {
     state.lastFocusedElement = null;
     afterHidden?.();
 
-    if (mountedSheets.size === 0) {
-      elements.backdrop.hidden = true;
-      requestAnimationFrame(() => focusTarget?.focus?.());
-    }
+    // 마지막 한 장이 닫힐 때만 원래 있던 자리로 포커스를 돌려준다.
+    if (mountedSheets.size === 0) requestAnimationFrame(() => focusTarget?.focus?.());
   });
-}
-
-function getOpenSheet() {
-  return (
-    SHEETS.find((sheet) => {
-      const phase = getSheetState(sheet).phase;
-      return phase === "opening" || phase === "open";
-    }) || null
-  );
-}
-
-function getFocusable(sheet) {
-  return [...sheet.querySelectorAll(FOCUSABLE)].filter((el) => el.getClientRects().length > 0);
-}
-
-/** aria-modal 시트 밖으로 포커스가 새 나가지 않도록 Tab 순환을 가둔다. */
-export function trapTab(event) {
-  if (event.key !== "Tab") return;
-  const sheet = getOpenSheet();
-  if (!sheet) return;
-
-  const focusable = getFocusable(sheet);
-  if (!focusable.length) return;
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
-/** Tab 이외의 경로(프로그램 포커스 등)로 빠져나간 포커스도 시트 안으로 되돌린다. */
-export function keepFocusInSheet(event) {
-  const sheet = getOpenSheet();
-  if (!sheet || sheet.contains(event.target)) return;
-  getFocusable(sheet)[0]?.focus();
 }
 
 const dragTracker = createDragTracker({
@@ -204,12 +157,12 @@ const dragTracker = createDragTracker({
     context.offset = Math.max(0, dy);
     context.sheet.style.setProperty("--drag-y", `${context.offset}px`);
     const fade = 1 - Math.min(1, context.offset / (context.sheet.offsetHeight || 1));
-    elements.backdrop.style.opacity = String(fade);
+    context.sheet.style.setProperty("--backdrop-fade", String(fade));
   },
 
   onRelease({ context }) {
     context.sheet.classList.remove("is-dragging");
-    elements.backdrop.style.removeProperty("opacity");
+    context.sheet.style.removeProperty("--backdrop-fade");
     if (context.offset > DISMISS_DISTANCE) {
       dismiss();
       return;

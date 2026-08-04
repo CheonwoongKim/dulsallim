@@ -11,11 +11,9 @@ import { getOpenPage, hidePage } from "../ui/page.js";
 import {
   SHEETS,
   endSheetDrag,
-  keepFocusInSheet,
   moveSheetDrag,
   setDismissHandler,
   startSheetDrag,
-  trapTab,
 } from "../ui/sheet.js";
 import { closeOpenRow } from "../ui/swipe.js";
 
@@ -45,7 +43,23 @@ SHEETS.forEach((sheet) => {
   sheet.addEventListener("pointerup", endSheetDrag);
   sheet.addEventListener("pointercancel", endSheetDrag);
 });
-elements.backdrop.addEventListener("click", closeActiveSheet);
+/*
+ * 배경을 눌러 닫기, 그리고 Esc.
+ *
+ * 시트는 <dialog> 라 열릴 때 top layer 로 올라간다. 그 자리에서는 배경 쪽 누름도
+ * 시트 자신에게 오므로(event.target === sheet) 따로 배경 요소를 둘 필요가 없다.
+ * Esc 는 브라우저가 스스로 닫으려 하는데, 그러면 연출도 잠금 해제도 건너뛴다.
+ * 막아 두고 우리 닫는 길로 되돌린다.
+ */
+SHEETS.forEach((sheet) => {
+  sheet.addEventListener("click", (event) => {
+    if (event.target === sheet) closeActiveSheet();
+  });
+  sheet.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeActiveSheet();
+  });
+});
 
 /* ── 전역 ─────────────────────────────────────────────────── */
 
@@ -54,15 +68,9 @@ document.addEventListener("pointerdown", (event) => {
   if (!event.target.closest(".swipe-row")) closeOpenRow();
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Tab") {
-    trapTab(event);
-    return;
-  }
   if (event.key !== "Escape") return;
-  // 시트가 전체 화면 위에 뜨므로 위에 있는 것부터 닫는다.
-  const sheetOpen = SHEETS.some((sheet) => !sheet.hidden);
-  closeActiveSheet();
+  // 시트가 열려 있으면 브라우저가 cancel 로 알려 준다. 여기서 또 닫으면 두 번 닫힌다.
+  if (SHEETS.some((sheet) => sheet.open)) return;
   closeOpenRow();
-  if (!sheetOpen && getOpenPage()) hidePage();
+  if (getOpenPage()) hidePage();
 });
-document.addEventListener("focusin", keepFocusInSheet);

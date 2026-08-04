@@ -33,7 +33,7 @@ export function showPage(page) {
   page.scrollTop = 0;
   /*
    * 뒤에 있는 가계부는 안 보일 뿐, 탭으로는 그대로 들어간다.
-   * 시트에는 Tab 을 가두는 장치(trapTab)가 있지만 화면에는 없어 커서가 덮인 목록 속으로 사라진다.
+   * 시트는 <dialog> 라 브라우저가 포커스를 가둬 주지만 화면은 아니라, 커서가 덮인 목록 속으로 사라진다.
    */
   elements.appShell.inert = true;
   requestAnimationFrame(() => {

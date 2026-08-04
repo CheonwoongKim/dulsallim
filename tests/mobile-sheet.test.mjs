@@ -35,15 +35,15 @@ test("헤더와 닫기 버튼은 스크롤 영역 밖에 고정된다", () => {
 
 test("닫히는 중인 바텀시트는 탭이 입력 요소로 새지 않는다", () => {
   assert.match(css, /\.sheet:not\(\.is-visible\)\s*\{[^}]*pointer-events:\s*none/, "두 시트가 공유하는 규칙이어야 한다");
-  assert.match(html, /<section class="sheet" id="entry-sheet"/);
-  assert.match(html, /<section class="sheet month-sheet" id="month-sheet"/);
+  assert.match(html, /<dialog class="sheet" id="entry-sheet"/);
+  assert.match(html, /<dialog class="sheet month-sheet" id="month-sheet"/);
   const hideFn = app.match(/function hideSheet\([\s\S]*?\n\}/)?.[0] || "";
   assert.match(hideFn, /\.blur\(\)/);
 });
 
 test("월 선택은 네이티브 input이 아닌 자체 시트로 동작한다", () => {
   assert.doesNotMatch(html, /type="month"/);
-  assert.match(html, /id="month-sheet"[^>]*role="dialog"/);
+  // role="dialog" 는 <dialog> 가 스스로 갖는다.
   assert.match(app, /elements\.monthTrigger\.addEventListener\("click", openMonthSheet\)/);
 });
 

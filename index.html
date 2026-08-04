@@ -318,9 +318,7 @@
         </button>
       </div>
     </section>
-
-    <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
-    <section class="sheet" id="entry-sheet" role="dialog" aria-modal="true" aria-labelledby="form-title" hidden>
+    <dialog class="sheet" id="entry-sheet" aria-labelledby="form-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">
         <div>
@@ -379,9 +377,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
       </form>
-    </section>
+    </dialog>
 
-    <section class="sheet month-sheet" id="month-sheet" role="dialog" aria-modal="true" aria-labelledby="month-sheet-title" hidden>
+    <dialog class="sheet month-sheet" id="month-sheet" aria-labelledby="month-sheet-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">
         <div>
@@ -404,9 +402,9 @@
       </div>
 
       <div class="sheet-scroll month-grid" id="month-grid" role="group" aria-labelledby="year-label"></div>
-    </section>
+    </dialog>
 
-    <section class="sheet" id="notes-sheet" role="dialog" aria-modal="true" aria-labelledby="notes-title" hidden>
+    <dialog class="sheet" id="notes-sheet" aria-labelledby="notes-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">
         <div>
@@ -427,9 +425,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </form>
-    </section>
+    </dialog>
 
-    <section class="sheet" id="trend-sheet" role="dialog" aria-modal="true" aria-labelledby="trend-sheet-title" hidden>
+    <dialog class="sheet" id="trend-sheet" aria-labelledby="trend-sheet-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">
         <div>
@@ -458,9 +456,9 @@
         <p class="trend-legend" id="trend-legend"></p>
         <p class="trend-note">가로 점선은 <b>지금</b> 정해 둔 월 지출 목표예요. 이번 달은 아직 진행 중이라 점선으로 이었어요.</p>
       </div>
-    </section>
+    </dialog>
 
-    <section class="sheet" id="reset-sheet" role="dialog" aria-modal="true" aria-labelledby="reset-sheet-title" hidden>
+    <dialog class="sheet" id="reset-sheet" aria-labelledby="reset-sheet-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">
         <div>
@@ -483,9 +481,9 @@
           <span>모두 삭제</span>
         </button>
       </form>
-    </section>
+    </dialog>
 
-    <section class="sheet" id="nag-sheet" role="dialog" aria-modal="true" aria-labelledby="nag-form-title" hidden>
+    <dialog class="sheet" id="nag-sheet" aria-labelledby="nag-form-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">
         <div>
@@ -517,9 +515,9 @@
 
         <button class="submit-button" type="submit" id="nag-submit"><span id="nag-submit-label">추가</span></button>
       </form>
-    </section>
+    </dialog>
 
-    <section class="sheet" id="fixed-sheet" role="dialog" aria-modal="true" aria-labelledby="fixed-sheet-title" hidden>
+    <dialog class="sheet" id="fixed-sheet" aria-labelledby="fixed-sheet-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">
         <div>
@@ -587,7 +585,7 @@
           <button class="submit-button" type="submit" id="fixed-submit"><span id="fixed-submit-label">고정비 저장</span></button>
         </div>
       </form>
-    </section>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden>
       <span id="toast-message">지출을 삭제했어요</span>

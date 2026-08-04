@@ -122,7 +122,6 @@ export const elements = {
   calendar: document.querySelector("#expense-calendar"),
   viewToggle: document.querySelectorAll(".view-toggle button"),
   emptyTemplate: document.querySelector("#empty-template"),
-  backdrop: document.querySelector("#sheet-backdrop"),
   appHeader: document.querySelector(".app-header"),
   totalAmount: document.querySelector(".total-amount"),
   compactTotal: document.querySelector("#compact-total"),

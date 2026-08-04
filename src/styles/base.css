@@ -44,6 +44,13 @@
   initial-value: 100svh;
 }
 
+/* 끌어내리는 동안 배경이 함께 옅어진다. ::backdrop 이 시트에서 물려받으므로 inherits 다. */
+@property --backdrop-fade {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
 @property --drag-y {
   syntax: "<length>";
   inherits: false;
