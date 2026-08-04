@@ -36,6 +36,31 @@ function syncHeaderHeight() {
 /** layout.css 의 --condense-ms 와 같은 값이다. */
 const CONDENSE_MS = 260;
 
+const root = document.documentElement;
+let anchorTimer = null;
+
+/**
+ * 접히고 펴지는 동안에는 브라우저의 스크롤 고정을 끈다.
+ *
+ * 펴질 때 머리와 요약 카드가 되살아나면서 목록 위로 300px 넘게 끼어든다.
+ * 브라우저는 보고 있던 줄을 제자리에 두려고 스크롤을 그만큼 내리는데,
+ * 우리는 그걸 "사용자가 아래로 내렸다"로 읽어 곧바로 도로 접었다.
+ * 위로 올려도 펴지지 않는 것처럼 보인 이유가 이것이다.
+ *
+ * 목록이 짧은 달일수록 잘 걸린다. 접으면 스크롤할 거리가 얼마 안 남아
+ * (계측: 389px → 61px) 되돌려진 위치가 곧바로 접는 지점을 넘기기 때문이다.
+ *
+ * 끄는 것은 이 전환 동안뿐이다. 평소에는 상대가 기록해 목록이 바뀔 때
+ * 보던 자리를 지켜 주는 고마운 기능이다.
+ */
+function suspendScrollAnchoring() {
+  root.style.overflowAnchor = "none";
+  clearTimeout(anchorTimer);
+  anchorTimer = setTimeout(() => {
+    root.style.removeProperty("overflow-anchor");
+  }, CONDENSE_MS);
+}
+
 /** 이어 붙이는 중인 애니메이션. 다시 부를 때 앞엣것을 세운다. */
 const bridging = new WeakMap();
 
@@ -96,6 +121,7 @@ function bridgeJump(change) {
 function setCondensed(next) {
   if (next === condensed) return;
   condensed = next;
+  suspendScrollAnchoring();
   bridgeJump(() => {
     elements.appShell.classList.toggle("is-condensed", next);
   });

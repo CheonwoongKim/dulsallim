@@ -1624,3 +1624,19 @@ test("키보드가 올라오면 시트를 그 위로 올린다", () => {
   assert.match(fn("watchKeyboard"), /if \(!viewport\) return/);
   assert.match(fn("watchKeyboard"), /addEventListener\("resize", sync\)[\s\S]{0,80}addEventListener\("scroll", sync\)/);
 });
+
+test("펴질 때 브라우저가 스크롤을 되돌려 도로 접히지 않게 한다", () => {
+  /*
+   * 펴지면 머리와 요약 카드가 되살아나 목록 위로 300px 넘게 끼어든다.
+   * 브라우저는 보고 있던 줄을 제자리에 두려고 스크롤을 그만큼 내리는데(scroll anchoring),
+   * 그걸 "사용자가 아래로 내렸다"로 읽으면 곧바로 도로 접힌다.
+   * 계측: 끄기 전 4회 중 3회 갇힘 → 끈 뒤 0회. 목록이 짧은 달일수록 잘 걸린다
+   * (접으면 스크롤 거리가 389px → 61px 로 줄어 되돌려진 위치가 접는 지점을 넘긴다).
+   */
+  assert.match(fn("setCondensed"), /suspendScrollAnchoring\(\)/);
+  const suspend = fn("suspendScrollAnchoring");
+  assert.match(suspend, /overflowAnchor = "none"/);
+  // 전환이 끝나면 되돌린다. 평소에는 목록이 바뀔 때 보던 자리를 지켜 주는 기능이다.
+  assert.match(suspend, /removeProperty\("overflow-anchor"\)/);
+  assert.match(suspend, /setTimeout\([\s\S]{0,120}CONDENSE_MS\)/);
+});
