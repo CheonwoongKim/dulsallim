@@ -30,6 +30,8 @@
 - 이메일·비밀번호 로그인 (이메일 기억하기). 가구에 연결된 계정만 데이터를 볼 수 있습니다
 - 마이페이지에서 표시 이름, 기본·직접 선택 아바타 색상, 월 지출 목표 변경
 - 설정에서 고정비·소비 잔소리 관리와 데이터 초기화
+- **알림** — 상대가 기록하거나, 목표를 넘기거나, 달이 끝나면 알려 줍니다.
+  설정에서 켜고 끕니다. iOS는 홈 화면에 추가한 앱에서만 알림이 옵니다(16.4+)
 - 홈 화면에 설치할 수 있는 PWA
 
 ## 준비
@@ -59,6 +61,30 @@
 | 5 | `supabase/migration-hardening.sql` | 대화 작성자 검사, 초기화·고정비 반영 트랜잭션 |
 | 6 | `supabase/migration-fixed-sync.sql` | 고정비 변경을 상대 기기에도 바로 반영 |
 | 7 | `supabase/migration-avatar-custom-color.sql` | 아바타 색상 직접 선택 |
+| 8 | `supabase/migration-push.sql` | 알림 받을 곳 저장 |
+| 9 | `supabase/migration-push-triggers.sql` | 알림 보내는 시점 (아래 준비가 먼저 필요) |
+
+### 알림을 쓰려면
+
+1. **VAPID 키 한 쌍**을 만듭니다. 공개키는 앱이, 비밀키는 서버가 씁니다.
+
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+2. 공개키를 `.env.local` 에 넣습니다 (`VITE_VAPID_PUBLIC_KEY=...`).
+   Vercel 환경 변수에도 같은 값을 넣어야 배포본에서 동작합니다.
+
+3. `supabase/functions/send-push` 를 배포하고 비밀값을 넣습니다.
+
+   ```bash
+   supabase functions deploy send-push
+   supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:주소
+   ```
+
+4. `migration-push.sql` 을 실행한 뒤, `migration-push-triggers.sql` 안의 주석 처리된
+   두 줄(함수 주소와 service_role 키)을 채워서 실행합니다.
+   **service_role 키는 저장소에 적지 마세요.** DB 안에만 두고 앱에서는 읽을 수 없습니다.
 
 대시보드에서 **가입은 반드시 꺼 두세요**
 (Project Settings → Authentication → User Signups → Allow new users to sign up).

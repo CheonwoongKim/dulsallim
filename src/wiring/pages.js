@@ -1,3 +1,4 @@
+import { togglePush } from "../features/push.js";
 import { elements } from "../dom.js";
 import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "../features/analysis.js";
 import { toggleCategoryFilter, toggleMemberFilter } from "../features/expense-actions.js";
@@ -87,6 +88,7 @@ elements.profilePalette.addEventListener("click", (event) => {
   const swatch = event.target.closest(".swatch");
   if (swatch) pickColor(swatch.dataset.color);
 });
+elements.pushToggle.addEventListener("change", (event) => togglePush(event.target.checked));
 elements.openNag.addEventListener("click", openNagPage);
 elements.nagEnabled.addEventListener("change", (event) => toggleNagEnabled(event.target.checked));
 elements.addNag.addEventListener("click", addNag);

@@ -87,3 +87,51 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   event.respondWith(url.pathname.startsWith("/assets/") ? cacheFirst(request) : networkFirst(request));
 });
+
+/*
+ * 알림.
+ *
+ * iOS 는 홈 화면에 추가한 웹앱에서만 푸시를 받는다(16.4+). Safari 탭에서는 오지 않으므로
+ * 여기 코드는 그 경우 그냥 실행되지 않는다.
+ *
+ * 페이로드는 서버가 보낸 JSON 이다. 형태가 어긋나도 알림은 떠야 하므로 기본값을 둔다 —
+ * 아무것도 안 뜨면 사용자는 무슨 일이 있었는지 영영 모른다.
+ */
+self.addEventListener("push", (event) => {
+  let 알림 = {};
+  try {
+    알림 = event.data ? event.data.json() : {};
+  } catch {
+    알림 = { body: event.data ? event.data.text() : "" };
+  }
+
+  const 제목 = 알림.title || "둘살림";
+  event.waitUntil(
+    self.registration.showNotification(제목, {
+      body: 알림.body || "",
+      icon: "/icon.png",
+      badge: "/icon.png",
+      // 같은 종류가 여러 번 오면 쌓지 않고 최신 것으로 바꾼다.
+      tag: 알림.tag || "dulsallim",
+      renotify: Boolean(알림.tag),
+      data: { url: 알림.url || "/" },
+    }),
+  );
+});
+
+/** 알림을 누르면 이미 열려 있는 창을 앞으로 가져온다. 매번 새 창을 띄우면 여러 장이 쌓인다. */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const 갈곳 = new URL(event.notification.data?.url || "/", self.location.origin);
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((창들) => {
+      for (const 창 of 창들) {
+        if (new URL(창.url).origin !== 갈곳.origin) continue;
+        창.focus();
+        if ("navigate" in 창 && 창.url !== 갈곳.href) 창.navigate(갈곳.href);
+        return undefined;
+      }
+      return self.clients.openWindow(갈곳.href);
+    }),
+  );
+});

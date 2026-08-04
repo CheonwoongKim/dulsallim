@@ -361,6 +361,39 @@ test("소스 파일은 800줄 상한을 지킨다", () => {
   }
 });
 
+test("알림은 사람이 켠 순간에만 허락을 구한다", () => {
+  /*
+   * 화면을 열자마자 물으면 브라우저가 아예 막고, 한 번 거절당하면 다시 물을 길이 없다.
+   * iOS 는 홈 화면에 추가한 웹앱에서만 푸시를 허용하므로(16.4+), 쓸 수 없는 곳에서는
+   * 스위치를 감춘다 — 눌러도 안 되는 것을 보여 주면 고장 난 것처럼 보인다.
+   */
+  const 켜기 = fn("togglePush");
+  assert.match(켜기, /await Notification\.requestPermission\(\)/);
+  assert.doesNotMatch(fn("syncPushToggle"), /requestPermission/, "상태만 맞출 때 물으면 안 된다");
+  assert.match(fn("canUsePush"), /"PushManager" in window/);
+  assert.match(fn("syncPushToggle"), /자리\.hidden = !canUsePush\(\)/);
+  // 조용한 푸시는 iOS 가 허용하지 않는다. 늘 보이는 알림이어야 한다.
+  assert.match(켜기, /userVisibleOnly: true/);
+  // 껐으면 서버 기록도 지운다. 남겨 두면 보내는 쪽이 계속 헛수고한다.
+  assert.match(켜기, /removePushSubscription\(구독\.endpoint\)[\s\S]{0,80}구독\.unsubscribe\(\)/);
+});
+
+test("고정비가 자동으로 채워질 때는 알리지 않는다", async () => {
+  /*
+   * 열두 달이 밀린 채 처음 열면 고정비가 한꺼번에 채워진다. 그때마다 알리면
+   * 알림이 수십 개 쏟아진다. 사람이 직접 적은 것만 알린다.
+   */
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../supabase/migration-push-triggers.sql", import.meta.url), "utf8");
+  assert.match(sql, /if new\.fixed_cost_id is not null then return new; end if;/);
+  // 적은 사람 자신에게는 보내지 않는다.
+  assert.match(sql, /where household_id = new\.household_id and id <> new\.created_by/);
+  // 알림이 늦거나 실패해도 지출은 저장돼야 한다. pg_net 은 기다리지 않는다.
+  assert.match(sql, /perform net\.http_post\(/);
+  // service_role 키는 DB 안에만 둔다.
+  assert.match(sql, /revoke all on app_secrets from anon, authenticated/);
+});
+
 test("분석에서 분류를 눌러 그 분류만 볼 수 있다", () => {
   /*
    * 합계만 보고 "그래서 뭘 샀는데?" 로 넘어갈 길이 없었다. 한 달 마흔 건이면

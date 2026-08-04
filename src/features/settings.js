@@ -1,3 +1,4 @@
+import { syncPushToggle } from "./push.js";
 import { elements } from "../dom.js";
 import { getMembers } from "../members.js";
 import { paintMembers, render, resetTotalAnimation } from "../render.js";
@@ -11,6 +12,7 @@ import { getProfile } from "./auth.js";
 const CONFIRM_WORD = "초기화";
 
 export function openSettingsPage() {
+  syncPushToggle();
   showPage(elements.settingsPage);
 }
 

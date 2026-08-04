@@ -308,6 +308,33 @@ export async function fireNags(expenseId) {
   if (error) console.error("잔소리 확인 실패:", error);
 }
 
+/* ── 알림 ─────────────────────────────────────────────────── */
+
+/**
+ * 알림 받을 곳을 저장한다.
+ *
+ * 같은 사람이 폰을 바꾸거나 다시 설치하면 새 endpoint 가 생긴다. endpoint 를 열쇠로
+ * 덮어써서, 옛 것이 남아 보내는 쪽이 헛수고하지 않게 한다.
+ */
+export async function savePushSubscription(userId, subscription) {
+  unwrap(
+    "알림 등록",
+    await supabase.from("push_subscriptions").upsert(
+      {
+        user_id: userId,
+        endpoint: subscription.endpoint,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+      },
+      { onConflict: "endpoint" },
+    ),
+  );
+}
+
+export async function removePushSubscription(endpoint) {
+  unwrap("알림 해제", await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint));
+}
+
 /* ── 실시간 ───────────────────────────────────────────────── */
 
 /**
