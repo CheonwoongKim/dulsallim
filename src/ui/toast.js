@@ -6,6 +6,14 @@ const FADE_MS = 220;
 let toastTimer = null;
 let hideTimer = null;
 
+/** 토스트가 하단 피드백을 맡는 동안 FAB는 겹치거나 눌리지 않게 자리를 비운다. */
+function setFloatingAddSuppressed(suppressed) {
+  elements.floatingAdd.classList.toggle("is-toast-suppressed", suppressed);
+  elements.floatingAdd.disabled = suppressed;
+  if (suppressed) elements.floatingAdd.setAttribute("aria-hidden", "true");
+  else elements.floatingAdd.removeAttribute("aria-hidden");
+}
+
 /**
  * @param {string} message
  * @param {{ canUndo?: boolean, onExpire?: () => void }} [options]
@@ -19,6 +27,7 @@ export function showToast(message, options = {}) {
 
   elements.toastMessage.textContent = message;
   elements.undoDelete.hidden = !canUndo;
+  setFloatingAddSuppressed(true);
   elements.toast.hidden = false;
   requestAnimationFrame(() => elements.toast.classList.add("is-visible"));
 
@@ -34,5 +43,6 @@ export function hideToast() {
   elements.toast.classList.remove("is-visible");
   hideTimer = setTimeout(() => {
     elements.toast.hidden = true;
+    setFloatingAddSuppressed(false);
   }, FADE_MS);
 }

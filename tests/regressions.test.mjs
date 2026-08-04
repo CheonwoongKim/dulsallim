@@ -66,6 +66,21 @@ test("토스트 숨김 타이머는 추적되어 취소할 수 있다", () => {
   assert.match(show, /clearTimeout\(hideTimer\)/, "새 토스트를 띄울 때 이전 숨김 예약을 취소해야 한다");
 });
 
+test("토스트가 보이는 동안에는 하단 등록 버튼이 자리를 비운다", () => {
+  const show = fn("showToast");
+  const hide = fn("hideToast");
+  const suppress = fn("setFloatingAddSuppressed");
+
+  assert.match(show, /setFloatingAddSuppressed\(true\)/, "토스트가 나타날 때 FAB부터 숨겨야 한다");
+  assert.match(
+    hide,
+    /elements\.toast\.hidden = true;\s*setFloatingAddSuppressed\(false\)/,
+    "토스트의 퇴장 애니메이션이 끝난 뒤 FAB가 돌아와야 한다"
+  );
+  assert.match(suppress, /elements\.floatingAdd\.disabled = suppressed/, "보이지 않는 FAB가 눌리면 안 된다");
+  assert.match(css, /\.floating-add\.is-toast-suppressed\s*\{[\s\S]*?pointer-events:\s*none;[\s\S]*?opacity:\s*0;/);
+});
+
 test("연도와 월 이동에는 상한·하한이 있다", () => {
   assert.match(fn("shiftPickerYear"), /clampYear\(/);
   assert.match(fn("openMonthSheet"), /clampYear\(/);
