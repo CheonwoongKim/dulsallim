@@ -34,8 +34,15 @@ function getSheetState(sheet) {
   return state;
 }
 
-function moveFocusIntoSheet(sheet) {
-  if (sheet.contains(document.activeElement)) return;
+/**
+ * 포커스를 시트 껍데기에 둔다. 안의 버튼이 아니라.
+ *
+ * showModal 은 시트 안 첫 요소(우리 경우 닫기 버튼)에 포커스를 준다. 그러면 열자마자
+ * 닫기 아이콘에 동그란 포커스 링이 뜬다 — 누르지도 않았는데 눌린 것처럼 보인다.
+ * 껍데기를 잡아 두면 링이 없고, 보조기술도 "무엇이 열렸는지"부터 읽는다.
+ */
+function moveFocusIntoSheet(sheet, 무조건 = false) {
+  if (!무조건 && sheet.contains(document.activeElement)) return;
   sheet.tabIndex = -1;
   sheet.focus({ preventScroll: true });
 }
@@ -85,6 +92,8 @@ export function showSheet(sheet) {
    * 우리가 손으로 하던 일이 전부 여기로 넘어갔다 — 배경 스크롤 잠금만 빼고.
    */
   if (!sheet.open) sheet.showModal();
+  // 그림이 그려지기 전에 되돌린다. 같은 작업 안이라 링이 한 번도 보이지 않는다.
+  moveFocusIntoSheet(sheet, true);
 
   requestAnimationFrame(() => {
     if (state.phase !== "opening") return;

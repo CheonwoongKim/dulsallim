@@ -91,6 +91,18 @@ test("연도와 월 이동에는 상한·하한이 있다", () => {
   assert.match(app, /elements\.prevYear\.disabled/, "경계에서 버튼을 비활성화해 시각적으로도 알려야 한다");
 });
 
+test("시트를 열어도 닫기 아이콘에 포커스 링이 뜨지 않는다", () => {
+  /*
+   * showModal 은 시트 안 첫 요소에 포커스를 준다 — 우리 경우 닫기 버튼이다.
+   * 그러면 열자마자 X 둘레에 동그란 링이 떠서, 누르지도 않았는데 눌린 것처럼 보인다.
+   * 껍데기를 잡아 두면 링이 없고, 보조기술도 "무엇이 열렸는지"부터 읽는다.
+   *
+   * showModal 바로 다음 줄이어야 한다. 프레임을 넘기면 링이 한 번 그려졌다 사라진다.
+   */
+  assert.match(fn("showSheet"), /showModal\(\);\s*(?:\/\/[^\n]*\n\s*)*moveFocusIntoSheet\(sheet, true\)/);
+  assert.match(fn("moveFocusIntoSheet"), /if \(!무조건 && sheet\.contains\(document\.activeElement\)\) return/);
+});
+
 test("시트는 화면 바닥에 붙는다", () => {
   /*
    * <dialog> 기본값은 top: 0 이다. 아래(bottom)와 함께 위(top)까지 정해지면
