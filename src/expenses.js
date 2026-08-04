@@ -115,6 +115,16 @@ export function nextMemberFilter(current, member) {
 }
 
 /** date가 null이면 전체를 그대로 돌려준다(필터 해제). */
+export function filterByCategory(monthly, category) {
+  if (!category) return monthly;
+  return monthly.filter((expense) => expense.category === category);
+}
+
+/** 분석에서 같은 분류를 다시 누르면 해제된다. 사람·날짜 필터와 같은 규칙이다. */
+export function nextCategoryFilter(current, category) {
+  return current === category ? null : category || null;
+}
+
 export function filterByDate(monthly, date) {
   if (!date) return monthly;
   return monthly.filter((expense) => expense.date === date);

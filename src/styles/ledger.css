@@ -43,6 +43,20 @@
   view-transition-name: ledger-calendar;
 }
 
+/* 제목에 붙은 조건. 글자처럼 보이되 눌러서 풀 수 있다. */
+.ledger-filter {
+  padding: 0;
+  border: 0;
+  color: var(--ink-soft);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.ledger-filter:active {
+  opacity: 0.55;
+}
+
 .expense-list {
   min-height: 160px;
   view-transition-name: ledger-list;

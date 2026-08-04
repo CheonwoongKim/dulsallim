@@ -1,6 +1,6 @@
 import { elements } from "../dom.js";
 import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "../features/analysis.js";
-import { toggleMemberFilter } from "../features/expense-actions.js";
+import { toggleCategoryFilter, toggleMemberFilter } from "../features/expense-actions.js";
 import {
   addNag,
   closeNagSheet,
@@ -62,6 +62,10 @@ elements.compareList.addEventListener("click", (event) => {
     toggleCompare(button.dataset.compare);
     render();
   }
+});
+elements.analysisList.addEventListener("click", (event) => {
+  const 줄 = event.target.closest("[data-category]");
+  if (줄) toggleCategoryFilter(줄.dataset.category);
 });
 elements.analysisMembers.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-member]");

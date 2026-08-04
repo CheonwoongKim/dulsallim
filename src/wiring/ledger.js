@@ -1,5 +1,6 @@
 import { elements } from "../dom.js";
 import {
+  clearFilters,
   copyExpense,
   deleteExpense,
   toggleDateFilter,
@@ -38,6 +39,7 @@ import {
 elements.memberSlots.forEach(({ row }) => {
   row.addEventListener("click", () => toggleMemberFilter(row.dataset.member));
 });
+elements.ledgerFilter.addEventListener("click", clearFilters);
 elements.prevMonth.addEventListener("click", () => shiftMonth(-1));
 elements.nextMonth.addEventListener("click", () => shiftMonth(1));
 

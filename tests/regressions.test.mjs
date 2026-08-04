@@ -361,6 +361,42 @@ test("소스 파일은 800줄 상한을 지킨다", () => {
   }
 });
 
+test("분석에서 분류를 눌러 그 분류만 볼 수 있다", () => {
+  /*
+   * 합계만 보고 "그래서 뭘 샀는데?" 로 넘어갈 길이 없었다. 한 달 마흔 건이면
+   * 목록을 끝까지 훑어야 했다. 사람 필터와 같은 규칙이다 — 다시 누르면 풀린다.
+   */
+  assert.match(html, /<div id="analysis-list">/);
+  assert.match(fn("paintShares"), /<button class="analysis-row" type="button" data-category=/);
+  assert.match(fn("toggleCategoryFilter"), /setCategoryFilter\(nextCategoryFilter\(getCategoryFilter\(\), category\)\)/);
+  // 거르고 나면 분석을 닫는다. 목록이 그 화면 뒤에 있어 안 닫으면 결과가 안 보인다.
+  assert.match(fn("toggleCategoryFilter"), /hidePage\(\)/);
+  assert.match(fn("nextCategoryFilter"), /current === category \? null : category/);
+  /*
+   * 캘린더 숫자에는 분류를 걸지 않는다. 걸면 그 분류가 없는 날이 통째로 비어
+   * 달력이 "그날은 안 썼다" 로 읽힌다.
+   */
+  const 그리기 = fn("render");
+  assert.match(그리기, /filterByCategory\(filterByDate\(byMember, dateFilter\), categoryFilter\)/);
+  assert.doesNotMatch(그리기, /renderCalendar\([^)]*categoryFilter/);
+});
+
+test("걸린 조건은 제목에 뜨고 눌러서 풀 수 있다", () => {
+  /*
+   * 사람은 요약 카드를, 날짜는 달력을 다시 누르면 풀린다 — 화면에 보이는 자리가 있다.
+   * 분류만 그런 자리가 없어 분석 화면으로 되돌아가야 했다. 제목에 이미 적혀 있으니
+   * 거기가 푸는 자리이기도 하게 둔다.
+   */
+  assert.match(html, /<button class="ledger-filter" type="button" id="ledger-filter" hidden><\/button>/);
+  assert.match(app, /elements\.ledgerFilter\.addEventListener\("click", clearFilters\)/);
+  const 지우기 = fn("clearFilters");
+  for (const 끄기 of [/setMemberFilter\(null\)/, /setCategoryFilter\(null\)/, /setDateFilter\(null\)/]) {
+    assert.match(지우기, 끄기);
+  }
+  // 무엇이 걸렸는지 보조기술도 알아야 한다.
+  assert.match(fn("paintLedgerHeading"), /setAttribute\("aria-label", `\$\{labels\.join\(", "\)\} 조건 지우기`\)/);
+});
+
 test("아이콘 버튼은 보이는 크기보다 넓게 눌린다", () => {
   /*
    * 42px 은 애플이 말하는 44px 에 2px 모자란다. 동그라미를 키우면 머리 줄이 두꺼워지므로

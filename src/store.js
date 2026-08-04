@@ -27,6 +27,7 @@ let context = null;
 let selectedMonth = toMonthKey(new Date());
 let memberFilter = null;
 let dateFilter = null;
+let categoryFilter = null;
 /** "list" 또는 "calendar". 같은 달을 다르게 보는 것뿐이라 서버와는 무관하다. */
 let viewMode = "list";
 let highlightId = null;
@@ -105,6 +106,7 @@ export function clearData() {
   setMembers([]);
   memberFilter = null;
   dateFilter = null;
+  categoryFilter = null;
   // 보던 달과 보기 방식도 앞사람의 것이다. 남기면 다음 사람이 2000년 캘린더로 시작한다.
   selectedMonth = toMonthKey(new Date());
   viewMode = "list";
@@ -268,6 +270,14 @@ export function setSelectedMonth(monthKey) {
   selectedMonth = monthKey;
   // 8월 3일을 고른 채 9월로 넘어가면 아무것도 안 보인다. 달이 바뀌면 날짜 필터를 푼다.
   dateFilter = null;
+}
+
+export function getCategoryFilter() {
+  return categoryFilter;
+}
+
+export function setCategoryFilter(category) {
+  categoryFilter = category;
 }
 
 export function getMemberFilter() {

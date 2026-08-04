@@ -1,5 +1,7 @@
 import { elements } from "./dom.js";
 import {
+  CATEGORIES,
+  filterByCategory,
   filterByDate,
   filterByMember,
   formatDayLabel,
@@ -15,6 +17,7 @@ import { renderCalendar } from "./ui/calendar-grid.js";
 import { paintAnalysis } from "./features/analysis.js";
 import { refreshTrend } from "./features/trend.js";
 import {
+  getCategoryFilter,
   getDateFilter,
   getExpenses,
   getMemberFilter,
@@ -141,15 +144,17 @@ function paintMemberShares(stats, monthly, memberFilter, isThisMonth) {
 }
 
 /** 지출 내역 제목 — 건수와 걸린 필터. 둘을 적은 뒤 한 번만 다시 그린다. */
-function paintLedgerHeading(visible, memberFilter, dateFilter) {
+function paintLedgerHeading(visible, memberFilter, dateFilter, categoryFilter) {
   elements.count.textContent = `(${visible.length})`;
 
-  // 사람과 날짜를 함께 걸 수 있다. 걸린 것만 이어 붙인다.
+  // 사람·날짜·분류를 함께 걸 수 있다. 걸린 것만 이어 붙인다.
   const labels = [
     memberFilter ? getMemberName(memberFilter) : null,
+    categoryFilter ? (CATEGORIES[categoryFilter] || CATEGORIES.etc).label : null,
     dateFilter ? formatDayLabel(dateFilter) : null,
   ].filter(Boolean);
   elements.ledgerFilter.textContent = labels.length ? ` · ${labels.join(" · ")}` : "";
+  elements.ledgerFilter.setAttribute("aria-label", `${labels.join(", ")} 조건 지우기`);
   elements.ledgerFilter.hidden = !labels.length;
   repaintLedgerTitle();
 }
@@ -162,7 +167,12 @@ export function render() {
   // 캘린더 숫자는 사람 필터까지만 반영한다. 날짜까지 걸러 넘기면 고른 날 하나만 남고 나머지가 빈다.
   const byMember = filterByMember(monthly, memberFilter);
   const dateFilter = getDateFilter();
-  const visible = filterByDate(byMember, dateFilter);
+  /*
+   * 캘린더 숫자에는 분류를 걸지 않는다. 걸면 그 분류가 없는 날이 통째로 비어,
+   * 달력이 "그날은 안 썼다"로 읽힌다. 분류는 아래 목록에만 적용한다.
+   */
+  const categoryFilter = getCategoryFilter();
+  const visible = filterByCategory(filterByDate(byMember, dateFilter), categoryFilter);
 
   elements.monthTitle.textContent = formatMonth(getSelectedMonth());
   animateNumber(previousTotal, stats.total);
@@ -184,7 +194,7 @@ export function render() {
     renderCalendar({ monthKey: getSelectedMonth(), monthly: byMember, selected: dateFilter });
   }
 
-  paintLedgerHeading(visible, memberFilter, dateFilter);
+  paintLedgerHeading(visible, memberFilter, dateFilter, categoryFilter);
 
   // 캘린더만 보고 있을 때는 아래 목록을 접어 둔다. 날을 고르면 그날 것만 펼친다.
   elements.list.hidden = calendarMode && !dateFilter;

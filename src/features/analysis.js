@@ -99,12 +99,13 @@ function paintShares(categories, total) {
   return categories
     .map(
       (category) => `
-      <div class="analysis-row">
+      <button class="analysis-row" type="button" data-category="${escapeHtml(category.key)}"
+        aria-label="${escapeHtml(category.label)} 기록만 보기">
         <span class="analysis-name">${escapeHtml(category.label)}</span>
         <span class="analysis-bar"><i style="width:${(category.total / total) * 100}%;background:${category.color}"></i></span>
         <span class="analysis-amount">${formatMoney(category.total)}원</span>
         <span class="analysis-percent">${category.percent}%</span>
-      </div>`,
+      </button>`,
     )
     .join("");
 }
