@@ -39,7 +39,12 @@
  */
 .hero {
   position: relative;
-  padding: 4px 0 26px;
+  /*
+   * 위 27 아래 30. 달 이동 줄과 사이가 38px, 사용자별 지출과 사이가 30px 이 되는 값이다
+   * (머리 안쪽에서 달 이동 줄 아래로 11px 이 이미 남는다).
+   * 접던 시절과 같은 간격이다 — 머리 구조가 바뀌었다고 자간까지 바뀔 이유는 없다.
+   */
+  padding: 27px 0 30px;
   text-align: center;
   animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }

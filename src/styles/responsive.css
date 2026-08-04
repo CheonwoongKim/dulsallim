@@ -21,7 +21,8 @@
   }
 
   .hero {
-    padding: 10px 0 36px;
+    /* 넓은 화면에서는 달 이동 줄과 45px 을 띄운다. */
+    padding: 34px 0 36px;
   }
 
   main {
