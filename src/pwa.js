@@ -61,6 +61,7 @@ export async function registerPwaUpdater(environment = {}) {
     if (updatePromise) return updatePromise;
     updatePromise = ensureRegistration()
       .then((current) => current?.update())
+      // 확인에 실패해도 사용자에게 알릴 것이 없다. 다음 기회에 다시 확인한다.
       .catch(() => undefined)
       .finally(() => {
         updatePromise = null;
@@ -82,5 +83,6 @@ export async function registerPwaUpdater(environment = {}) {
 }
 
 if (import.meta.env.PROD) {
+  // 등록에 실패해도 앱은 그대로 돈다. 새 버전으로 갈아타는 것만 다음 기회로 미뤄진다.
   window.addEventListener("load", () => registerPwaUpdater().catch(() => {}), { once: true });
 }

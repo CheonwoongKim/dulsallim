@@ -60,7 +60,7 @@ let catchingUp = false;
  * 무엇이 어긋났는지도 알 수 없다. 특히 대화 개수와 구성원은 reloadHousehold 가
  * 읽지 않아, 그것만으로는 상대가 남긴 말이 목록에 나타나지 않는다.
  */
-export async function catchUp() {
+async function catchUp() {
   const profile = getProfile();
   // 로그아웃하면 profile 이 비므로, 로그인 화면에서 돌아온 것과 구분된다.
   if (!profile || catchingUp) return;
