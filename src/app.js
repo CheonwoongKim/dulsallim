@@ -60,7 +60,13 @@ import {
   openProfilePage,
   pickColor,
 } from "./features/profile.js";
-import { handleReset, openSettingsPage, syncResetButton } from "./features/settings.js";
+import {
+  closeResetSheet,
+  handleReset,
+  openResetSheet,
+  openSettingsPage,
+  syncResetButton,
+} from "./features/settings.js";
 import {
   addNag,
   closeNagSheet,
@@ -121,6 +127,7 @@ function closeActiveSheet() {
   if (!elements.notesSheet.hidden) closeNotes();
   if (!elements.nagSheet.hidden) closeNagSheet();
   if (!elements.trendSheet.hidden) closeTrendSheet();
+  if (!elements.resetSheet.hidden) closeResetSheet();
 }
 
 /* ── 상단: 사람 필터 · 월 이동 ─────────────────────────────── */
@@ -167,7 +174,7 @@ elements.backdrop.addEventListener("click", closeActiveSheet);
 
 elements.form.addEventListener("submit", handleSubmit);
 // 포커스가 폼 밖으로 나가면 키보드가 내려가며 레이아웃이 흔들린다. 그 사이 오탭을 막는다.
-[elements.form, elements.fixedForm].forEach(settleOnFocusLeave);
+[elements.form, elements.fixedForm, elements.resetForm].forEach(settleOnFocusLeave);
 closeOnPress(elements.closeForm, closeForm);
 
 /* ── 마이페이지 · 설정 ────────────────────────────────────── */
@@ -244,6 +251,8 @@ elements.nagList.addEventListener("click", (event) => {
   const remove = event.target.closest("[data-remove-nag]");
   if (remove) removeNag(remove.dataset.removeNag);
 });
+elements.openResetSheet.addEventListener("click", openResetSheet);
+closeOnPress(elements.closeResetSheet, closeResetSheet);
 elements.resetForm.addEventListener("submit", handleReset);
 elements.resetConfirm.addEventListener("input", syncResetButton);
 

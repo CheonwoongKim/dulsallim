@@ -287,7 +287,7 @@ test("초기화는 확인 문구를 그대로 적어야만 실행된다", () => 
   assert.match(handler, /!== CONFIRM_WORD\) return/, "문구가 틀리면 즉시 멈춰야 한다");
   assert.match(app, /const CONFIRM_WORD = "초기화"/);
   assert.match(html, /id="reset-submit" disabled/, "처음에는 버튼이 잠겨 있어야 한다");
-  assert.match(fn("openSettingsPage"), /님의 기록도 함께 지워집니다/, "상대 기록도 지워진다고 알려야 한다");
+  assert.match(fn("openResetSheet"), /님의 기록도 함께 지워집니다/, "상대 기록도 지워진다고 알려야 한다");
 });
 
 test("아바타 색은 서버 값에서 오고 막대와 짝을 이룬다", () => {
@@ -1464,4 +1464,36 @@ test("실시간 대상에 세 표가 모두 들어 있다", async () => {
   // 이미 쓰고 있는 프로젝트는 schema.sql 을 다시 돌리지 않는다. 따라잡을 파일이 따로 있어야 한다.
   assert.match(migration, /alter publication supabase_realtime add table fixed_costs;/);
   assert.match(verify, /pubname = 'supabase_realtime'[\s\S]{0,200}fixed_costs/);
+});
+
+test("초기화는 설정 화면에 펼쳐 두지 않는다", () => {
+  /*
+   * 자주 하는 일이 아닌 데다 되돌릴 수 없다. 늘 보이면 손이 스치고,
+   * 지나칠 때마다 "지운다"는 말이 눈에 들어와 설정 화면이 경고판이 된다.
+   * 따로 열어야 나오게 두면 여는 행동 자체가 첫 번째 확인이 된다.
+   */
+  const 설정 = html.match(/<section class="page" id="settings-page"[\s\S]*?<\/section>/)[0];
+  assert.doesNotMatch(설정, /id="reset-confirm"/, "확인 입력칸이 설정 화면에 그대로 있다");
+  assert.doesNotMatch(설정, /id="reset-submit"/, "삭제 버튼이 설정 화면에 그대로 있다");
+  assert.match(설정, /id="open-reset-sheet"[\s\S]{0,200}데이터 초기화/, "여는 메뉴가 없다");
+  // 폼은 시트 안으로 갔다.
+  const 시트 = html.match(/<section class="sheet" id="reset-sheet"[\s\S]*?<\/section>/)[0];
+  assert.match(시트, /id="reset-form"/);
+  assert.match(시트, /id="reset-submit" disabled/, "처음에는 버튼이 잠겨 있어야 한다");
+  assert.match(시트, /role="dialog" aria-modal="true"/);
+});
+
+test("초기화 시트도 다른 시트와 같은 장치를 받는다", () => {
+  // SHEETS 에 넣지 않으면 끌어 닫기·Tab 가두기·바깥 누르기가 이 시트에만 빠진다.
+  assert.match(app, /elements\.trendSheet,\s*\n\s*elements\.resetSheet,/);
+  assert.match(fn("closeActiveSheet"), /resetSheet\.hidden\) closeResetSheet\(\)/);
+  // 확인 문구를 적는 동안 키보드가 오르내린다. 지출·고정비 폼과 같은 보호가 필요하다.
+  assert.match(app, /\[elements\.form, elements\.fixedForm, elements\.resetForm\]\.forEach\(settleOnFocusLeave\)/);
+});
+
+test("다 지우면 시트와 설정 화면을 함께 닫는다", () => {
+  // 지운 자리에 남아 있을 이유가 없다. 시트만 닫으면 빈 설정 화면이 덩그러니 남는다.
+  const handler = fn("handleReset");
+  assert.match(handler, /closeResetSheet\(\);[\s\S]{0,80}hidePage\(\)/);
+  assert.match(handler, /showToast\("모든 기록을 지웠어요"\)/);
 });

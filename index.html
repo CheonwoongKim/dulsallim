@@ -292,18 +292,13 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
 
-        <form class="danger-zone" id="reset-form" novalidate>
-          <strong>데이터 초기화</strong>
-          <p id="reset-warning"></p>
-          <label class="field-group">
-            <span>확인을 위해 <b>초기화</b>라고 입력해 주세요</span>
-            <input type="text" id="reset-confirm" autocomplete="off" autocapitalize="none" />
-          </label>
-          <small class="field-error" id="reset-error"></small>
-          <button class="submit-button danger" type="submit" id="reset-submit" disabled>
-            <span>모두 삭제</span>
-          </button>
-        </form>
+        <button class="menu-row danger-row" type="button" id="open-reset-sheet" aria-haspopup="dialog">
+          <span>
+            <strong>데이터 초기화</strong>
+            <small>지출 기록과 고정비를 모두 지웁니다</small>
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
       </div>
     </section>
 
@@ -457,6 +452,31 @@
         <p class="trend-legend" id="trend-legend"></p>
         <p class="trend-note">가로 점선은 <b>지금</b> 정해 둔 월 지출 목표예요. 이번 달은 아직 진행 중이라 점선으로 이었어요.</p>
       </div>
+    </section>
+
+    <section class="sheet" id="reset-sheet" role="dialog" aria-modal="true" aria-labelledby="reset-sheet-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow">되돌릴 수 없어요</p>
+          <h2 id="reset-sheet-title">데이터 초기화</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-reset-sheet" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <form class="sheet-scroll danger-zone" id="reset-form" novalidate>
+        <p id="reset-warning"></p>
+        <label class="field-group">
+          <span>확인을 위해 <b>초기화</b>라고 입력해 주세요</span>
+          <input type="text" id="reset-confirm" autocomplete="off" autocapitalize="none" />
+        </label>
+        <small class="field-error" id="reset-error"></small>
+        <button class="submit-button danger" type="submit" id="reset-submit" disabled>
+          <span>모두 삭제</span>
+        </button>
+      </form>
     </section>
 
     <section class="sheet" id="nag-sheet" role="dialog" aria-modal="true" aria-labelledby="nag-form-title" hidden>

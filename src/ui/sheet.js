@@ -22,6 +22,7 @@ export const SHEETS = [
   elements.notesSheet,
   elements.nagSheet,
   elements.trendSheet,
+  elements.resetSheet,
 ];
 
 let lastFocusedElement = null;

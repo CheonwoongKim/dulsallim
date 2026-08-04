@@ -133,21 +133,15 @@
 }
 
 /* 되돌릴 수 없는 동작. 눈에 띄게 갈라 놓아 실수로 흘러들지 않게 한다. */
-.danger-zone {
-  display: grid;
-  margin-top: 10px;
-  padding: 18px;
-  border: 1px solid rgba(216, 77, 52, 0.35);
-  border-radius: 16px;
-  gap: 12px;
-  background: rgba(242, 103, 75, 0.05);
-}
-
-.danger-zone strong {
+/*
+ * 초기화는 설정 안에 펼쳐 두지 않고 따로 연다. 여기 남은 것은 그 문을 여는 한 줄이다.
+ * 다른 메뉴와 같은 모양이되 제목만 붉게 둔다 — 액자까지 다르면 설정 화면이 경고판이 된다.
+ */
+.menu-row.danger-row strong {
   color: var(--accent-dark);
-  font-size: 15px;
 }
 
+/* 시트가 이미 액자다. 안에서 또 테두리를 두르면 상자가 겹친다. */
 .danger-zone p {
   margin: 0;
   color: var(--ink-soft);
@@ -157,6 +151,11 @@
 
 .danger-zone b {
   color: var(--ink);
+}
+
+/* 지우는 버튼은 한 박자 떨어뜨린다. 확인 문구 바로 밑에 붙으면 손이 먼저 간다. */
+.danger-zone .submit-button {
+  margin-top: 3px;
 }
 
 .submit-button.danger {
