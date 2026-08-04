@@ -60,6 +60,21 @@
   transition: opacity 260ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/*
+ * 껍데기에는 포커스 테두리를 그리지 않는다.
+ *
+ * 시트가 열리면 껍데기(tabindex=-1)에 포커스를 준다 — 보조기술이 "무엇이 열렸는지"부터
+ * 읽게 하려는 것이지 사람이 고른 자리가 아니다. 그런데 브라우저는 outline: auto 로
+ * 시트 둘레에 기본 링을 그린다(iOS 에서는 파란색). 좌우와 아래는 화면 밖이라
+ * 위쪽 한 줄만 파랗게 보였다.
+ *
+ * 이 요소는 Tab 으로 닿을 수 없으므로 지워도 키보드 사용자가 잃는 표시가 없다.
+ * 안쪽 버튼과 입력칸의 링은 그대로 둔다.
+ */
+.sheet:focus {
+  outline: none;
+}
+
 .sheet.is-visible {
   opacity: 1;
   transform: translateY(var(--drag-y, 0px));
