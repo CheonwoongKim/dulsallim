@@ -1446,6 +1446,8 @@ test("본 화면 단락 사이 여백은 머리를 바꾸기 전과 같다", () 
   assert.match(css, /\.month-bar \{[^}]*padding: 0 22px 8px/);
   assert.match(css, /\n\.hero \{[^}]*padding: 27px 0 30px/, "휴대폰: 위로 38px, 아래로 30px");
   assert.match(css, /\.hero \{\n    \/\*[^*]*\*\/\n    padding: 34px 0 36px/, "넓은 화면: 위로 45px");
+  // 사용자별 지출 단락과 지출 내역 사이. 22px 은 넉넉해서 목록을 8px 끌어올렸다.
+  assert.match(css, /\.ledger \{[^}]*padding-top: 14px/);
 });
 
 test("맨 위에서 달 이동 줄은 가운데에 선다", () => {
