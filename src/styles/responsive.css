@@ -2,7 +2,7 @@
   body {
     min-height: 100vh;
     background:
-      linear-gradient(90deg, #e8e2d8 0, #f7f3eb calc(50% - 390px), #f7f3eb calc(50% + 390px), #e8e2d8 100%);
+      linear-gradient(90deg, var(--edge) 0, var(--paper) calc(50% - 390px), var(--paper) calc(50% + 390px), var(--edge) 100%);
   }
 
   .topbar {
@@ -17,7 +17,7 @@
 
   .app-header {
     background:
-      linear-gradient(90deg, #e8e2d8 0, #f7f3eb calc(50% - 390px), #f7f3eb calc(50% + 390px), #e8e2d8 100%);
+      linear-gradient(90deg, var(--edge) 0, var(--paper) calc(50% - 390px), var(--paper) calc(50% + 390px), var(--edge) 100%);
   }
 
   .hero {

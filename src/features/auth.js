@@ -1,4 +1,5 @@
 import { elements } from "../dom.js";
+import { MY_PROFILE_COLUMNS } from "../data/remote.js";
 import { CONFIG_ERROR, isConfigured, supabase } from "../supabase.js";
 
 let profile = null;
@@ -60,7 +61,7 @@ function isOffline(error) {
 async function loadProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_color, monthly_goal, nag_enabled, household_id")
+    .select(MY_PROFILE_COLUMNS)
     .eq("id", userId)
     .maybeSingle();
 

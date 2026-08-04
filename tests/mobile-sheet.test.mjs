@@ -69,10 +69,14 @@ test("드래그 오프셋은 데스크톱 중앙 정렬 transform과 합성된�
 });
 
 test("폼 입력 필드는 iOS 자동 확대를 막기 위해 16px 이상이다", () => {
+  /*
+   * [^}] 로 규칙 안에 가둔다. [\s\S]*? 로 두면 그 규칙에 font-size 가 없을 때
+   * 닫는 괄호를 넘어 다음 규칙의 값을 읽는다 — 엉뚱한 14px 을 잡아 실패했다.
+   */
   const rules = {
-    "지출 항목·분류": /\.field-group input\[type="text"\],\s*\n\.field-group select \{[\s\S]*?font-size:\s*(\d+)px/,
-    "날짜": /\n\.date-control \{[\s\S]*?font-size:\s*(\d+)px/,
-    "금액": /\.amount-field input\[type="text"\] \{[\s\S]*?font-size:\s*(\d+)px/,
+    "지출 항목·분류": /\.field-group input\[type="text"\],\s*\n\.field-group select \{[^}]*font-size:\s*(\d+)px/,
+    "날짜": /\n\.date-control \{[^}]*font-size:\s*(\d+)px/,
+    "금액": /\.amount-field input\[type="text"\] \{[^}]*font-size:\s*(\d+)px/,
   };
   for (const [name, pattern] of Object.entries(rules)) {
     const match = css.match(pattern);

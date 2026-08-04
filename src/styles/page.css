@@ -298,7 +298,7 @@
   height: 28px;
   flex: 0 0 auto;
   border-radius: 99px;
-  background: #ddd8cf;
+  background: var(--field-line);
   transition: background 200ms ease;
 }
 

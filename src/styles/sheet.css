@@ -120,9 +120,9 @@
 
 .month-cell {
   min-height: 54px;
-  border: 1px solid #ddd8cf;
+  border: 1px solid var(--field-line);
   border-radius: 13px;
-  background: #fcfaf5;
+  background: var(--field-bg);
   cursor: pointer;
   font-size: 14px;
   font-weight: 700;
@@ -318,13 +318,6 @@
 
 .field-group input[type="text"],
 .field-group select {
-  width: 100%;
-  min-width: 0;
-  height: 50px;
-  padding: 0 14px;
-  border: 1px solid #ddd8cf;
-  border-radius: 13px;
-  background: #fcfaf5;
   font-size: 16px;
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
@@ -332,28 +325,15 @@
 .date-control {
   position: relative;
   display: flex;
-  width: 100%;
-  min-width: 0;
-  height: 50px;
-  padding: 0 14px;
-  border: 1px solid #ddd8cf;
-  border-radius: 13px;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  background: #fcfaf5;
   font-size: 16px;
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
 .date-control:hover {
-  border-color: #bdb8ae;
-}
-
-.date-control:focus-within {
-  border-color: var(--accent);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(242, 103, 75, 0.11);
+  border-color: var(--line-strong);
 }
 
 .date-control > svg {
@@ -382,17 +362,8 @@
 
 .field-group input:hover,
 .field-group select:hover {
-  border-color: #bdb8ae;
+  border-color: var(--line-strong);
 }
-
-.field-group input:focus,
-.field-group select:focus {
-  border-color: var(--accent);
-  outline: 0;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(242, 103, 75, 0.11);
-}
-
 .segmented-control {
   display: grid;
   padding: 4px;

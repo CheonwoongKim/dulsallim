@@ -31,25 +31,10 @@
 
 .auth-card input[type="email"],
 .auth-card input[type="password"] {
-  width: 100%;
-  min-width: 0;
-  height: 50px;
-  padding: 0 14px;
-  border: 1px solid #ddd8cf;
-  border-radius: 13px;
-  background: #fcfaf5;
   /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
   font-size: 16px;
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
-
-.auth-card input:focus {
-  border-color: var(--accent);
-  outline: 0;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(242, 103, 75, 0.11);
-}
-
 .auth-card .submit-button[disabled] {
   cursor: default;
   opacity: 0.6;

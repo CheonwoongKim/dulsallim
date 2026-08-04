@@ -89,7 +89,7 @@
 }
 
 .ghost-button:hover {
-  border-color: #bdb8ae;
+  border-color: var(--line-strong);
   background: rgba(32, 33, 30, 0.04);
 }
 
@@ -327,8 +327,8 @@ main {
 }
 
 .member-row[aria-pressed="true"] {
-  background: #ece5d8;
-  box-shadow: 0 0 0 10px #ece5d8;
+  background: var(--pressed);
+  box-shadow: 0 0 0 10px var(--pressed);
 }
 
 .member-body {

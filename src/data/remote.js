@@ -28,6 +28,15 @@ function unwrap(action, { data, error }) {
   return data;
 }
 
+/**
+ * 내 프로필을 읽어 올 때 가져오는 열.
+ *
+ * 세 곳(로그인, 잔소리 켜기, 프로필 수정)이 같은 목록을 따로 적고 있었다.
+ * 열을 하나 더하면 셋을 다 고쳐야 하고, 한 곳을 빠뜨리면 그 경로로 들어온 프로필에만
+ * 그 값이 비어 화면이 조용히 어긋난다(avatar_color 를 더할 때 실제로 셋을 고쳐야 했다).
+ */
+export const MY_PROFILE_COLUMNS = "id, display_name, avatar_color, monthly_goal, nag_enabled, household_id";
+
 /* ── 읽기 ─────────────────────────────────────────────────── */
 
 /** 가구 구성원. 가입 순서가 화면의 좌우 배치 순서가 된다. */
@@ -56,7 +65,7 @@ export async function setNagEnabled(userId, enabled) {
       .from("profiles")
       .update({ nag_enabled: enabled })
       .eq("id", userId)
-      .select("id, display_name, avatar_color, monthly_goal, nag_enabled, household_id")
+      .select(MY_PROFILE_COLUMNS)
       .single(),
   );
   return row;
@@ -73,7 +82,7 @@ export async function updateProfile(userId, { name, color, goal }) {
       .from("profiles")
       .update({ display_name: name, avatar_color: color, monthly_goal: goal })
       .eq("id", userId)
-      .select("id, display_name, avatar_color, monthly_goal, nag_enabled, household_id")
+      .select(MY_PROFILE_COLUMNS)
       .single(),
   );
   return row;

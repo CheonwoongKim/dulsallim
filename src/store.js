@@ -56,15 +56,20 @@ export async function reloadMembers() {
   setMembers(members);
 }
 
-/** 가구의 모든 기록을 지운다. 되돌릴 수 없다. */
-export async function resetHousehold() {
-  await remote.resetHousehold();
+/** 화면이 들고 있던 사본을 비운다. 초기화와 로그아웃이 같은 것을 지운다. */
+function 비우기() {
   expenses = [];
   fixedTemplates = [];
   fixedApplied = [];
-  // 지출이 사라지면 달려 있던 대화도 DB에서 함께 지워진다(on delete cascade).
   noteCounts = {};
   countedNoteIds = new Set();
+}
+
+/** 가구의 모든 기록을 지운다. 되돌릴 수 없다. */
+export async function resetHousehold() {
+  await remote.resetHousehold();
+  // 지출이 사라지면 달려 있던 대화도 DB에서 함께 지워진다(on delete cascade).
+  비우기();
 }
 
 /**
@@ -95,11 +100,7 @@ export async function reloadHousehold() {
 
 /** 로그아웃. 다음 사람이 앞사람 기록을 보지 않도록 사본을 비운다. */
 export function clearData() {
-  expenses = [];
-  fixedTemplates = [];
-  fixedApplied = [];
-  noteCounts = {};
-  countedNoteIds = new Set();
+  비우기();
   context = null;
   setMembers([]);
   memberFilter = null;

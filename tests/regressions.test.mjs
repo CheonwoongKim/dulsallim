@@ -190,9 +190,19 @@ test("시트는 브라우저가 가둬 준다", () => {
 
 test("로그아웃하면 앞사람 기록이 화면에 남지 않는다", () => {
   const clear = fn("clearData");
-  for (const line of [/expenses = \[\]/, /fixedTemplates = \[\]/, /context = null/, /setMembers\(\[\]\)/]) {
-    assert.match(clear, line);
+  assert.match(clear, /비우기\(\)/);
+  assert.match(clear, /context = null/);
+  assert.match(clear, /setMembers\(\[\]\)/);
+  /*
+   * 비우는 일은 초기화와 로그아웃이 똑같이 한다. 두 곳에 따로 적어 두면 하나만 늘게 되고,
+   * 빠진 쪽에는 앞사람 기록이 남는다. 지금은 한 함수가 다 지운다.
+   */
+  const 비우기 = fn("비우기");
+  for (const line of [/expenses = \[\]/, /fixedTemplates = \[\]/, /fixedApplied = \[\]/,
+                      /noteCounts = \{\}/, /countedNoteIds = new Set\(\)/]) {
+    assert.match(비우기, line);
   }
+  assert.match(fn("resetHousehold"), /비우기\(\)/, "초기화도 같은 것을 쓴다");
   // 사본만 비우고 다시 그리지 않으면 앞사람 목록이 화면에 그대로 남는다.
   assert.match(app, /clearData\(\);[\s\S]{0,200}?render\(\);/, "로그아웃 처리에서 사본을 비우고 다시 그려야 한다");
   assert.match(app, /unsubscribe\(channel\)/, "구독을 남기면 남의 가구 변경을 계속 받는다");
@@ -349,6 +359,34 @@ test("소스 파일은 800줄 상한을 지킨다", () => {
   for (const [path, lines] of Object.entries(sourceLineCounts)) {
     assert.ok(lines <= 800, `${path}가 ${lines}줄 (상한 800)`);
   }
+});
+
+test("적는 상자와 손이 닿은 표시는 한 곳에서 정한다", () => {
+  /*
+   * 로그인 칸, 시트의 입력칸·분류, 날짜 줄, 대화 입력이 같은 상자를 쓴다.
+   * 예전에는 각자 적어 두어 높이나 테두리를 바꿀 때마다 서너 곳을 찾아다녀야 했고,
+   * 실제로 값이 조금씩 어긋나 있었다.
+   */
+  const 세기 = (re) => (css.match(re) ?? []).length;
+  assert.equal(세기(/height: 50px;\n  padding: 0 14px;\n  border: 1px solid var\(--field-line\)/g), 1,
+    "상자를 두 곳 이상에서 정하고 있다");
+  assert.equal(세기(/box-shadow: 0 0 0 3px rgba\(242, 103, 75, 0\.11\)/g), 1,
+    "손이 닿은 표시를 두 곳 이상에서 정하고 있다");
+  // 같은 색을 여러 곳에 적어 두면 한 곳만 바뀐다. :root 밖에는 리터럴을 두지 않는다.
+  assert.match(css, /--field-line: #ddd8cf/);
+  assert.equal(세기(/#ddd8cf|#fcfaf5|#f7f3eb/g), 3, ":root 밖에 같은 색을 다시 적어 두었다");
+});
+
+test("내 프로필을 읽는 열 목록은 한 곳에서 정한다", () => {
+  /*
+   * 로그인·잔소리 켜기·프로필 수정 세 곳이 같은 목록을 따로 적고 있었다.
+   * 열을 하나 더하면 셋을 다 고쳐야 하고, 한 곳을 빠뜨리면 그 경로로 들어온 프로필에만
+   * 그 값이 비어 화면이 조용히 어긋난다(avatar_color 를 더할 때 실제로 셋을 고쳐야 했다).
+   */
+  assert.match(app, /export const MY_PROFILE_COLUMNS = "[^"]*avatar_color[^"]*"/);
+  const 손으로적은것 = app.match(/\.select\("id, display_name, avatar_color[^"]*nag_enabled[^"]*"\)/g) ?? [];
+  assert.deepEqual(손으로적은것, [], "목록을 손으로 다시 적어 두지 않는다");
+  assert.ok((app.match(/\.select\(MY_PROFILE_COLUMNS\)/g) ?? []).length >= 3, "세 곳이 같은 것을 쓴다");
 });
 
 test("프로필 수정 권한은 정해진 열로만 열려 있다", async () => {

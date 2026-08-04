@@ -87,21 +87,13 @@
   min-width: 0;
   height: 46px;
   padding: 0 16px;
-  border: 1px solid #ddd8cf;
+  border: 1px solid var(--field-line);
   border-radius: 999px;
-  background: #fcfaf5;
+  background: var(--field-bg);
   /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
   font-size: 16px;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
-
-.note-form input:focus {
-  border-color: var(--accent);
-  outline: 0;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(242, 103, 75, 0.11);
-}
-
 .note-send {
   display: grid;
   width: 46px;
