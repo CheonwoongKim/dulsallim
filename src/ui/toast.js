@@ -1,10 +1,11 @@
 import { elements } from "../dom.js";
+import { afterMotion } from "./after-motion.js";
 
+/** 얼마나 머무를지. 사라지는 데 걸리는 시간은 CSS 가 정하고 여기서는 묻기만 한다. */
 const VISIBLE_MS = 4200;
-const FADE_MS = 220;
 
 let toastTimer = null;
-let hideTimer = null;
+let stopWaiting = null;
 
 /** 토스트가 하단 피드백을 맡는 동안 FAB는 겹치거나 눌리지 않게 자리를 비운다. */
 function setFloatingAddSuppressed(suppressed) {
@@ -23,7 +24,8 @@ export function showToast(message, options = {}) {
 
   clearTimeout(toastTimer);
   // 이전 숨김 예약을 반드시 취소한다. 남아 있으면 방금 띄운 토스트를 지워버린다.
-  clearTimeout(hideTimer);
+  stopWaiting?.();
+  stopWaiting = null;
 
   elements.toastMessage.textContent = message;
   elements.undoDelete.hidden = !canUndo;
@@ -39,10 +41,11 @@ export function showToast(message, options = {}) {
 
 export function hideToast() {
   clearTimeout(toastTimer);
-  clearTimeout(hideTimer);
+  stopWaiting?.();
   elements.toast.classList.remove("is-visible");
-  hideTimer = setTimeout(() => {
+  stopWaiting = afterMotion(elements.toast, () => {
+    stopWaiting = null;
     elements.toast.hidden = true;
     setFloatingAddSuppressed(false);
-  }, FADE_MS);
+  });
 }

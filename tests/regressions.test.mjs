@@ -63,9 +63,9 @@ test("지출 목록은 변경 시 새 배열을 만든다", () => {
 test("토스트 숨김 타이머는 추적되어 취소할 수 있다", () => {
   const show = fn("showToast");
   const hide = fn("hideToast");
-  assert.match(hide, /hideTimer = setTimeout/, "추적되지 않으면 새 토스트를 즉시 지워버린다");
-  assert.match(hide, /clearTimeout\(hideTimer\)/);
-  assert.match(show, /clearTimeout\(hideTimer\)/, "새 토스트를 띄울 때 이전 숨김 예약을 취소해야 한다");
+  assert.match(hide, /stopWaiting = afterMotion\(elements\.toast/, "추적되지 않으면 새 토스트를 즉시 지워버린다");
+  assert.match(hide, /stopWaiting\?\.\(\)/);
+  assert.match(show, /stopWaiting\?\.\(\)/, "새 토스트를 띄울 때 이전 숨김 예약을 취소해야 한다");
 });
 
 test("토스트가 보이는 동안에는 하단 등록 버튼이 자리를 비운다", () => {
@@ -1221,10 +1221,10 @@ test("한 해 데이터는 한 번만 계산한다", () => {
 test("각 시트는 자기 수명주기와 닫기 타이머를 따로 가진다", () => {
   // 전역 타이머 하나를 나눠 쓰면 다른 시트를 여는 순간 먼저 닫던 시트의 정리가 취소된다.
   assert.match(app, /const sheetStates = new WeakMap\(\)/);
-  assert.match(fn("getSheetState"), /closeTimer: null/);
+  assert.match(fn("getSheetState"), /stopWaiting: null/);
   assert.match(fn("showSheet"), /phase === "opening" \|\| state\.phase === "open"/);
   assert.match(fn("hideSheet"), /phase === "closed" \|\| state\.phase === "closing"/);
-  assert.match(fn("hideSheet"), /state\.closeTimer = setTimeout/);
+  assert.match(fn("hideSheet"), /state\.stopWaiting = afterMotion\(sheet/);
   assert.match(fn("showSheet"), /lockPageScroll\(sheet\)/);
   assert.match(fn("hideSheet"), /unlockPageScroll\(sheet\)/);
 });
@@ -1242,22 +1242,24 @@ test("닫히는 중인 시트는 아무것도 눌리지 않는다", () => {
   assert.match(fn("showSheet"), /is-closing/);
 });
 
-test("숨기는 시점은 닫히는 애니메이션보다 늦다", async () => {
-  // 애니메이션이 420ms 인데 320ms 에 hidden 을 걸면 남은 100ms 가 잘려 툭 사라진다.
-  // CLOSE_MS 는 시트와 페이지에 하나씩 있어 파일을 직접 짝지어 읽는다.
+test("숨기는 시점을 JS 가 따로 세지 않는다", async () => {
+  /*
+   * 예전에는 CSS 에 적은 시간을 JS 에도 한 번 더 적어 두고 setTimeout 으로 맞췄다
+   * (시트 420, 화면 280, 토스트 220). 같은 숫자가 두 곳에 있으면 한쪽만 고치게 되고,
+   * JS 가 짧으면 애니메이션이 잘려 툭 사라지고 길면 닫힌 뒤에도 한참 잠긴 채 남는다.
+   * 이제 브라우저에게 직접 묻는다 — 계측: CSS 를 900ms 로 바꾸니 908ms 에 정리됐다.
+   */
   const { readFile } = await import("node:fs/promises");
-  const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-
-  for (const [js, cssFile, rule] of [
-    ["src/ui/sheet.js", "src/styles/sheet.css", "\\.sheet"],
-    ["src/ui/page.js", "src/styles/page.css", "\\.page"],
-  ]) {
-    const 닫힘 = Number((await read(js)).match(/const CLOSE_MS = (\d+)/)[1]);
-    const 전환 = Number(
-      (await read(cssFile)).match(new RegExp(`\n${rule} \\{[\\s\\S]*?transform (\\d+)ms`))[1],
-    );
-    assert.ok(닫힘 >= 전환, `${js}: 숨김 ${닫힘}ms 가 전환 ${전환}ms 보다 빠르다`);
+  for (const path of ["src/ui/sheet.js", "src/ui/page.js", "src/ui/toast.js"]) {
+    const 소스 = await readFile(new URL(`../${path}`, import.meta.url), "utf8");
+    assert.match(소스, /afterMotion\(/, `${path} 가 움직임이 끝나기를 기다리지 않는다`);
+    // 머무는 시간(VISIBLE_MS)은 움직임이 아니라 읽는 시간이라 JS 가 정한다.
+    const 굳은시간 = [...소스.matchAll(/const (\w*(?:CLOSE|FADE|ANIM)\w*_MS) = \d+/g)];
+    assert.deepEqual(굳은시간.map((m) => m[1]), [], `${path} 에 애니메이션 시간이 굳어 있다`);
   }
+  // 물어보는 곳은 한 군데뿐이다.
+  assert.match(fn("afterMotion"), /element\.getAnimations\(\)/);
+  assert.match(fn("afterMotion"), /Promise\.allSettled/, "취소된 전환도 뒤처리는 해야 한다");
 });
 
 test("README 기능 목록이 실제 화면과 어긋나지 않는다", async () => {

@@ -1,12 +1,8 @@
 import { elements } from "../dom.js";
+import { afterMotion } from "./after-motion.js";
 import { createDragTracker } from "./drag-tracker.js";
 import { lockPageScroll, unlockPageScroll } from "./scroll-lock.js";
 
-/*
- * 닫히는 데 걸리는 시간. sheet.css 의 transform 전환보다 짧으면 안 된다.
- * 짧으면 애니메이션 도중에 hidden 이 걸려 시트가 툭 사라진다.
- */
-const CLOSE_MS = 420;
 const DISMISS_DISTANCE = 96;
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -31,7 +27,7 @@ function getSheetState(sheet) {
   if (!state) {
     state = {
       phase: sheet.hidden ? "closed" : "open",
-      closeTimer: null,
+      stopWaiting: null,
       lastFocusedElement: null,
       onHidden: null,
     };
@@ -81,8 +77,8 @@ export function showSheet(sheet) {
   }
 
   const wasClosing = state.phase === "closing";
-  clearTimeout(state.closeTimer);
-  state.closeTimer = null;
+  state.stopWaiting?.();
+  state.stopWaiting = null;
   state.onHidden = null;
   state.phase = "opening";
   if (!wasClosing) state.lastFocusedElement = document.activeElement;
@@ -119,11 +115,12 @@ export function hideSheet(sheet, onHidden) {
   if (!hasInteractiveSheet(sheet)) elements.backdrop.classList.remove("is-visible");
   sheet.classList.remove("is-visible");
 
-  clearTimeout(state.closeTimer);
-  state.closeTimer = setTimeout(() => {
+  state.stopWaiting?.();
+  state.stopWaiting = afterMotion(sheet, () => {
+    // 다시 열렸으면 그 사이에 phase 가 바뀐다. 그때는 뒤처리를 하면 안 된다.
     if (state.phase !== "closing") return;
     state.phase = "closed";
-    state.closeTimer = null;
+    state.stopWaiting = null;
     sheet.hidden = true;
     sheet.classList.remove("is-closing");
     sheet.style.removeProperty("--drag-y");
@@ -140,7 +137,7 @@ export function hideSheet(sheet, onHidden) {
       elements.backdrop.hidden = true;
       requestAnimationFrame(() => focusTarget?.focus?.());
     }
-  }, CLOSE_MS);
+  });
 }
 
 function getOpenSheet() {

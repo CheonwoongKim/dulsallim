@@ -22,6 +22,7 @@ const SOURCE_FILES = [
   "analysis.js",
   "supabase.js",
   "fixed-costs.js",
+  "ui/after-motion.js",
   "ui/drag-tracker.js",
   "ui/escape.js",
   "ui/page.js",
