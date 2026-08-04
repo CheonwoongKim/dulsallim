@@ -1323,6 +1323,24 @@ test("머리 밑으로 들어가는 줄은 글자 한가운데서 잘리지 않�
   assert.doesNotMatch(css, /\.app-shell:not\(\.is-stuck\) \.app-header::after/);
 });
 
+test("배선은 도메인별 파일에 있고 app.js 에는 남지 않는다", async () => {
+  /*
+   * 예전에는 배선 300줄이 app.js 한 파일에 있었고, 구간 이름과 내용이 어긋나 있었다 —
+   * 잔소리가 "마이페이지 · 설정" 아래에, 지출 폼 입력이 "고정비" 아래에 있었다.
+   * 한 파일이 커질수록 그런 어긋남이 눈에 안 띈다.
+   *
+   * app.js 에 남는 것은 앱을 띄우고 내리는 일뿐이다 — 로그인·로그아웃·다시 시도.
+   */
+  const { readFile } = await import("node:fs/promises");
+  const appOnly = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
+
+  const 배선수 = (appOnly.match(/addEventListener/g) ?? []).length;
+  assert.ok(배선수 <= 4, `app.js 에 배선이 ${배선수}개 있다 — 앱을 띄우고 내리는 것만 남긴다`);
+  for (const 이름 of ["shell", "ledger", "forms", "pages"]) {
+    assert.match(appOnly, new RegExp(`import "\\./wiring/${이름}\\.js"`), `${이름} 배선을 불러오지 않는다`);
+  }
+});
+
 test("시작이 실패해도 화면이 말없이 멈추지 않는다", () => {
   /*
    * boot 는 아무도 기다리지 않는다. 안에서 터지면 잡히지 않은 거부가 되어

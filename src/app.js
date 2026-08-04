@@ -1,95 +1,27 @@
 import "./style.css";
 
+/* 아래 넷은 화면과 기능을 이어 붙인다. 불러오기만 하면 스스로 붙으므로 여기서 부를 것이 없다. */
+import "./wiring/shell.js";
+import "./wiring/ledger.js";
+import "./wiring/forms.js";
+import "./wiring/pages.js";
+
+/* 새 버전으로 갈아타는 일도 스스로 건다. */
+import "./pwa.js";
+
 import { elements } from "./dom.js";
 
 import { paintMembers, render, resetTotalAnimation } from "./render.js";
-import { clearData, getExpenses, loadAll } from "./store.js";
+import { clearData, loadAll } from "./store.js";
 
-import {
-  copyExpense,
-  deleteExpense,
-  toggleDateFilter,
-  toggleMemberFilter,
-  toggleView,
-  undoDelete,
-} from "./features/expense-actions.js";
-import {
-  closeForm,
-  handleSubmit,
-  openForm,
-  syncDateDisplay,
-  syncGoalNotice,
-} from "./features/expense-form.js";
-import {
-  buildMonthGrid,
-  closeMonthSheet,
-  getPickerMonthFromCell,
-  openMonthSheet,
-  selectMonth,
-  shiftMonth,
-  shiftPickerYear,
-} from "./features/month-picker.js";
-import {
-  SHEETS,
-  closeOnPress,
-  endSheetDrag,
-  keepFocusInSheet,
-  moveSheetDrag,
-  setDismissHandler,
-  startSheetDrag,
-  trapTab,
-} from "./ui/sheet.js";
-import {
-  cancelSwipe,
-  closeOpenRow,
-  didJustSwipe,
-  endSwipe,
-  hasOpenRow,
-  moveSwipe,
-  setRowOpen,
-  startSwipe,
-} from "./ui/swipe.js";
+import { openForm } from "./features/expense-form.js";
+import { buildMonthGrid } from "./features/month-picker.js";
+
 import { describeApplied } from "./fixed-costs.js";
-import { formatAmountInput } from "./money.js";
-import { closePageNow, getOpenPage, hidePage } from "./ui/page.js";
-import {
-  handleGoalInput,
-  handleNameInput,
-  handleProfileSubmit,
-  openProfilePage,
-  pickColor,
-} from "./features/profile.js";
-import {
-  closeResetSheet,
-  handleReset,
-  openResetSheet,
-  openSettingsPage,
-  syncResetButton,
-} from "./features/settings.js";
-import {
-  addNag,
-  closeNagSheet,
-  editNag,
-  handleNagSubmit,
-  openNagPage,
-  removeNag,
-  syncNagHint,
-  toggleNagEnabled,
-} from "./features/nag.js";
-import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "./features/analysis.js";
-import {
-  closeTrendSheet,
-  endScrub,
-  moveScrub,
-  openScrubbedMonth,
-  openTrendSheet,
-  scrubByKey,
-  shiftTrendYear,
-  startScrub,
-} from "./features/trend.js";
-import { closeNotes, handleNoteSubmit, openNotes } from "./features/notes.js";
+
+import { closePageNow } from "./ui/page.js";
+
 import { fillCategoryOptions } from "./ui/category-options.js";
-import "./pwa.js";
 import { stopSync, watchForChanges } from "./sync.js";
 import { watchHeaderSummary } from "./ui/header-summary.js";
 import { watchKeyboard } from "./ui/keyboard-inset.js";
@@ -105,271 +37,7 @@ import {
   signIn,
   signOut,
 } from "./features/auth.js";
-import {
-  applyDueFixedCosts,
-  closeFixedSheet,
-  editFixedTemplate,
-  handleFixedSubmit,
-  openFixedSheet,
-  removeFixedTemplate,
-  showFormView,
-  updateFixedHint,
-} from "./features/fixed-sheet.js";
-
-function closeActiveSheet() {
-  if (!elements.sheet.hidden) closeForm();
-  if (!elements.monthSheet.hidden) closeMonthSheet();
-  if (!elements.fixedSheet.hidden) closeFixedSheet();
-  if (!elements.notesSheet.hidden) closeNotes();
-  if (!elements.nagSheet.hidden) closeNagSheet();
-  if (!elements.trendSheet.hidden) closeTrendSheet();
-  if (!elements.resetSheet.hidden) closeResetSheet();
-}
-
-/* ── 상단: 사람 필터 · 월 이동 ─────────────────────────────── */
-
-elements.memberSlots.forEach(({ row }) => {
-  row.addEventListener("click", () => toggleMemberFilter(row.dataset.member));
-});
-elements.prevMonth.addEventListener("click", () => shiftMonth(-1));
-elements.nextMonth.addEventListener("click", () => shiftMonth(1));
-
-/* ── 목록 / 캘린더 ────────────────────────────────────────── */
-
-elements.viewToggle.forEach((button) => {
-  button.addEventListener("click", () => toggleView(button.dataset.view));
-});
-elements.calendar.addEventListener("click", (event) => {
-  const cell = event.target.closest(".calendar-cell[data-date]");
-  if (cell) toggleDateFilter(cell.dataset.date);
-});
-
-/* ── 월 선택 시트 ─────────────────────────────────────────── */
-
-elements.monthTrigger.addEventListener("click", openMonthSheet);
-closeOnPress(elements.closeMonthSheet, closeMonthSheet);
-elements.prevYear.addEventListener("click", () => shiftPickerYear(-1));
-elements.nextYear.addEventListener("click", () => shiftPickerYear(1));
-elements.monthGrid.addEventListener("click", (event) => {
-  const cell = event.target.closest(".month-cell");
-  if (cell) selectMonth(getPickerMonthFromCell(cell));
-});
-
-/* ── 시트 공통: 아래로 끌어 닫기 · 포커스 가두기 ──────────── */
-
-setDismissHandler(closeActiveSheet);
-SHEETS.forEach((sheet) => {
-  sheet.addEventListener("pointerdown", startSheetDrag);
-  sheet.addEventListener("pointermove", moveSheetDrag);
-  sheet.addEventListener("pointerup", endSheetDrag);
-  sheet.addEventListener("pointercancel", endSheetDrag);
-});
-elements.backdrop.addEventListener("click", closeActiveSheet);
-
-/* ── 지출 입력 폼 ─────────────────────────────────────────── */
-
-elements.form.addEventListener("submit", handleSubmit);
-closeOnPress(elements.closeForm, closeForm);
-
-/* ── 마이페이지 · 설정 ────────────────────────────────────── */
-
-elements.openAnalysis.addEventListener("click", openAnalysisPage);
-elements.analysisPrev.addEventListener("click", () => {
-  shiftAnalysisMonth(-1);
-  render();
-});
-elements.analysisNext.addEventListener("click", () => {
-  shiftAnalysisMonth(1);
-  render();
-});
-elements.compareList.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-compare]");
-  if (button && !button.disabled) {
-    toggleCompare(button.dataset.compare);
-    render();
-  }
-});
-elements.analysisMembers.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-member]");
-  // 요약 카드를 누르는 것과 같은 상태다. 여기서 고르면 본 화면 목록에도 그대로 걸린다.
-  if (button) toggleMemberFilter(button.dataset.member || null);
-});
-elements.openProfile.addEventListener("click", openProfilePage);
-elements.openSettings.addEventListener("click", openSettingsPage);
-elements.pages.forEach((page) => {
-  page.querySelector("[data-close-page]").addEventListener("click", hidePage);
-});
-elements.profileForm.addEventListener("submit", handleProfileSubmit);
-elements.profileName.addEventListener("input", handleNameInput);
-elements.profileGoal.addEventListener("input", handleGoalInput);
-elements.profilePalette.addEventListener("click", (event) => {
-  const swatch = event.target.closest(".swatch");
-  if (swatch) pickColor(swatch.dataset.color);
-});
-elements.openNag.addEventListener("click", openNagPage);
-elements.nagEnabled.addEventListener("change", (event) => toggleNagEnabled(event.target.checked));
-elements.addNag.addEventListener("click", addNag);
-closeOnPress(elements.closeNagSheet, closeNagSheet);
-
-/* ── 한 해 추이 시트 ──────────────────────────────────────── */
-
-elements.openTrend.addEventListener("click", openTrendSheet);
-closeOnPress(elements.closeTrendSheet, closeTrendSheet);
-elements.trendPrev.addEventListener("click", () => shiftTrendYear(-1));
-elements.trendNext.addEventListener("click", () => shiftTrendYear(1));
-// 세로 점선을 끌어 달을 짚는다. 아래 숫자 줄을 누르면 그 달을 자세히 본다.
-elements.trendChart.addEventListener("pointerdown", startScrub);
-elements.trendChart.addEventListener("pointermove", moveScrub);
-elements.trendChart.addEventListener("pointerup", endScrub);
-elements.trendChart.addEventListener("pointercancel", endScrub);
-elements.trendChart.addEventListener("keydown", scrubByKey);
-// 보고 있는 달은 본 화면과 나눠 쓰는 상태다. 한쪽만 그리면 화면과 상태가 어긋난다.
-elements.trendReadout.addEventListener("click", () => {
-  if (openScrubbedMonth()) render();
-});
-elements.nagForm.addEventListener("submit", handleNagSubmit);
-elements.nagPercent.addEventListener("input", (event) => {
-  event.target.value = event.target.value.replace(/\D/g, "").slice(0, 3);
-  elements.nagError.textContent = "";
-  syncNagHint();
-});
-elements.nagBody.addEventListener("input", () => {
-  elements.nagError.textContent = "";
-});
-elements.nagList.addEventListener("click", (event) => {
-  const edit = event.target.closest("[data-edit-nag]");
-  if (edit) {
-    editNag(edit.dataset.editNag);
-    return;
-  }
-  const remove = event.target.closest("[data-remove-nag]");
-  if (remove) removeNag(remove.dataset.removeNag);
-});
-elements.openResetSheet.addEventListener("click", openResetSheet);
-closeOnPress(elements.closeResetSheet, closeResetSheet);
-elements.resetForm.addEventListener("submit", handleReset);
-elements.resetConfirm.addEventListener("input", syncResetButton);
-
-/* ── 대화 ─────────────────────────────────────────────────── */
-
-elements.noteForm.addEventListener("submit", handleNoteSubmit);
-closeOnPress(elements.closeNotes, closeNotes);
-
-/* ── 고정비 ───────────────────────────────────────────────── */
-
-elements.openFixedSheet.addEventListener("click", openFixedSheet);
-closeOnPress(elements.closeFixedSheet, closeFixedSheet);
-elements.addFixed.addEventListener("click", () => showFormView());
-elements.cancelFixed.addEventListener("click", openFixedSheet);
-elements.fixedForm.addEventListener("submit", handleFixedSubmit);
-elements.fixedDay.addEventListener("input", (event) => {
-  event.target.value = event.target.value.replace(/\D/g, "").slice(0, 2);
-  elements.fixedDayError.textContent = "";
-  updateFixedHint();
-});
-elements.fixedAmount.addEventListener("input", (event) => {
-  event.target.value = formatAmountInput(event.target.value);
-  elements.fixedAmountError.textContent = "";
-});
-elements.fixedItem.addEventListener("input", () => {
-  elements.fixedItemError.textContent = "";
-});
-elements.fixedList.addEventListener("pointerdown", startSwipe);
-elements.fixedList.addEventListener("pointermove", moveSwipe);
-elements.fixedList.addEventListener("pointerup", endSwipe);
-elements.fixedList.addEventListener("pointercancel", cancelSwipe);
-elements.fixedList.addEventListener("click", (event) => {
-  const editButton = event.target.closest("[data-edit-fixed]");
-  if (editButton) {
-    editFixedTemplate(editButton.dataset.editFixed);
-    return;
-  }
-  const removeButton = event.target.closest("[data-remove-fixed]");
-  if (removeButton) removeFixedTemplate(removeButton.dataset.removeFixed);
-});
-// 금액·날짜·결제자 중 무엇이 바뀌어도 남은 목표의 기준이 달라진다.
-const syncDate = () => {
-  syncDateDisplay();
-  syncGoalNotice();
-};
-elements.date.addEventListener("change", syncDate);
-elements.date.addEventListener("input", syncDate);
-elements.form.querySelectorAll('input[name="member"]').forEach((radio) => {
-  radio.addEventListener("change", syncGoalNotice);
-});
-elements.amount.addEventListener("input", (event) => {
-  event.target.value = formatAmountInput(event.target.value);
-  elements.amountError.textContent = "";
-  syncGoalNotice();
-});
-elements.item.addEventListener("input", () => {
-  elements.itemError.textContent = "";
-});
-
-/* ── 목록: 스와이프 · 수정 · 삭제 ─────────────────────────── */
-
-elements.list.addEventListener("click", (event) => {
-  if (event.target.closest("[data-open-form]")) {
-    openForm();
-    return;
-  }
-  const copyButton = event.target.closest("[data-copy-id]");
-  if (copyButton) {
-    copyExpense(copyButton.dataset.copyId);
-    return;
-  }
-  const editButton = event.target.closest("[data-edit-id]");
-  if (editButton) {
-    const expense = getExpenses().find((current) => current.id === editButton.dataset.editId);
-    closeOpenRow();
-    if (expense) openForm(expense);
-    return;
-  }
-  const deleteButton = event.target.closest("[data-delete-id]");
-  if (deleteButton) {
-    deleteExpense(deleteButton.dataset.deleteId);
-    return;
-  }
-  // 스와이프 끝에도 click이 따라온다. 이걸 먼저 걸러야 한다.
-  // 아래 두 갈래보다 뒤에 두면 방금 스와이프로 연 행이 이 click에 곧바로 닫힌다.
-  if (didJustSwipe()) return;
-  // 열려 있는 행이 있으면 이번 탭은 그걸 닫는 데 쓴다.
-  if (hasOpenRow()) {
-    closeOpenRow();
-    return;
-  }
-  const row = event.target.closest(".expense-item");
-  if (row) openNotes(row.dataset.id);
-});
-elements.list.addEventListener("pointerdown", startSwipe);
-elements.list.addEventListener("pointermove", moveSwipe);
-elements.list.addEventListener("pointerup", endSwipe);
-elements.list.addEventListener("pointercancel", cancelSwipe);
-// 키보드로 수정·삭제 버튼에 도달하면 해당 행을 열어 보이게 한다.
-elements.list.addEventListener("focusin", (event) => {
-  const item = event.target.closest(".swipe-row");
-  if (item && event.target.closest(".swipe-actions")) setRowOpen(item, true);
-});
-
-/* ── 전역 ─────────────────────────────────────────────────── */
-
-elements.undoDelete.addEventListener("click", undoDelete);
-document.addEventListener("pointerdown", (event) => {
-  if (!event.target.closest(".swipe-row")) closeOpenRow();
-});
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Tab") {
-    trapTab(event);
-    return;
-  }
-  if (event.key !== "Escape") return;
-  // 시트가 전체 화면 위에 뜨므로 위에 있는 것부터 닫는다.
-  const sheetOpen = SHEETS.some((sheet) => !sheet.hidden);
-  closeActiveSheet();
-  closeOpenRow();
-  if (!sheetOpen && getOpenPage()) hidePage();
-});
-document.addEventListener("focusin", keepFocusInSheet);
+import { applyDueFixedCosts } from "./features/fixed-sheet.js";
 
 /* ── 로그인 ───────────────────────────────────────────────── */
 
@@ -506,4 +174,3 @@ async function boot() {
 
 // 아무도 기다리지 않는 호출이다. 여기서 놓치면 화면은 "불러오는 중…" 에 멈춘 채 아무 말도 안 한다.
 boot().catch((error) => showDataGate(error.message, true));
-
