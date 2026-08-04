@@ -1013,7 +1013,8 @@ test("아직 모르는 지출의 메시지는 버리지 않고 맡아 둔다", (
   assert.match(fn("receiveNote"), /pending\.set/, "모르는 지출이면 맡아 둬야 한다");
   assert.match(app, /export function flushPendingNotes/);
   // 다시 읽은 "뒤", 그리기 "전"이어야 개수가 맞는다.
-  assert.match(app, /await reloadHousehold\(\);[\s\S]{0,200}?flushPendingNotes\(\);[\s\S]{0,80}?render\(\);/);
+  assert.match(fn("repaintAfterSync"), /flushPendingNotes\(\);[\s\S]{0,120}?render\(\);/);
+  assert.match(app, /await reloadHousehold\(\);\s*\n\s*repaintAfterSync\(\);/);
 });
 
 test("서버 함수는 비로그인이 부를 수 없다", async () => {
@@ -1561,4 +1562,35 @@ test("한 프레임에 바뀌던 것들에도 전환을 건다", () => {
   // 월 이동 줄 아래 여백 38 → 0, 월 라벨 안쪽 여백 10 → 4 가 한 프레임에 끝났다.
   assert.match(css, /\.overview-head \.month-control \{[^}]*transition: margin var\(--condense-ms\)/);
   assert.match(css, /\.month-label \{[^}]*transition: padding var\(--condense-ms\)/);
+});
+
+test("화면으로 돌아오면 다시 읽는다", () => {
+  /*
+   * 폰이 앱을 재우면 실시간 연결이 끊긴다. 다시 이어져도 자는 동안 있었던 일은
+   * 들려주지 않아, 상대가 그사이 적은 지출이 다음 변경 때까지 화면에 없었다.
+   */
+  assert.match(app, /visibilitychange[\s\S]{0,140}visibilityState === "visible"\) catchUp\(\)/);
+  // 얼려 둔 페이지를 되살릴 때는 visibilitychange 없이 이쪽만 울리는 경우가 있다.
+  assert.match(app, /pageshow[\s\S]{0,120}event\.persisted\) catchUp\(\)/);
+});
+
+test("돌아왔을 때는 통째로 다시 읽는다", () => {
+  const catchUp = fn("catchUp");
+  /*
+   * reloadHousehold 는 대화 개수와 구성원을 읽지 않는다.
+   * 그것만 부르면 자는 동안 상대가 남긴 말이 목록에 나타나지 않는다.
+   */
+  assert.match(catchUp, /await loadAll\(profile\)/);
+  assert.doesNotMatch(catchUp, /reloadHousehold/, "구성원과 대화 개수까지 읽어야 한다");
+  assert.match(catchUp, /paintMembers\(\)/);
+  assert.match(catchUp, /repaintAfterSync\(\)/);
+});
+
+test("돌아왔는데 못 읽어도 보던 화면은 지키다", () => {
+  const catchUp = fn("catchUp");
+  // 로그아웃하면 profile 이 빈다. 로그인 화면에서 돌아온 것과 구분된다.
+  assert.match(catchUp, /if \(!profile \|\| catchingUp\) return/);
+  // 돌아오자마자 오류 화면을 띄우지 않는다.
+  assert.match(catchUp, /catch \{[\s\S]{0,140}?return;\n\s*\} finally \{[\s\S]{0,60}catchingUp = false/);
+  assert.doesNotMatch(catchUp, /showDataGate/);
 });
