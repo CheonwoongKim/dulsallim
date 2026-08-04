@@ -93,26 +93,19 @@
   border: 0;
 }
 
-.custom-swatch {
-  --custom-color: #5b7fa6;
-  /* 고른 색 둘레에 남는 무지개 고리의 굵기. */
-  --ring: 3px;
-  position: relative;
-  background: conic-gradient(#f2674b, #c2883f, #8da697, #5b7fa6, #8d6a91, #f2674b);
-}
-
 /*
- * 자리에서 빼 둔다.
+ * 여섯 개와 똑같이 테두리 없는 단색 원이다.
  *
- * 흐름 안에 두고 height: 100% 를 주면, 부모 높이는 aspect-ratio 로 정해지는데
- * 자식이 그 높이를 되받아 순환이 생긴다. 그때 이 칸만 40×46 세로 타원이 됐다.
- * 빼 두면 부모 높이는 오로지 aspect-ratio 가 정한다.
+ * 예전에는 둘레에 무지개 고리를 두르고 안쪽에만 색을 칠했다. 고리가 자리를 먹어
+ * 같은 40px 인데도 눈에는 작아 보였다. 안에 상자를 하나 두면 그 높이가
+ * aspect-ratio 로 정한 부모 높이를 되받아 세로로 늘어나기도 했다.
+ *
+ * 아직 직접 고른 적이 없으면 선 색으로 비워 둔다 — 여섯 색 중 무엇과도 겹치지 않아
+ * 옆의 + 표와 함께 "여기서 고른다"로 읽힌다. 고르고 나면 그 색이 그대로 채워진다.
  */
-.custom-swatch-preview {
-  position: absolute;
-  inset: var(--ring);
-  border: 2px solid var(--paper);
-  border-radius: 50%;
+.custom-swatch {
+  --custom-color: var(--line);
+  position: relative;
   background: var(--custom-color);
 }
 

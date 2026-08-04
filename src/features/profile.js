@@ -41,8 +41,14 @@ function markSelectedSwatch() {
   });
 
   const customSwatch = elements.profileCustomColor.closest(".custom-swatch");
-  customSwatch.classList.toggle("is-selected", !PRESET_COLORS.has(pickedColor));
-  customSwatch.style.setProperty("--custom-color", elements.profileCustomColor.value);
+  const 직접고름 = !PRESET_COLORS.has(pickedColor);
+  customSwatch.classList.toggle("is-selected", 직접고름);
+  /*
+   * 여섯 색 중 하나를 고른 동안에는 이 칸을 비워 둔다(CSS 의 선 색으로 돌아간다).
+   * 같은 색을 칠해 두면 옆의 동그라미와 구별이 안 되어 왜 둘인지 알 수 없다.
+   */
+  if (직접고름) customSwatch.style.setProperty("--custom-color", pickedColor);
+  else customSwatch.style.removeProperty("--custom-color");
 }
 
 /**

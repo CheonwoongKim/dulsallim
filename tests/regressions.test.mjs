@@ -282,17 +282,26 @@ test("프로필 수정 권한은 정해진 열로만 열려 있다", async () =>
   }
 });
 
-test("직접 선택 칸도 다른 색과 같은 원이다", () => {
+test("직접 선택 칸은 테두리 없는 단색 원이다", () => {
   /*
    * 미리보기를 흐름 안에 두고 height: 100% 를 주면, 부모 높이는 aspect-ratio 로 정해지는데
    * 자식이 그 높이를 되받아 순환이 생긴다. 이 칸만 40×46 세로 타원이 됐다.
    * 자리에서 빼 두면 부모 높이는 오로지 aspect-ratio 가 정한다.
    */
-  const 미리보기 = css.match(/\.custom-swatch-preview \{[^}]*\}/)[0];
-  assert.match(미리보기, /position: absolute/);
-  assert.doesNotMatch(미리보기, /height: 100%/, "부모 높이를 되받으면 순환이 생긴다");
+  // 안에 자리를 차지하는 상자를 두지 않는다. 색은 칸 자체가 입는다.
+  assert.doesNotMatch(css, /custom-swatch-preview/);
+  assert.doesNotMatch(html, /custom-swatch-preview/);
   // 원 모양은 여섯 개와 한 규칙에서 나온다.
   assert.match(css, /\.swatch,\n\.custom-swatch \{[^}]*aspect-ratio: 1/);
+  /*
+   * 둘레에 고리를 두르면 자리를 먹어 같은 40px 인데도 눈에는 작아 보인다.
+   * 아직 고른 적 없으면 선 색으로 비워 둔다 — 여섯 색 중 무엇과도 겹치지 않는다.
+   */
+  const 직접칸 = css.match(/\n\.custom-swatch \{[^}]*--custom-color[^}]*\}/)[0];
+  assert.doesNotMatch(직접칸, /conic-gradient|border:/);
+  assert.match(직접칸, /--custom-color: var\(--line\)/);
+  assert.match(fn("markSelectedSwatch"), /else customSwatch\.style\.removeProperty\("--custom-color"\)/,
+    "기본 팔레트를 고른 동안 같은 색을 칠하면 옆 동그라미와 구별되지 않는다");
 });
 
 test("서버가 준 아바타 색을 그대로 화면에 끼워 넣지 않는다", async () => {
