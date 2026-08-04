@@ -578,6 +578,60 @@ async function boot() {
 
 boot();
 
-if ("serviceWorker" in navigator && location.protocol !== "file:") {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+/**
+ * iOS 홈 화면 웹앱은 Safari 탭과 별도 프로세스로 살아남을 수 있다.
+ * 앱이 다시 보일 때 워커를 확인하고, 새 워커가 제어권을 잡으면 문서도 같은 버전으로 맞춘다.
+ */
+export async function registerPwaUpdater(environment = {}) {
+  const serviceWorker = environment.serviceWorker ?? globalThis.navigator?.serviceWorker;
+  const windowTarget = environment.windowTarget ?? globalThis.window;
+  const documentTarget = environment.documentTarget ?? globalThis.document;
+  const locationTarget = environment.locationTarget ?? globalThis.location;
+
+  if (!serviceWorker || !windowTarget || !documentTarget || !locationTarget || locationTarget.protocol === "file:") {
+    return null;
+  }
+
+  let hasController = Boolean(serviceWorker.controller);
+  let isReloading = false;
+
+  serviceWorker.addEventListener("controllerchange", () => {
+    if (!hasController) {
+      hasController = true;
+      return;
+    }
+    if (isReloading) return;
+
+    isReloading = true;
+    locationTarget.reload();
+  });
+
+  const registration = await serviceWorker.register("/sw.js", { updateViaCache: "none" });
+  let updatePromise = null;
+
+  const checkForUpdate = () => {
+    if (updatePromise) return updatePromise;
+    updatePromise = registration
+      .update()
+      .catch(() => undefined)
+      .finally(() => {
+        updatePromise = null;
+      });
+    return updatePromise;
+  };
+
+  const checkWhenVisible = () => {
+    if (documentTarget.visibilityState === "visible") void checkForUpdate();
+  };
+
+  windowTarget.addEventListener("pageshow", checkForUpdate);
+  windowTarget.addEventListener("online", checkForUpdate);
+  documentTarget.addEventListener("visibilitychange", checkWhenVisible);
+
+  await checkForUpdate();
+  return registration;
+}
+
+if (import.meta.env.PROD) {
+  window.addEventListener("load", () => registerPwaUpdater().catch(() => {}), { once: true });
 }
