@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { createPrecacheUrls, renderServiceWorker } from "../vite.config.js";
 
-const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
+const appSource = await readFile(new URL("../src/pwa.js", import.meta.url), "utf8");
 
 function readNamedFunction(source, name) {
   const start = source.indexOf(`export async function ${name}`);

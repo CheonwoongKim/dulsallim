@@ -1,10 +1,10 @@
 import "./style.css";
 
 import { elements } from "./dom.js";
-import { formatMoney } from "./expenses.js";
+
 import { paintMembers, render, resetTotalAnimation } from "./render.js";
-import { clearData, getExpenses, loadAll, reloadHousehold } from "./store.js";
-import { subscribeHousehold, subscribeNotes, unsubscribe } from "./data/remote.js";
+import { clearData, getExpenses, loadAll } from "./store.js";
+
 import {
   copyExpense,
   deleteExpense,
@@ -87,14 +87,10 @@ import {
   shiftTrendYear,
   startScrub,
 } from "./features/trend.js";
-import {
-  closeNotes,
-  flushPendingNotes,
-  handleNoteSubmit,
-  openNotes,
-  receiveNote,
-} from "./features/notes.js";
+import { closeNotes, handleNoteSubmit, openNotes } from "./features/notes.js";
 import { fillCategoryOptions } from "./ui/category-options.js";
+import "./pwa.js";
+import { stopSync, watchForChanges } from "./sync.js";
 import { watchHeaderSummary } from "./ui/header-summary.js";
 import { watchKeyboard } from "./ui/keyboard-inset.js";
 import { showToast } from "./ui/toast.js";
@@ -115,7 +111,6 @@ import {
   editFixedTemplate,
   handleFixedSubmit,
   openFixedSheet,
-  refreshFixedSheet,
   removeFixedTemplate,
   showFormView,
   updateFixedHint,
@@ -409,11 +404,7 @@ elements.loginForm.addEventListener("submit", async (event) => {
 });
 
 elements.signOut.addEventListener("click", async () => {
-  unsubscribe(channel);
-  unsubscribe(noteChannel);
-  clearTimeout(syncTimer);
-  channel = null;
-  noteChannel = null;
+  stopSync();
   closePageNow();
   clearData();
   // 사본만 비우면 화면에는 앞사람 기록이 그대로 남는다. 지운 상태로 한 번 그려서 흔적을 없앤다.
@@ -426,14 +417,6 @@ elements.signOut.addEventListener("click", async () => {
 
 /* ── 시작 ─────────────────────────────────────────────────── */
 
-/** 상대 폰의 변경을 몰아서 한 번만 반영한다. 한 건씩 다시 읽으면 목록이 계속 껌뻑인다. */
-const SYNC_DEBOUNCE_MS = 400;
-
-let wired = false;
-let channel = null;
-let noteChannel = null;
-let syncTimer = null;
-
 function showDataGate(message, canRetry = false) {
   elements.dataGate.hidden = false;
   elements.authGate.hidden = true;
@@ -441,6 +424,8 @@ function showDataGate(message, canRetry = false) {
   elements.dataStatus.textContent = message;
   elements.retryLoad.hidden = !canRetry;
 }
+
+let wired = false;
 
 function wireOnce() {
   if (wired) return;
@@ -451,106 +436,45 @@ function wireOnce() {
   buildMonthGrid();
 }
 
-/** 다시 읽은 뒤 화면을 맞춘다. 실시간 변경과 화면 복귀가 같은 마무리를 쓴다. */
-function repaintAfterSync() {
-  // 지출보다 먼저 도착해 맡겨 뒀던 메시지를 이제 붙인다. 그려지기 전이어야 개수가 맞는다.
-  flushPendingNotes();
-  render();
-  // 고정비 목록은 render 가 그리지 않는다. 열어 둔 채라면 여기서 맞춘다.
-  refreshFixedSheet();
-}
-
-/** 상대가 기록하면 내 화면도 따라 바뀐다. 내 변경도 여기로 돌아오지만 결과는 같다. */
-function watchForChanges(householdId) {
-  unsubscribe(channel);
-  unsubscribe(noteChannel);
-  // 상대가 남긴 말은 목록의 개수와 열려 있는 대화 양쪽에 바로 반영된다.
-  noteChannel = subscribeNotes(receiveNote);
-  channel = subscribeHousehold(householdId, () => {
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(async () => {
-      try {
-        await reloadHousehold();
-        repaintAfterSync();
-      } catch {
-        // 실패해도 지금 보이는 화면은 그대로 둔다. 다음 변경 때 다시 시도된다.
-      }
-    }, SYNC_DEBOUNCE_MS);
-  });
-}
-
-let catchingUp = false;
-
-/**
- * 화면으로 돌아왔을 때 처음부터 다시 읽는다.
- *
- * 폰이 앱을 재우면 실시간 연결이 끊긴다. 깨어나 다시 이어져도 자는 동안 있었던 일은
- * 들려주지 않는다 — 지나간 변경을 재생해 주는 구독이 아니기 때문이다.
- * 그래서 상대가 그사이 적은 지출은 다음에 무언가 바뀔 때까지 화면에 없었다.
- *
- * 바뀐 것만 골라 읽지 않고 통째로 읽는다. 얼마나 오래 잠들었는지 알 수 없으니
- * 무엇이 어긋났는지도 알 수 없다. 특히 대화 개수와 구성원은 reloadHousehold 가
- * 읽지 않아, 그것만으로는 상대가 남긴 말이 목록에 나타나지 않는다.
- */
-async function catchUp() {
-  const profile = getProfile();
-  // 로그아웃하면 profile 이 비므로, 로그인 화면에서 돌아온 것과 구분된다.
-  if (!profile || catchingUp) return;
-
-  catchingUp = true;
-  try {
-    await loadAll(profile);
-  } catch {
-    // 돌아오자마자 오류 화면을 띄우지 않는다. 보던 것을 그대로 두고 다음 기회에 맞춘다.
-    return;
-  } finally {
-    catchingUp = false;
-  }
-  paintMembers();
-  repaintAfterSync();
-}
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") catchUp();
-});
-/* 얼려 둔 페이지를 되살릴 때는 visibilitychange 없이 이쪽만 울리는 경우가 있다. */
-window.addEventListener("pageshow", (event) => {
-  if (event.persisted) catchUp();
-});
-
 async function startApp() {
   const profile = getProfile();
   showDataGate("기록을 불러오는 중…");
 
   try {
     await loadAll(profile);
+
+    elements.dataGate.hidden = true;
+    showApp();
+    wireOnce();
+    watchHeaderSummary();
+    watchKeyboard();
+    paintMembers();
+
+    /*
+     * 고정비를 채우기 전에 귀부터 연다.
+     *
+     * 뒤에 두면 그 사이 상대가 남긴 말이 어느 쪽에도 안 잡힌다 — 이미 불러온 개수에도 없고,
+     * 구독은 지나간 일을 들려주지 않는다. 밀린 고정비가 많을수록 그 틈이 길어진다.
+     */
+    watchForChanges(profile.household_id);
+
+    // 반영일이 지난 고정비를 채운 뒤 그린다.
+    const applied = await applyDueFixedCosts();
+    render();
+
+    // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
+    const notice = describeApplied(applied);
+    if (notice) showToast(notice);
   } catch (error) {
+    /*
+     * 불러오다 터지든 그리다 터지든 여기서 받는다.
+     *
+     * 예전에는 loadAll 만 감쌌다. 그 뒤에서 터지면 로그인 폼의 catch 가 대신 받아
+     * 이미 숨겨진 로그인 화면의 오류 자리에 글자를 썼다 — 화면은 반쯤 뜬 채,
+     * 아무 설명 없는 빈 목록만 남았다. 실제로 그렇게 한 번 놓쳤다.
+     */
     showDataGate(error.message, true);
-    return;
   }
-
-  elements.dataGate.hidden = true;
-  showApp();
-  wireOnce();
-  watchHeaderSummary();
-  watchKeyboard();
-  paintMembers();
-
-  /*
-   * 고정비를 채우기 전에 귀부터 연다.
-   *
-   * 뒤에 두면 그 사이 상대가 남긴 말이 어느 쪽에도 안 잡힌다 — 이미 불러온 개수에도 없고,
-   * 구독은 지나간 일을 들려주지 않는다. 밀린 고정비가 많을수록 그 틈이 길어진다.
-   */
-  watchForChanges(profile.household_id);
-
-  // 반영일이 지난 고정비를 채운 뒤 그린다.
-  const applied = await applyDueFixedCosts();
-  render();
-
-  // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
-  const notice = describeApplied(applied);
-  if (notice) showToast(notice);
 }
 
 elements.retryLoad.addEventListener("click", () => (getProfile() ? startApp() : boot()));
@@ -580,91 +504,6 @@ async function boot() {
   showLoginScreen();
 }
 
-boot();
+// 아무도 기다리지 않는 호출이다. 여기서 놓치면 화면은 "불러오는 중…" 에 멈춘 채 아무 말도 안 한다.
+boot().catch((error) => showDataGate(error.message, true));
 
-/**
- * iOS 홈 화면 웹앱은 Safari 탭과 별도 프로세스로 살아남을 수 있다.
- * 앱이 다시 보일 때 워커를 확인하고, 새 워커가 제어권을 잡으면 문서도 같은 버전으로 맞춘다.
- */
-export async function registerPwaUpdater(environment = {}) {
-  const serviceWorker = environment.serviceWorker ?? globalThis.navigator?.serviceWorker;
-  const windowTarget = environment.windowTarget ?? globalThis.window;
-  const documentTarget = environment.documentTarget ?? globalThis.document;
-  const locationTarget = environment.locationTarget ?? globalThis.location;
-
-  if (!serviceWorker || !windowTarget || !documentTarget || !locationTarget || locationTarget.protocol === "file:") {
-    return null;
-  }
-
-  /*
-   * 시트나 전체 화면이 열려 있으면 사람이 무언가 적고 있는 중이다.
-   * 그때 새로고침하면 저장하지 않은 지출이 통째로 사라진다. 닫힐 때까지 미룬다.
-   * 기본 판정은 DOM 만 본다 — 이 함수는 테스트에서 본문만 떼어 실행되므로
-   * 모듈 바깥의 것을 참조하면 안 된다.
-   */
-  const isBusy =
-    environment.isBusy ??
-    (() => Boolean(documentTarget.querySelector?.(".sheet:not([hidden]), .page:not([hidden])")));
-  // 미뤄 둔 새로고침을 얼마나 자주 다시 살필지. 기다리는 동안에만 돈다.
-  const idleDelay = environment.idleDelay ?? 2000;
-
-  let hasController = Boolean(serviceWorker.controller);
-  let isReloading = false;
-  let idleTimer = null;
-
-  const reloadWhenIdle = () => {
-    if (isReloading) return;
-    if (isBusy()) {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(reloadWhenIdle, idleDelay);
-      return;
-    }
-    isReloading = true;
-    locationTarget.reload();
-  };
-
-  serviceWorker.addEventListener("controllerchange", () => {
-    if (!hasController) {
-      hasController = true;
-      return;
-    }
-    reloadWhenIdle();
-  });
-
-  let registration = null;
-  let updatePromise = null;
-
-  /** 한 번 실패해도 다음 기회에 다시 등록한다. 실패를 삼키면 그 세션은 영영 옛 버전이다. */
-  const ensureRegistration = async () => {
-    if (registration) return registration;
-    registration = await serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => null);
-    return registration;
-  };
-
-  const checkForUpdate = () => {
-    if (updatePromise) return updatePromise;
-    updatePromise = ensureRegistration()
-      .then((current) => current?.update())
-      .catch(() => undefined)
-      .finally(() => {
-        updatePromise = null;
-      });
-    return updatePromise;
-  };
-
-  const checkWhenVisible = () => {
-    if (documentTarget.visibilityState === "visible") void checkForUpdate();
-  };
-
-  // 등록보다 먼저 건다. 첫 등록이 실패해도 온라인으로 돌아오면 다시 시도할 수 있어야 한다.
-  windowTarget.addEventListener("pageshow", checkForUpdate);
-  windowTarget.addEventListener("online", checkForUpdate);
-  documentTarget.addEventListener("visibilitychange", checkWhenVisible);
-
-  await checkForUpdate();
-  return registration;
-}
-
-if (import.meta.env.PROD) {
-  window.addEventListener("load", () => registerPwaUpdater().catch(() => {}), { once: true });
-}

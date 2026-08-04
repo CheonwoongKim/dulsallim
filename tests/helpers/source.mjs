@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 /** 모듈이 어느 파일로 옮겨가도 검사가 깨지지 않도록 src 전체를 합쳐서 본다. */
 const SOURCE_FILES = [
   "app.js",
+  "sync.js",
+  "pwa.js",
   "dom.js",
   "render.js",
   "store.js",

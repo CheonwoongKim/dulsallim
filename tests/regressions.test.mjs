@@ -36,7 +36,9 @@ test("불러오기에 실패하면 빈 가계부 대신 이유를 보여준다",
   // 빈 목록을 그리면 기록이 전부 지워진 줄 안다.
   const start = fn("startApp");
   assert.match(start, /catch \(error\)[\s\S]*showDataGate\(error\.message, true\)/);
-  assert.match(start, /return;/);
+  // 그리는 일이 전부 try 안에 있어야 한다. 밖에 있으면 실패한 뒤에도 빈 목록이 그려진다.
+  assert.ok(start.indexOf("render();") < start.indexOf("} catch (error) {"),
+    "render 가 catch 뒤에 있으면 실패해도 그려진다");
   assert.match(app, /elements\.retryLoad\.addEventListener\("click"/, "다시 시도할 방법이 있어야 한다");
 });
 
@@ -1319,6 +1321,30 @@ test("머리 밑으로 들어가는 줄은 글자 한가운데서 잘리지 않�
    */
   assert.doesNotMatch(css, /\n\.app-header::after/);
   assert.doesNotMatch(css, /\.app-shell:not\(\.is-stuck\) \.app-header::after/);
+});
+
+test("시작이 실패해도 화면이 말없이 멈추지 않는다", () => {
+  /*
+   * boot 는 아무도 기다리지 않는다. 안에서 터지면 잡히지 않은 거부가 되어
+   * 화면은 "불러오는 중…" 에 멈춘 채 조용하다. 실제로 그렇게 한 번 놓쳤다 —
+   * 모듈을 나누다 변수 하나가 딸려 가 wireOnce 가 죽었는데 아무 표시가 없었다.
+   */
+  assert.match(app, /boot\(\)\.catch\(\(error\) => showDataGate\(error\.message, true\)\)/);
+
+  /*
+   * startApp 도 마찬가지다. 예전에는 loadAll 만 감싸서, 그 뒤에서 터지면
+   * 로그인 폼의 catch 가 대신 받아 이미 숨겨진 로그인 화면에 글자를 썼다.
+   */
+  const start = fn("startApp");
+  assert.doesNotMatch(start, /\} catch \(error\) \{\s*showDataGate\(error\.message, true\);\s*return;/,
+    "불러오기만 감싸면 그 뒤의 실패가 새어 나간다");
+  assert.match(start, /watchForChanges\(profile\.household_id\);[\s\S]*\} catch \(error\) \{/);
+});
+
+test("실시간 맞춤은 한 모듈이 맡는다", () => {
+  // 로그아웃이 채널 변수 세 개를 직접 만지고 있었다. 그 상태를 가진 쪽이 정리도 맡는다.
+  assert.match(fn("stopSync"), /unsubscribe\(channel\)[\s\S]*unsubscribe\(noteChannel\)[\s\S]*clearTimeout\(syncTimer\)/);
+  assert.match(app, /elements\.signOut\.addEventListener\("click", async \(\) => \{\s*stopSync\(\);/);
 });
 
 test("분류 선택지는 한 곳에서 만든다", () => {
