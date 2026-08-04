@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 import { defineConfig } from "vite";
 
-const STATIC_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
+const STATIC_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.png", "/apple-touch-icon.png"];
 
 export function createPrecacheUrls(fileNames) {
   const emitted = fileNames

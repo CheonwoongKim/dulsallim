@@ -128,7 +128,8 @@ test("빌드할 때 해시 자산과 버전을 서비스 워커 템플릿에 넣
     "/",
     "/index.html",
     "/manifest.webmanifest",
-    "/icon.svg",
+    "/icon.png",
+    "/apple-touch-icon.png",
     "/assets/index-abc123.js",
     "/assets/index-def456.css",
   ]);
