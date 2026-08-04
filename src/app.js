@@ -95,6 +95,7 @@ import {
   receiveNote,
 } from "./features/notes.js";
 import { watchScroll } from "./ui/condense.js";
+import { watchKeyboard } from "./ui/keyboard-inset.js";
 import { showToast } from "./ui/toast.js";
 import {
   getProfile,
@@ -531,6 +532,7 @@ async function startApp() {
   showApp();
   wireOnce();
   watchScroll();
+  watchKeyboard();
   paintMembers();
 
   /*

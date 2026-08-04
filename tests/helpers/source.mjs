@@ -24,6 +24,7 @@ const SOURCE_FILES = [
   "ui/ledger.js",
   "ui/scroll-lock.js",
   "ui/condense.js",
+  "ui/keyboard-inset.js",
   "ui/sheet.js",
   "ui/swipe.js",
   "ui/toast.js",

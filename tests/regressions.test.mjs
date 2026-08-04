@@ -1589,3 +1589,23 @@ test("캘린더에서 날짜를 골라도 접힘이 저절로 풀리지 않는�
   assert.match(fn("measure"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
   assert.doesNotMatch(app, /recheckCondense/, "옛 이름이 남아 있으면 무엇을 하는지 오해한다");
 });
+
+test("키보드가 올라오면 시트를 그 위로 올린다", () => {
+  /*
+   * iOS Safari 는 키보드가 뜰 때 레이아웃 뷰포트를 통째로 밀어 올린다.
+   * "밀지 마라"고 지정하는 viewport 의 interactive-widget 은 Safari 가 아직 없다(26.5까지).
+   * 가려진 채로 두면 Safari 가 입력칸을 보이게 하려고 화면을 밀고, 미는 동안 누른 자리에
+   * 다른 요소가 들어온다 — 닫기를 눌렀는데 그 자리로 올라온 분류 목록이 열리던 것이 이것이다.
+   */
+  const sync = fn("sync");
+  assert.match(sync, /window\.innerHeight - viewport\.height - viewport\.offsetTop/);
+  // 주소창이 오르내리는 정도를 키보드로 오해하면 시트 밑에 까닭 없는 틈이 생긴다.
+  assert.match(sync, /inset > KEYBOARD_MIN/);
+  assert.match(app, /const KEYBOARD_MIN = \d+;/);
+  // 시트는 그만큼 올라가고, 키보드 위 공간을 넘지 않는다.
+  assert.match(css, /\.sheet \{[^}]*bottom: var\(--keyboard-inset, 0px\)/);
+  assert.match(css, /\.sheet \{[^}]*max-height: min\(92svh, 760px, var\(--viewport-h, 100svh\)\)/);
+  // 없는 브라우저에서는 변수를 두지 않는다 — CSS 기본값이 지금까지의 동작이다.
+  assert.match(fn("watchKeyboard"), /if \(!viewport\) return/);
+  assert.match(fn("watchKeyboard"), /addEventListener\("resize", sync\)[\s\S]{0,80}addEventListener\("scroll", sync\)/);
+});
