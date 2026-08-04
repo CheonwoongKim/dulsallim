@@ -1309,9 +1309,14 @@ test("검사에서 빠진 소스 파일이 없다", async () => {
 
 test("머리 밑으로 들어가는 줄은 글자 한가운데서 잘리지 않는다", () => {
   // 요약 카드가 머리 밑으로 밀려 들어가면 이름 줄이 반쯤 잘린 채 삐져나왔다.
-  assert.match(css, /\.app-shell:not\(\.is-stuck\) \.app-header::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
-  // 제목이 붙은 뒤에는 그 위에 얹혀 제목을 흐리게 만든다. 그때는 제목이 알아서 한다.
+  assert.match(css, /\.is-scrolled:not\(\.is-stuck\) \.app-header::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
+  /*
+   * 맨 위에서는 걸지 않는다. 머리 바로 아래가 "함께 쓴 금액" 이라 이 그림자가
+   * 그 글자를 14px 덮어 흐릿하게 만들었다(계측: 최대 21단계).
+   * 제목이 붙은 뒤에도 걸지 않는다 — 불투명한 제목 위에 얹혀 같은 일이 벌어진다.
+   */
   assert.doesNotMatch(css, /\n\.app-header::after/);
+  assert.doesNotMatch(css, /\.app-shell:not\(\.is-stuck\) \.app-header::after/);
 });
 
 test("맨 위에서 달 이동 줄은 가운데에 선다", () => {
@@ -1319,17 +1324,22 @@ test("맨 위에서 달 이동 줄은 가운데에 선다", () => {
    * 작은 총액이 안 보일 때도 자리를 잡고 있으면 달 이동이 그만큼 왼쪽으로 밀린다.
    * 화면의 나머지가 다 가운데 정렬이라 이 줄만 쏠려 보였다 — 계측: 66px 왼쪽.
    */
-  assert.match(css, /\.compact-total \{[^}]*max-width: 0/, "안 보일 때는 폭도 0 이어야 한다");
+  assert.match(css, /\.compact-total \{[^}]*flex: 0 0 0/, "안 보일 때는 폭도 0 이어야 한다");
   assert.match(css, /\.month-bar \.month-control \{[^}]*margin-inline: auto/, "남는 자리를 양옆으로 나눈다");
   // space-between 이면 총액이 0폭이어도 달 이동은 왼쪽 끝에 붙는다.
   assert.doesNotMatch(css.match(/\n\.month-bar \{[^}]*\}/)[0], /justify-content/);
 });
 
-test("좁은 화면에서는 달 이름이 먼저 양보한다", () => {
-  // 320px 에서는 달 이동(214px)과 총액이 함께 설 자리가 모자란다.
-  // 총액이 줄면 몇 자리가 잘려 못 읽는 값이 되므로, 줄이는 쪽은 달 이름이다.
-  assert.match(css, /\.compact-total \{[^}]*flex: none/);
-  assert.match(css, /\.month-bar \.month-label \{[^}]*min-width: 0/);
+test("내려가면 달 이동은 왼쪽 끝까지 간다", () => {
+  /*
+   * 총액이 남는 자리를 다 가져가야 달 이동이 끝까지 밀려난다. 폭만 딱 차지하면
+   * 남는 자리가 그대로 있어 달 이동은 어중간하게 조금만 옮겨 간다(계측: 왼쪽 끝 22 대신 67).
+   * flex-grow 는 0 에서 1 로 흐르므로 그 사이가 이어진다 — 66px 을 한 프레임에 뛰지 않는다.
+   */
+  assert.match(css, /\.is-scrolled \.compact-total \{[^}]*flex-grow: 1/);
+  assert.match(css, /\.compact-total \{[^}]*transition: flex-grow/);
+  // 자리를 다 차지하므로 숫자는 오른쪽 끝에 붙여야 오른쪽 정렬로 보인다.
+  assert.match(css, /\.compact-total \{[^}]*text-align: right/);
 });
 
 test("한 줄에 선 달 이름은 두 줄로 깨지지 않는다", () => {
