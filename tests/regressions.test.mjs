@@ -98,15 +98,13 @@ test("서비스워커는 성공한 동일 출처 응답만 캐시한다", () => 
   assert.match(sw, /\.catch\(\(\) => \{\}\)/, "cache.put 실패가 unhandled rejection이 되면 안 된다");
 });
 
-test("닫기 버튼은 누른 순간 닫고, 뒤따르는 click은 삼킨다", () => {
-  // click은 손을 뗄 때 좌표를 다시 히트테스트한다. 그때 시트는 이미 내려가 있어
-  // 그 자리의 다른 것(요약 카드, 목록 행)이 대신 눌린다.
+test("닫기 버튼은 완성된 click 하나로만 닫는다", () => {
+  // pointerdown에서 시트를 움직이면 같은 탭의 pointerup/click 대상이 배경이나 select로 바뀐다.
+  // click이 X 버튼으로 확정된 뒤에 닫으면 전역 클릭 삼키기가 필요 없다.
   const helper = fn("closeOnPress");
-  assert.match(helper, /addEventListener\("pointerdown"/);
-  assert.match(helper, /swallowNextClick = true/, "닫기만 하고 click을 막지 않으면 뒤 요소가 눌린다");
-  assert.match(helper, /addEventListener\("click", close\)/, "키보드 사용자는 click만 보낸다");
-  assert.match(app, /document\.addEventListener\(\s*"click",[\s\S]{0,220}?stopPropagation\(\)[\s\S]{0,40}?true,/,
-    "삼키려면 캡처 단계에서 잡아야 한다");
+  assert.match(helper, /addEventListener\("click", close\)/);
+  assert.doesNotMatch(helper, /pointerdown/, "제스처가 끝나기 전에 시트를 움직이면 안 된다");
+  assert.doesNotMatch(app, /swallowNextClick|swallowTimer/, "다음 정상 클릭을 전역에서 삼키면 안 된다");
 
   // 네 개의 닫기 버튼이 모두 같은 처리를 받아야 한다. 하나만 빠지면 그 시트에서만 재발한다.
   for (const button of ["closeForm", "closeMonthSheet", "closeNotes", "closeFixedSheet"]) {
@@ -118,16 +116,11 @@ test("닫기 버튼 누름은 시트 드래그로 오인되지 않는다", () =>
   assert.match(app, /closest\("\.close-button"\)/, "닫기 버튼 위 누름은 onBegin에서 걸러야 한다");
 });
 
-test("키보드가 내려가는 동안 폼은 입력을 받지 않는다", () => {
-  assert.match(fn("beginSettle"), /is-settling/);
-  // 굳히기는 "폼 밖을 눌러" 포커스가 빠졌을 때만. 폼 안 버튼을 누른 것까지 굳히면
-  // 그 버튼의 click 이 사라진다(iOS 는 버튼에 포커스를 주지 않아 relatedTarget 이 빈다).
-  assert.match(fn("settleOnFocusLeave"), /lastPress\.target/);
-  assert.doesNotMatch(app, /focusout[\s\S]{0,120}?beginSettle\(form\)/,
-    "focusout 만 보고 굳히면 안 된다");
-  assert.match(fn("beginSettle"), /clearTimeout\(settleTimers\.get\(scroller\)\)/);
-  assert.match(app, /form\.addEventListener\("focusout"/);
-  assert.match(css, /\.sheet-scroll\.is-settling\s*\{[^}]*pointer-events:\s*none/);
+test("키보드 변화 때문에 폼 전체의 입력을 임의로 차단하지 않는다", () => {
+  // VisualViewport 이벤트는 Safari UI 상태에 따라 늦게 올 수 있다. 그 시점부터 폼을 막으면
+  // 오탭을 막는 것이 아니라 사용자가 다음에 누른 정상 버튼을 잃는다.
+  assert.doesNotMatch(app, /settleOnFocusLeave|beginSettle/);
+  assert.doesNotMatch(app, /visualViewport\?\.addEventListener\("resize"/);
 });
 
 test("사람별 필터는 목록에만 적용되고 상단 요약은 그 달 전체를 유지한다", () => {
@@ -456,15 +449,15 @@ test("요약 카드의 목표 줄은 카드를 밀어내지 않는다", () => {
   assert.match(css, /\.member-goal \{[^}]*text-overflow: ellipsis/);
 });
 
-test("스크롤 잠금은 몇 겹인지 세어야 한다", () => {
-  // 전체 화면 위에 시트를 열 수 있다. 세지 않으면 시트가 닫히며 잠금을 풀어
-  // 아직 열려 있는 화면 뒤로 배경이 움직이고 원래 스크롤 위치도 잃는다.
+test("스크롤 잠금은 호출 횟수가 아니라 소유자를 센다", () => {
+  // 전체 화면과 시트는 함께 잠글 수 있지만, 같은 시트를 두 번 연 것은 한 번이어야 한다.
   const lock = fn("lockPageScroll");
   const unlock = fn("unlockPageScroll");
-  assert.match(lock, /depth \+= 1/);
-  assert.match(lock, /if \(depth > 1\) return/, "이미 잠겼으면 위치를 다시 읽으면 안 된다(그때 scrollY는 0)");
-  assert.match(unlock, /depth = Math\.max\(0, depth - 1\)/);
-  assert.match(unlock, /if \(depth > 0\) return/, "아직 열린 게 있으면 잠금을 유지해야 한다");
+  assert.match(app, /const owners = new Set\(\)/);
+  assert.match(lock, /owners\.has\(owner\)/);
+  assert.match(lock, /owners\.add\(owner\)/);
+  assert.match(unlock, /owners\.delete\(owner\)/);
+  assert.match(unlock, /owners\.size > 0/, "아직 다른 소유자가 있으면 잠금을 유지해야 한다");
 });
 
 test("대화가 달린 지출을 지우면 대화도 사라진다고 알린다", () => {
@@ -1153,24 +1146,15 @@ test("한 해 데이터는 한 번만 계산한다", () => {
   assert.equal((app.match(/buildYearSeries\(getExpenses\(\)/g) || []).length, 1);
 });
 
-test("굳히기 타이머는 폼마다 따로 둔다", () => {
-  // 타이머를 하나로 쓰면 두 폼이 잇달아 굳을 때 뒤엣것이 앞엣것의 해제를 취소한다.
-  // 그러면 앞 폼은 pointer-events: none 인 채로 영영 남아 입력 자체가 안 된다.
-  // (브라우저에서 재현했다 — 900ms 뒤에도 지출 폼이 굳어 있었다)
-  assert.match(app, /const settleTimers = new WeakMap\(\)/);
-  assert.match(fn("beginSettle"), /settleTimers\.get\(scroller\)/);
-  assert.match(fn("beginSettle"), /settleTimers\.set\(\s*scroller/);
-});
-
-test("닫기 버튼을 누를 때는 폼을 굳히지 않는다", () => {
-  // 굳히기는 "다음 탭이 엉뚱한 입력에 떨어지는 것"을 막으려는 것이다.
-  // 시트가 통째로 사라지는 중이면 잘못 눌릴 입력 자체가 없다.
-  assert.match(fn("settleOnFocusLeave"), /close-button/);
-});
-
-test("시트를 열 때 굳은 상태를 풀고 시작한다", () => {
-  // 어떤 경로로든 굳은 채 남았다면, 다시 열었을 때만큼은 멀쩡해야 한다.
-  assert.match(fn("showSheet"), /is-settling/);
+test("각 시트는 자기 수명주기와 닫기 타이머를 따로 가진다", () => {
+  // 전역 타이머 하나를 나눠 쓰면 다른 시트를 여는 순간 먼저 닫던 시트의 정리가 취소된다.
+  assert.match(app, /const sheetStates = new WeakMap\(\)/);
+  assert.match(fn("getSheetState"), /closeTimer: null/);
+  assert.match(fn("showSheet"), /phase === "opening" \|\| state\.phase === "open"/);
+  assert.match(fn("hideSheet"), /phase === "closed" \|\| state\.phase === "closing"/);
+  assert.match(fn("hideSheet"), /state\.closeTimer = setTimeout/);
+  assert.match(fn("showSheet"), /lockPageScroll\(sheet\)/);
+  assert.match(fn("hideSheet"), /unlockPageScroll\(sheet\)/);
 });
 
 test("닫히는 중인 시트는 아무것도 눌리지 않는다", () => {
@@ -1341,15 +1325,12 @@ test("제목 글자가 바뀌면 붙어 있는 제목을 다시 그리게 한다
   assert.ok(다시그리기 > 필터, "건수와 필터를 모두 적은 뒤에 봐야 한다");
 });
 
-test("키보드가 오르내리는 순간에는 시트 안 입력을 막는다", () => {
-  // 키보드가 뜨면 시트가 그만큼 밀린다. 그 순간 노린 곳과 눌리는 곳이 어긋나,
-  // 닫기 버튼을 보고 눌렀는데 327px 아래의 분류 select 가 그 자리에 올라와 대신 눌렸다
-  // (아이폰 키보드 높이가 291~336px 이라 거리가 거의 같다).
-  //
-  // focusout 으로는 이 순간을 잡을 수 없다 — 키보드가 뜰 때 포커스는 폼 안에 그대로 있어
-  // 아무 신호도 나지 않는다. 화면 크기 변화가 유일하게 정확한 신호다.
-  assert.match(app, /visualViewport\?\.addEventListener\("resize"/);
-  assert.match(app, /getOpenSheet\(\)\?\.querySelector\("\.sheet-scroll"\)[\s\S]{0,80}beginSettle/);
+test("시트를 열면 포커스가 모달 안으로 들어간다", () => {
+  const focus = fn("moveFocusIntoSheet");
+  assert.match(focus, /sheet\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(focus, /sheet\.contains\(document\.activeElement\)/);
+  assert.match(fn("showSheet"), /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => moveFocusIntoSheet\(sheet\)\)\)/,
+    "이미 열린 시트의 내부 화면을 바꿔도 포커스를 되돌려야 한다");
 });
 
 test("접히면 사용자별 현황도 함께 접는다", () => {
@@ -1488,8 +1469,7 @@ test("초기화 시트도 다른 시트와 같은 장치를 받는다", () => {
   // SHEETS 에 넣지 않으면 끌어 닫기·Tab 가두기·바깥 누르기가 이 시트에만 빠진다.
   assert.match(app, /elements\.trendSheet,\s*\n\s*elements\.resetSheet,/);
   assert.match(fn("closeActiveSheet"), /resetSheet\.hidden\) closeResetSheet\(\)/);
-  // 확인 문구를 적는 동안 키보드가 오르내린다. 지출·고정비 폼과 같은 보호가 필요하다.
-  assert.match(app, /\[elements\.form, elements\.fixedForm, elements\.resetForm\]\.forEach\(settleOnFocusLeave\)/);
+  assert.match(app, /closeOnPress\(elements\.closeResetSheet, closeResetSheet\)/);
 });
 
 test("다 지우면 시트와 설정 화면을 함께 닫는다", () => {

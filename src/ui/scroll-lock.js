@@ -1,12 +1,13 @@
 let lockedScrollY = 0;
 
 /**
- * 몇 겹이 잠갔는지 센다.
+ * 잠금을 요청한 화면을 소유자로 기억한다.
  *
- * 전체 화면(설정) 위에 시트(고정비)를 열 수 있다. 세지 않으면 시트가 닫히며 잠금을 풀어,
- * 아직 열려 있는 화면 뒤로 배경이 다시 움직이고 원래 스크롤 위치도 0으로 덮어써진다.
+ * 단순 숫자는 같은 시트가 실수로 두 번 열렸을 때 2가 되어, 한 번 닫아도 페이지가
+ * 영원히 잠긴다. 같은 소유자의 잠금은 한 번으로 취급하고 서로 다른 화면만 함께 센다.
  */
-let depth = 0;
+const defaultOwner = Symbol("page-scroll-lock");
+const owners = new Set();
 
 /**
  * 시트가 열린 동안 배경 페이지가 움직이지 않게 고정한다.
@@ -14,13 +15,15 @@ let depth = 0;
  */
 /** 잠긴 동안의 scrollY 는 0 이다. 그걸 "맨 위로 올라갔다"로 읽으면 안 되는 곳이 있다. */
 export function isPageScrollLocked() {
-  return depth > 0;
+  return owners.size > 0;
 }
 
-export function lockPageScroll() {
-  depth += 1;
-  // 이미 잠겨 있다면 위치를 다시 읽지 않는다. 그때의 scrollY는 0이라 원래 위치를 잃는다.
-  if (depth > 1) return;
+export function lockPageScroll(owner = defaultOwner) {
+  if (owners.has(owner)) return;
+  const alreadyLocked = owners.size > 0;
+  owners.add(owner);
+  // 다른 화면이 이미 잠갔다면 위치를 다시 읽지 않는다. 그때의 scrollY는 0이다.
+  if (alreadyLocked) return;
 
   lockedScrollY = window.scrollY;
   document.documentElement.classList.add("sheet-open");
@@ -32,10 +35,10 @@ export function lockPageScroll() {
   document.body.style.width = "100%";
 }
 
-export function unlockPageScroll() {
-  depth = Math.max(0, depth - 1);
-  // 아직 무언가 열려 있으면 잠금을 유지한다.
-  if (depth > 0) return;
+export function unlockPageScroll(owner = defaultOwner) {
+  if (!owners.delete(owner)) return;
+  // 아직 다른 소유자가 열려 있으면 잠금을 유지한다.
+  if (owners.size > 0) return;
 
   document.documentElement.classList.remove("sheet-open");
   document.body.classList.remove("sheet-open");
