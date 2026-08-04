@@ -129,9 +129,10 @@
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
 
+/* 14px 굵은 글자라 큰 글자 기준을 못 받는다. --accent 는 2.95 로 모자랐다. */
 .month-cell.is-today {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-dark);
+  color: var(--accent-dark);
 }
 
 .month-cell.is-selected {

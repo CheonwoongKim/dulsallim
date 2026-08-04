@@ -189,9 +189,23 @@ main {
 }
 
 .icon-button {
+  position: relative;
   width: 42px;
   height: 42px;
   border-radius: 50%;
+}
+
+/*
+ * 보이는 크기는 두고 누를 자리만 넓힌다.
+ *
+ * 42px 은 애플이 말하는 44px 에 2px 모자란다. 동그라미를 키우면 머리 줄이 두꺼워지므로
+ * 자리만 넓힌다. 가로로 크게 넓히면 옆 버튼과 겹쳐 경계에서 어느 쪽이 눌릴지 알 수 없으니
+ * 1px 씩만 — 달 이동은 사이가 5px, 상단 아이콘은 8px 이라 겹치지 않는다.
+ */
+.icon-button::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
 }
 
 /* 눌러도 안 되는 버튼은 그렇게 보여야 한다. 화면마다 따로 정하지 않는다. */
@@ -220,12 +234,20 @@ main {
 }
 
 .month-label {
+  position: relative;
   min-width: 120px;
   padding: 10px 8px;
   font-size: 15px;
   font-weight: 700;
   /* 작은 총액과 한 줄에 서면 폭이 좁아진다. "2026년 8 / 월" 로 깨진 적이 있다. */
   white-space: nowrap;
+}
+
+/* 41px 이라 세로로만 넓힌다. 가로는 이미 120px 이고, 넓히면 옆 화살표와 겹친다. */
+.month-label::after {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
 }
 
 /*
