@@ -1314,6 +1314,24 @@ test("머리 밑으로 들어가는 줄은 글자 한가운데서 잘리지 않�
   assert.doesNotMatch(css, /\n\.app-header::after/);
 });
 
+test("맨 위에서 달 이동 줄은 가운데에 선다", () => {
+  /*
+   * 작은 총액이 안 보일 때도 자리를 잡고 있으면 달 이동이 그만큼 왼쪽으로 밀린다.
+   * 화면의 나머지가 다 가운데 정렬이라 이 줄만 쏠려 보였다 — 계측: 66px 왼쪽.
+   */
+  assert.match(css, /\.compact-total \{[^}]*max-width: 0/, "안 보일 때는 폭도 0 이어야 한다");
+  assert.match(css, /\.month-bar \.month-control \{[^}]*margin-inline: auto/, "남는 자리를 양옆으로 나눈다");
+  // space-between 이면 총액이 0폭이어도 달 이동은 왼쪽 끝에 붙는다.
+  assert.doesNotMatch(css.match(/\n\.month-bar \{[^}]*\}/)[0], /justify-content/);
+});
+
+test("좁은 화면에서는 달 이름이 먼저 양보한다", () => {
+  // 320px 에서는 달 이동(214px)과 총액이 함께 설 자리가 모자란다.
+  // 총액이 줄면 몇 자리가 잘려 못 읽는 값이 되므로, 줄이는 쪽은 달 이름이다.
+  assert.match(css, /\.compact-total \{[^}]*flex: none/);
+  assert.match(css, /\.month-bar \.month-label \{[^}]*min-width: 0/);
+});
+
 test("한 줄에 선 달 이름은 두 줄로 깨지지 않는다", () => {
   // 작은 총액과 한 줄에 서면 폭이 좁아진다. 실제로 "2026년 8 / 월" 로 깨졌다.
   assert.match(css, /\.month-label \{[^}]*white-space: nowrap/);
