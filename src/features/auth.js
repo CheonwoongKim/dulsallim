@@ -47,16 +47,16 @@ function toKoreanMessage(error) {
   return raw || "로그인하지 못했어요.";
 }
 
-/**
- * 로그인한 계정에 연결된 프로필을 읽는다.
- * 계정은 있는데 프로필이 없으면 가구에 속하지 않은 것이라 아무 데이터도 볼 수 없다.
- * 빈 화면을 보여주느니 여기서 막고 이유를 알린다.
- */
 /** 서버에 닿지 못한 것뿐인지. 세션을 버릴지 말지가 여기서 갈린다. */
 function isOffline(error) {
   return /failed to fetch|networkerror|load failed/i.test(error?.message || "");
 }
 
+/**
+ * 로그인한 계정에 연결된 프로필을 읽는다.
+ * 계정은 있는데 프로필이 없으면 가구에 속하지 않은 것이라 아무 데이터도 볼 수 없다.
+ * 빈 화면을 보여주느니 여기서 막고 이유를 알린다.
+ */
 async function loadProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")

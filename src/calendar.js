@@ -1,3 +1,5 @@
+import { lastDayOfMonth, parseMonthKey } from "./expenses.js";
+
 export const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 /**
@@ -17,9 +19,9 @@ const WEEKS = 6;
  * @returns {Array<{date: string|null, day: number|null}>} 그 달이 아닌 칸은 date가 null
  */
 export function buildCalendar(monthKey) {
-  const [year, month] = monthKey.split("-").map(Number);
+  const [year, month] = parseMonthKey(monthKey);
   const firstWeekday = new Date(year, month - 1, 1).getDay();
-  const lastDay = new Date(year, month, 0).getDate();
+  const lastDay = lastDayOfMonth(monthKey);
 
   return Array.from({ length: WEEKS * 7 }, (_, index) => {
     const day = index - firstWeekday + 1;

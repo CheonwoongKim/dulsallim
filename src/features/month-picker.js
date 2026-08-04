@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { MAX_YEAR, MIN_YEAR, clampYear, isValidMonthKey, toMonthKey } from "../expenses.js";
+import { MAX_YEAR, MIN_YEAR, clampYear, isValidMonthKey, shiftMonthKey, toMonthKey } from "../expenses.js";
 import { render, resetTotalAnimation } from "../render.js";
 import { getSelectedMonth, setSelectedMonth } from "../store.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
@@ -61,8 +61,7 @@ export function selectMonth(monthKey) {
 
 /** 좌우 화살표로 한 달씩 이동. 지원 범위를 벗어나면 무시한다. */
 export function shiftMonth(offset) {
-  const [year, month] = getSelectedMonth().split("-").map(Number);
-  const nextMonth = toMonthKey(new Date(year, month - 1 + offset, 1));
+  const nextMonth = shiftMonthKey(getSelectedMonth(), offset);
   if (!isValidMonthKey(nextMonth)) return;
   setSelectedMonth(nextMonth);
   resetTotalAnimation();

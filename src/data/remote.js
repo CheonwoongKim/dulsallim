@@ -301,12 +301,8 @@ export async function fireNags(expenseId) {
 /* ── 실시간 ───────────────────────────────────────────────── */
 
 /**
- * 상대가 폰에서 기록하면 내 화면도 따라 바뀌게 한다.
+ * 상대가 폰에서 기록하면 내 화면도 따라 바뀌게 한다. 지출과 고정비를 한 채널에서 함께 듣는다.
  * 둘이 함께 쓰는 가계부인데 새로고침해야 보인다면 "함께"가 아니다.
- * @returns {object} 해지에 쓰는 채널
- */
-/**
- * 가구의 기록이 바뀌면 알려 준다. 지출과 고정비를 한 채널에서 함께 듣는다.
  *
  * 고정비가 빠져 있으면 한쪽이 데이터를 초기화해도 상대 화면에는 지운 고정비가 남는다.
  * 그 목록으로 반영을 시도하면 "고정비를 찾을 수 없습니다"만 돌아온다.
@@ -315,6 +311,7 @@ export async function fireNags(expenseId) {
  * 확인할 수 없기 때문이다. 그래서 남의 가구 삭제도 여기로 들어올 수 있지만,
  * 페이로드에는 기본 키만 담기고 우리는 그 값을 쓰지 않는다. 받으면 그저 다시 읽을 뿐이고,
  * 다시 읽는 길은 RLS 가 지킨다.
+ * @returns {object} 해지에 쓰는 채널
  */
 export function subscribeHousehold(householdId, onChange) {
   const scope = { event: "*", schema: "public", filter: `household_id=eq.${householdId}` };

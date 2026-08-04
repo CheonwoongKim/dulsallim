@@ -123,7 +123,6 @@ export const elements = {
   emptyTemplate: document.querySelector("#empty-template"),
   backdrop: document.querySelector("#sheet-backdrop"),
   appHeader: document.querySelector(".app-header"),
-  overviewHead: document.querySelector(".overview-head"),
   overviewMonthControl: document.querySelector(".overview-head .month-control"),
   totalAmount: document.querySelector(".total-amount"),
   sheet: document.querySelector("#entry-sheet"),

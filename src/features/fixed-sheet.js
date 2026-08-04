@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
+import { CATEGORIES, formatMonth, formatMoney, formatShortDate } from "../expenses.js";
 import { getMemberName } from "../members.js";
 import { isValidAmount, readAmount } from "../money.js";
 import {
@@ -129,8 +129,7 @@ export function updateFixedHint() {
     return;
   }
   const startMonth = firstApplicableMonth(day);
-  const [year, month] = startMonth.split("-").map(Number);
-  elements.fixedHint.textContent = `${year}년 ${month}월 ${day}일부터 매월 자동으로 기록됩니다.`;
+  elements.fixedHint.textContent = `${formatMonth(startMonth)} ${day}일부터 매월 자동으로 기록됩니다.`;
 }
 
 function validateFixedInput({ day, item, amount }) {

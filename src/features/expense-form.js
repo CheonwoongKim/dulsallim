@@ -7,6 +7,7 @@ import {
   isFutureDateKey,
   getMonthlyExpenses,
   isValidDateKey,
+  lastDayOfMonth,
   summarizeGoal,
   toDateKey,
   toMonthKey,
@@ -35,8 +36,7 @@ let editingExpenseId = null;
 function getDefaultDate() {
   const selectedMonth = getSelectedMonth();
   if (selectedMonth === toMonthKey(new Date())) return toDateKey(new Date());
-  const [year, month] = selectedMonth.split("-").map(Number);
-  const lastDay = new Date(year, month, 0).getDate();
+  const lastDay = lastDayOfMonth(selectedMonth);
   return `${selectedMonth}-${String(lastDay).padStart(2, "0")}`;
 }
 

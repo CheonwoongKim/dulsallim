@@ -1,4 +1,4 @@
-import { shiftMonthKey, toDateKey, toMonthKey } from "./expenses.js";
+import { lastDayOfMonth, shiftMonthKey, toDateKey, toMonthKey } from "./expenses.js";
 
 
 export const MIN_DAY = 1;
@@ -11,17 +11,12 @@ export function isValidDay(day) {
   return Number.isInteger(day) && day >= MIN_DAY && day <= MAX_DAY;
 }
 
-function lastDayOf(monthKey) {
-  const [year, month] = monthKey.split("-").map(Number);
-  return new Date(year, month, 0).getDate();
-}
-
 /**
  * 그 달에 실제로 존재하는 날짜로 맞춘다.
  * 31일로 등록해도 2월에는 28일(윤년 29일)로 당겨진다.
  */
 export function resolveOccurrenceDate(monthKey, day) {
-  const clamped = Math.min(day, lastDayOf(monthKey));
+  const clamped = Math.min(day, lastDayOfMonth(monthKey));
   return `${monthKey}-${String(clamped).padStart(2, "0")}`;
 }
 

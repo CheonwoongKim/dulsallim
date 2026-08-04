@@ -27,6 +27,17 @@ export function toMonthKey(date) {
   return `${year}-${month}`;
 }
 
+/** "YYYY-MM"을 연·월 숫자로 나눈다. 월 키를 다루는 곳마다 이 파싱이 반복돼 한 곳으로 모았다. */
+export function parseMonthKey(monthKey) {
+  return monthKey.split("-").map(Number);
+}
+
+/** 그 달의 마지막 날짜. 윤년의 2월도 Date가 알아서 처리한다. */
+export function lastDayOfMonth(monthKey) {
+  const [year, month] = parseMonthKey(monthKey);
+  return new Date(year, month, 0).getDate();
+}
+
 export function toDateKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -50,13 +61,13 @@ export function isFutureDateKey(value, today = new Date()) {
 
 /** 월 키를 앞뒤로 옮긴다. 연도 경계도 Date가 알아서 넘긴다. */
 export function shiftMonthKey(monthKey, offset) {
-  const [year, month] = monthKey.split("-").map(Number);
+  const [year, month] = parseMonthKey(monthKey);
   return toMonthKey(new Date(year, month - 1 + offset, 1));
 }
 
 export function isValidMonthKey(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}$/.test(value)) return false;
-  const [year, month] = value.split("-").map(Number);
+  const [year, month] = parseMonthKey(value);
   return year >= MIN_YEAR && year <= MAX_YEAR && month >= 1 && month <= 12;
 }
 
@@ -70,7 +81,7 @@ export function formatMoney(value) {
 }
 
 export function formatMonth(monthKey) {
-  const [year, month] = monthKey.split("-").map(Number);
+  const [year, month] = parseMonthKey(monthKey);
   return `${year}년 ${month}월`;
 }
 
