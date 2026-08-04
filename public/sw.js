@@ -19,7 +19,15 @@ async function cacheResponse(key, response) {
 async function networkFirst(request, fallbackToShell = false) {
   try {
     const response = await fetch(request);
-    return cacheResponse(fallbackToShell ? "/index.html" : request, response);
+    if (!fallbackToShell) return cacheResponse(request, response);
+
+    /*
+     * 앱 셸 자리에는 문서만 넣는다.
+     * 최상위 문서로 연 것이 무엇이든(예: /icon.png) 그대로 저장하면,
+     * 오프라인에서 그 그림이 앱 대신 나온다.
+     */
+    const isDocument = (response.headers.get("content-type") || "").includes("text/html");
+    return isDocument ? cacheResponse("/index.html", response) : response;
   } catch {
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(request);

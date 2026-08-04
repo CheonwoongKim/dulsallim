@@ -1,0 +1,25 @@
+# 테스트가 깨진 채로 배포되지 않게 한다.
+# Vercel 은 빌드만 보므로, 빌드가 통과해도 테스트는 깨져 있을 수 있다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  검사:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # 빌드 시 서비스 워커에 자산 목록과 버전을 넣는다. 그 자리표시자가 없으면 여기서 실패한다.
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder

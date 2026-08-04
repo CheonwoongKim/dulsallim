@@ -151,3 +151,67 @@ test("서비스 워커는 문서 요청에만 앱 셸을 오프라인 대체 응
   assert.match(source, /client\.navigate\(client\.url\)/, "기존 홈 화면 설치본도 한 번은 새 문서를 받아야 한다");
   assert.doesNotMatch(source, /await client\.navigate/, "활성화 중 탐색 완료를 기다리면 서로 대기할 수 있다");
 });
+
+test("적고 있는 중이면 새로고침을 미루고, 닫힌 뒤에 한다", async () => {
+  /*
+   * 시트를 열어 둔 채 앱을 나갔다 돌아오는 사이에 배포가 있으면, 예전에는 그 자리에서
+   * 새로고침해 적어 둔 지출이 통째로 사라졌다.
+   */
+  const env = makeEnvironment();
+  let 열려있음 = true;
+  await registerPwaUpdater({ ...env, isBusy: () => 열려있음, idleDelay: 5 });
+
+  env.serviceWorker.dispatch("controllerchange");
+  await nextTask();
+  assert.equal(env.locationTarget.reloadCalls, 0, "적는 중에는 새로고침하지 않는다");
+
+  열려있음 = false;
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(env.locationTarget.reloadCalls, 1, "닫히면 그때 한 번 새로고침한다");
+});
+
+test("미뤄 두는 동안에도 새로고침은 한 번뿐이다", async () => {
+  const env = makeEnvironment();
+  let 열려있음 = true;
+  await registerPwaUpdater({ ...env, isBusy: () => 열려있음, idleDelay: 5 });
+
+  env.serviceWorker.dispatch("controllerchange");
+  env.serviceWorker.dispatch("controllerchange");
+  await nextTask();
+  열려있음 = false;
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  assert.equal(env.locationTarget.reloadCalls, 1);
+});
+
+test("첫 등록이 실패해도 다음 기회에 다시 시도한다", async () => {
+  // 등록 뒤에 리스너를 걸던 때는, 한 번 실패하면 그 세션 내내 업데이트 확인이 멈췄다.
+  const env = makeEnvironment();
+  let 실패할까 = true;
+  const 등록시도 = [];
+  env.serviceWorker.register = async (...args) => {
+    등록시도.push(args);
+    if (실패할까) throw new Error("일시적인 오류");
+    return env.registration;
+  };
+
+  const 결과 = await registerPwaUpdater(env);
+  assert.equal(결과, null, "실패하면 등록 결과가 없다");
+  assert.equal(등록시도.length, 1);
+
+  실패할까 = false;
+  env.windowTarget.dispatch("online");
+  await nextTask();
+  await nextTask();
+  assert.equal(등록시도.length, 2, "온라인으로 돌아오면 다시 등록한다");
+  assert.equal(env.registration.updateCalls, 1, "등록된 뒤에는 업데이트도 확인한다");
+});
+
+test("앱 셸 자리에는 문서만 넣는다", async () => {
+  /*
+   * 최상위 문서로 연 것이 무엇이든 그대로 저장하면(예: /icon.png),
+   * 오프라인에서 그 그림이 앱 대신 나온다.
+   */
+  const source = await readFile(new URL("../public/sw.js", import.meta.url), "utf8");
+  assert.match(source, /content-type[\s\S]{0,60}text\/html/);
+  assert.match(source, /isDocument \? cacheResponse\("\/index\.html", response\) : response/);
+});
