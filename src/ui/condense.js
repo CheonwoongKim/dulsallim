@@ -164,8 +164,43 @@ function syncStuck() {
  * 아니라 밀려난 것이다. 그때는 펴지 않는다.
  */
 function userIsAtTop() {
-  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-  return maxScroll >= EXPAND_AT && window.scrollY < EXPAND_AT;
+  return maxScrollable() >= EXPAND_AT && window.scrollY < EXPAND_AT;
+}
+
+/** layout.css 의 .is-condensed .overview-head 높이와 같다. */
+const CONDENSED_HEAD_H = 50;
+
+/** 지금 문서에서 스크롤할 수 있는 거리. */
+function maxScrollable() {
+  return document.documentElement.scrollHeight - window.innerHeight;
+}
+
+/**
+ * 접어도 돌아올 길이 남는가.
+ *
+ * 접으면 머리가 줄고 요약 카드가 사라져 문서가 그만큼 짧아진다. 남는 스크롤이 없으면
+ * 위로 올려 다시 펼 방법도 없어진다 — 캘린더 화면이 그랬다(펼침 156px → 접힘 0px).
+ * 그런 자리는 접어도 더 보여 줄 것이 없으니, 아예 접지 않는 편이 낫다.
+ */
+function roomToCondense() {
+  const 머리 = elements.overviewHead?.offsetHeight ?? 0;
+  const 요약 = elements.overview?.offsetHeight ?? 0;
+  const 줄어들 = Math.max(0, 머리 - CONDENSED_HEAD_H) + 요약;
+  return maxScrollable() - 줄어들 >= EXPAND_AT;
+}
+
+/**
+ * 접힌 채 갇혔는가.
+ *
+ * 접은 뒤에 화면이 바뀌어 스크롤할 거리가 사라질 수 있다 — 목록에서 접고 캘린더로
+ * 넘어가면 목록이 숨어 문서가 짧아진다(61px → 0px). 그러면 위로 올릴 것이 없어
+ * 되돌릴 방법이 없다. 그때만 대신 펴 준다.
+ *
+ * 문서가 길어진 경우는 여기 걸리지 않는다. 캘린더에서 날짜를 골라 목록이 나오는 때가
+ * 그런데, 그때 펴 버리면 머리가 저절로 커진다.
+ */
+function trappedWhileCondensed() {
+  return maxScrollable() < EXPAND_AT;
 }
 
 function measure() {
@@ -177,7 +212,7 @@ function measure() {
   if (isPageScrollLocked()) return;
   const y = window.scrollY;
   // 목록 길이와 상관없이, 내리면 접는다.
-  if (!condensed && y > CONDENSE_AT) setCondensed(true);
+  if (!condensed && y > CONDENSE_AT && roomToCondense()) setCondensed(true);
   else if (condensed && userIsAtTop()) setCondensed(false);
   syncStuck();
 }
@@ -229,5 +264,7 @@ export function watchScroll() {
  * 사용자가 실제로 올리면 스크롤 이벤트가 울리고 measure() 가 판단한다. 여기서 거들 일이 없다.
  */
 export function recheckAfterRender() {
+  // 접힌 채 스크롤할 거리가 사라졌다면 되돌릴 방법이 없다. 그때만 대신 편다.
+  if (condensed && trappedWhileCondensed()) setCondensed(false);
   syncStuck();
 }
