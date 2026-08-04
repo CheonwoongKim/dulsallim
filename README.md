@@ -27,7 +27,7 @@
 ### 그 밖에
 
 - 이메일·비밀번호 로그인 (이메일 기억하기). 가구에 연결된 계정만 데이터를 볼 수 있습니다
-- 마이페이지에서 표시 이름, 아바타 색상, 월 지출 목표 변경
+- 마이페이지에서 표시 이름, 기본·직접 선택 아바타 색상, 월 지출 목표 변경
 - 설정에서 고정비·소비 잔소리 관리와 데이터 초기화
 - 홈 화면에 설치할 수 있는 PWA
 
@@ -57,6 +57,7 @@
 | 4 | `supabase/migration-nag.sql` | 소비 잔소리 |
 | 5 | `supabase/migration-hardening.sql` | 대화 작성자 검사, 초기화·고정비 반영 트랜잭션 |
 | 6 | `supabase/migration-fixed-sync.sql` | 고정비 변경을 상대 기기에도 바로 반영 |
+| 7 | `supabase/migration-avatar-custom-color.sql` | 아바타 색상 직접 선택 |
 
 대시보드에서 **가입은 반드시 꺼 두세요**
 (Project Settings → Authentication → User Signups → Allow new users to sign up).

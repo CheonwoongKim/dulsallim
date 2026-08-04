@@ -280,13 +280,26 @@ test("프로필 수정 권한은 정해진 열로만 열려 있다", async () =>
   }
 });
 
-test("아바타 팔레트는 DB가 허용하는 색과 정확히 같다", async () => {
-  // 화면에만 색을 추가하면 사용자가 고르는 순간 저장이 거절된다.
+test("아바타는 기본 팔레트와 직접 고른 6자리 HEX를 함께 받는다", async () => {
+  // 화면만 열어 두거나 DB만 열어 두면 선택과 저장 중 한쪽이 어긋난다.
   const { readFile } = await import("node:fs/promises");
-  const { PALETTE } = await import("../src/members.js");
+  const { PALETTE, normalizeAvatarColor } = await import("../src/members.js");
   const sql = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
-  const allowed = sql.match(/avatar_color in \(([^)]+)\)/)[1].match(/#[0-9a-f]{6}/g);
-  assert.deepEqual(PALETTE.map((c) => c.value), allowed);
+  const migration = await readFile(
+    new URL("../supabase/migration-avatar-custom-color.sql", import.meta.url),
+    "utf8",
+  );
+
+  for (const { value } of PALETTE) assert.equal(normalizeAvatarColor(value), value);
+  assert.equal(normalizeAvatarColor("#12AbEf"), "#12abef");
+  for (const invalid of ["#fff", "12abef", "#12abeg", "#12abcdef", null]) {
+    assert.equal(normalizeAvatarColor(invalid), null);
+  }
+
+  assert.match(sql, /avatar_color ~ '\^#\[0-9a-f\]\{6\}\$'/);
+  assert.match(migration, /avatar_color ~ '\^#\[0-9a-f\]\{6\}\$'/);
+  assert.match(html, /type="color"[\s\S]{0,120}id="profile-custom-color"/);
+  assert.match(app, /profileCustomColor\.addEventListener\("input", handleCustomColorInput\)/);
 });
 
 test("초기화는 확인 문구를 그대로 적어야만 실행된다", () => {

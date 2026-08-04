@@ -25,7 +25,7 @@ export function getMemberGoal(id) {
   return members.find((member) => member.id === id)?.goal ?? null;
 }
 
-/** 고를 수 있는 아바타 색. DB의 check 제약과 같은 목록이어야 한다. */
+/** 빠르게 고를 수 있는 기본 아바타 색. 이 밖의 6자리 HEX도 직접 선택할 수 있다. */
 export const PALETTE = [
   { value: "#20211e", label: "먹" },
   { value: "#f2674b", label: "살구" },
@@ -34,3 +34,12 @@ export const PALETTE = [
   { value: "#c2883f", label: "황토" },
   { value: "#8d6a91", label: "자두" },
 ];
+
+const AVATAR_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+/** 브라우저·서버에 항상 같은 형식으로 보내도록 유효한 색을 소문자 HEX로 맞춘다. */
+export function normalizeAvatarColor(color) {
+  return typeof color === "string" && AVATAR_COLOR_PATTERN.test(color)
+    ? color.toLowerCase()
+    : null;
+}

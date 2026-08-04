@@ -54,6 +54,7 @@ import { formatAmountInput } from "./money.js";
 import { closePageNow, getOpenPage, hidePage } from "./ui/page.js";
 import {
   handleGoalInput,
+  handleCustomColorInput,
   handleNameInput,
   handleProfileSubmit,
   openProfilePage,
@@ -206,6 +207,8 @@ elements.pages.forEach((page) => {
 elements.profileForm.addEventListener("submit", handleProfileSubmit);
 elements.profileName.addEventListener("input", handleNameInput);
 elements.profileGoal.addEventListener("input", handleGoalInput);
+elements.profileCustomColor.addEventListener("input", handleCustomColorInput);
+elements.profileCustomColor.addEventListener("change", handleCustomColorInput);
 elements.profilePalette.addEventListener("click", (event) => {
   const swatch = event.target.closest(".swatch");
   if (swatch) pickColor(swatch.dataset.color);
