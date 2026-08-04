@@ -53,7 +53,19 @@ SHEETS.forEach((sheet) => {
  */
 SHEETS.forEach((sheet) => {
   sheet.addEventListener("click", (event) => {
-    if (event.target === sheet) closeActiveSheet();
+    /*
+     * 시트 자신이 잡혔다고 다 배경은 아니다. 시트의 자기 여백 — 맨 위 손잡이가 놓인
+     * 13px 띠 — 을 눌러도 여기로 온다. 그대로 닫으면 적다 만 폼이 손잡이를 잡는 순간 날아간다.
+     * 눌린 자리가 시트 상자 밖일 때만 배경이다.
+     */
+    if (event.target !== sheet || event.detail === 0) return;
+    const 상자 = sheet.getBoundingClientRect();
+    const 밖 =
+      event.clientY < 상자.top ||
+      event.clientY > 상자.bottom ||
+      event.clientX < 상자.left ||
+      event.clientX > 상자.right;
+    if (밖) closeActiveSheet();
   });
   sheet.addEventListener("cancel", (event) => {
     event.preventDefault();

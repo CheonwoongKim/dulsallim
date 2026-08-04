@@ -23,6 +23,7 @@ import { elements } from "../dom.js";
 const SLACK = 8;
 
 let observers = [];
+let sizeObserver = null;
 
 /** 지출 내역 제목이 머리 바로 밑에 붙으려면 머리 높이를 알아야 한다. */
 function syncHeaderHeight() {
@@ -48,19 +49,39 @@ function watch(target, headerHeight, onChange) {
   observers = [...observers, observer];
 }
 
+/**
+ * 한 번에 여러 기록이 올 수 있다. 첫 기록만 보면 지나간 상태로 판단하게 된다.
+ * 마지막이 지금이다.
+ */
+const 마지막 = (entries) => entries[entries.length - 1];
+
+/**
+ * 제목이 머리에 가서 붙었나.
+ *
+ * "온전히 보이지 않는다"만으로는 모자란다. 화면보다 아래에 있어 아직 보이지도 않는 제목도
+ * 그 조건에 걸린다 — 가로로 돌리거나(844×390) 화면이 짧으면 맨 위에서부터 붙은 것으로 읽혀,
+ * 지나가는 줄도 없는데 흐림이 걸리고 머리 밑 그림자는 반대로 꺼졌다.
+ * 잘라 둔 창의 윗변까지 올라왔을 때만 붙은 것이다.
+ */
+function 붙었나(entry) {
+  if (entry.intersectionRatio >= 1) return false;
+  const 창 = entry.rootBounds;
+  return !창 || entry.boundingClientRect.top <= 창.top;
+}
+
 function rewatch() {
   const headerHeight = syncHeaderHeight();
   for (const observer of observers) observer.disconnect();
   observers = [];
 
   // 큰 금액이 머리 밑으로 들어가면 그 자리를 작은 총액이 대신한다.
-  watch(elements.totalAmount, headerHeight, ([entry]) =>
-    elements.appShell.classList.toggle("is-scrolled", !entry.isIntersecting));
+  watch(elements.totalAmount, headerHeight, (entries) =>
+    elements.appShell.classList.toggle("is-scrolled", !마지막(entries).isIntersecting));
 
   // 제목이 머리에 가서 붙었을 때만 그 아래를 흐려 준다.
   // 붙기 전에는 제목 밑을 지나가는 줄이 없으므로 흐릴 이유도 없다.
-  watch(elements.sectionHeading, headerHeight, ([entry]) =>
-    elements.appShell.classList.toggle("is-stuck", entry.intersectionRatio < 1));
+  watch(elements.sectionHeading, headerHeight, (entries) =>
+    elements.appShell.classList.toggle("is-stuck", 붙었나(마지막(entries))));
 }
 
 export function watchHeaderSummary() {
@@ -77,6 +98,17 @@ export function watchHeaderSummary() {
   }
 
   rewatch();
-  // 머리 높이는 화면을 돌릴 때 말고는 변하지 않는다. 그때만 다시 잰다.
-  if (appHeader && typeof ResizeObserver === "function") new ResizeObserver(rewatch).observe(appHeader);
+  /*
+   * 머리 높이는 화면을 돌릴 때 말고는 변하지 않는다. 그때만 다시 잰다.
+   *
+   * 이 함수는 앱을 띄울 때마다 불린다 — 로그인, 다시 로그인, 불러오기 실패 후 다시 시도.
+   * 먼저 걸어 둔 것을 끊지 않으면 부를 때마다 하나씩 쌓여 화면을 돌릴 때 rewatch 가
+   * 그만큼 겹쳐 돈다(계측: 다시 로그인하니 하나 더 생겼다).
+   */
+  sizeObserver?.disconnect();
+  sizeObserver = null;
+  if (appHeader && typeof ResizeObserver === "function") {
+    sizeObserver = new ResizeObserver(rewatch);
+    sizeObserver.observe(appHeader);
+  }
 }

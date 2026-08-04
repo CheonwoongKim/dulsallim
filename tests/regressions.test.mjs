@@ -91,6 +91,50 @@ test("연도와 월 이동에는 상한·하한이 있다", () => {
   assert.match(app, /elements\.prevYear\.disabled/, "경계에서 버튼을 비활성화해 시각적으로도 알려야 한다");
 });
 
+test("시트 손잡이를 잡아도 닫히지 않는다", () => {
+  /*
+   * top layer 에서는 배경 자리의 누름이 시트 자신에게 온다. 그런데 시트의 자기 여백 —
+   * 맨 위 손잡이가 놓인 13px 띠 — 을 눌러도 똑같이 시트가 잡힌다.
+   * target 만 보고 닫으면 적다 만 폼이 손잡이를 잡는 순간 날아간다(계측: 실제로 닫혔다).
+   * 눌린 자리가 시트 상자 밖일 때만 배경이다.
+   */
+  const 배선 = app.match(/sheet\.addEventListener\("click"[\s\S]*?\n  \}\);/)[0];
+  assert.match(배선, /const 상자 = sheet\.getBoundingClientRect\(\)/);
+  assert.match(배선, /event\.clientY < 상자\.top/);
+  // 키보드로 누른 click 은 좌표가 0 이다. 그걸 "왼쪽 위 바깥"으로 읽으면 안 된다.
+  assert.match(배선, /event\.detail === 0\) return/);
+});
+
+test("한 번에 온 여러 기록 중 마지막을 본다", () => {
+  // 첫 기록만 보면 이미 지나간 상태로 판단하게 된다.
+  assert.match(app, /const 마지막 = \(entries\) => entries\[entries\.length - 1\]/);
+  assert.match(fn("rewatch"), /마지막\(entries\)/);
+});
+
+test("닫는 도중 다른 화면을 열어도 앞 화면이 남지 않는다", () => {
+  /*
+   * 닫는 연출이 끝나기를 기다리던 것을 그냥 취소하면, 그 화면이 hidden = false 인 채
+   * DOM 에 남는다. 눈에는 안 보여도(is-visible 이 빠져 옆으로 밀려 있다) 버튼은
+   * 그대로 눌리고 탭으로도 들어간다.
+   * 계측: 설정을 닫자마자 마이페이지를 열면 설정 화면 버튼이 히트테스트에 잡혔다.
+   */
+  assert.match(fn("showPage"), /finishClose\(\{ unlock: false \}\)/, "취소만 하면 안 되고 마무리를 지어야 한다");
+  assert.match(fn("finishClose"), /page\.hidden = true/);
+  // 잠금은 곧 열 화면이 이어받는다. 풀었다 다시 걸면 그사이 스크롤이 제자리로 튄다.
+  assert.match(fn("finishClose"), /if \(unlock\) unlockPageScroll\(\)/);
+});
+
+test("앱을 다시 띄워도 머리 관찰자가 쌓이지 않는다", () => {
+  /*
+   * watchHeaderSummary 는 앱을 띄울 때마다 불린다 — 로그인, 다시 로그인,
+   * 불러오기 실패 후 다시 시도. 먼저 걸어 둔 것을 끊지 않으면 하나씩 쌓여
+   * 화면을 돌릴 때 rewatch 가 그만큼 겹쳐 돈다.
+   * 계측: 세 번 로그인하니 살아 있는 ResizeObserver 가 3개였다(고친 뒤 1개).
+   */
+  assert.match(fn("watchHeaderSummary"), /sizeObserver\?\.disconnect\(\)/);
+  assert.match(fn("rewatch"), /for \(const observer of observers\) observer\.disconnect\(\)/);
+});
+
 test("시트 껍데기에는 포커스 테두리를 그리지 않는다", () => {
   /*
    * 열릴 때 껍데기(tabindex=-1)에 포커스를 준다. 보조기술이 "무엇이 열렸는지"부터
@@ -1393,7 +1437,7 @@ test("달 이동은 스크롤해도 남는다", () => {
 test("머리 높이는 화면이 바뀌면 다시 잰다", () => {
   // 지출 내역 제목은 머리 바로 밑에 붙는다. 가로로 돌리거나 글자 크기가 바뀌어
   // 머리가 두꺼워지면, 옛 높이로는 제목이 머리 밑에 깔리거나 빈 띠가 생긴다.
-  assert.match(fn("watchHeaderSummary"), /new ResizeObserver\(rewatch\)\.observe\(appHeader\)/);
+  assert.match(fn("watchHeaderSummary"), /sizeObserver = new ResizeObserver\(rewatch\);\s*sizeObserver\.observe\(appHeader\)/);
   assert.match(fn("rewatch"), /const headerHeight = syncHeaderHeight\(\)/);
   assert.match(css, /\.section-heading \{[^}]*top: var\(--header-h/);
 });
@@ -1580,7 +1624,13 @@ test("붙어 있는 제목 아래로 목록이 비치지 않는다", () => {
   assert.match(css, /\.is-stuck \.section-heading::after \{[^}]*linear-gradient\(var\(--paper\), transparent\)/);
   // 머리 높이만큼 깎은 창에서 제목이 온전히 보이지 않으면 붙은 것이다.
   assert.match(fn("rewatch"), /watch\(elements\.sectionHeading, headerHeight/);
-  assert.match(fn("rewatch"), /intersectionRatio < 1/);
+  assert.match(fn("붙었나"), /intersectionRatio >= 1\) return false/);
+  /*
+   * "온전히 보이지 않는다"만으로는 모자라다. 화면보다 아래에 있어 아직 보이지도 않는
+   * 제목도 그 조건에 걸린다. 계측: 844×390 가로 화면과 390×400 짧은 화면에서
+   * 맨 위인데도 붙은 것으로 읽혀, 흐림이 잘못 걸리고 머리 밑 그림자는 반대로 꺼졌다.
+   */
+  assert.match(fn("붙었나"), /entry\.boundingClientRect\.top <= 창\.top/);
 });
 
 test("제목 글자가 바뀌면 붙어 있는 제목을 다시 그리게 한다", () => {

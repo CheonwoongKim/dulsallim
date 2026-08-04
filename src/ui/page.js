@@ -9,16 +9,38 @@ import { lockPageScroll, unlockPageScroll } from "./scroll-lock.js";
  * 시트보다 아래에 깔리므로, 설정에서 고정비 시트를 열면 설정 화면 위에 시트가 뜬다.
  */
 let openedPage = null;
+let closingPage = null;
 let stopWaiting = null;
 let lastFocusedElement = null;
+
+/**
+ * 닫히는 중이던 화면의 뒤처리를 지금 끝낸다.
+ *
+ * 기다리던 것을 그냥 취소하면 그 화면이 hidden = false 인 채 DOM 에 남는다.
+ * 눈에는 안 보여도(is-visible 이 빠져 옆으로 밀려 있다) 버튼은 그대로 눌리고
+ * 탭으로도 들어간다. 계측: 설정을 닫자마자 마이페이지를 열면 설정 화면의 버튼이
+ * 여전히 히트테스트에 잡혔다.
+ *
+ * 잠금은 다음에 열 화면이 이어받을 수 있으므로 풀지 말지를 부르는 쪽이 정한다.
+ * 여기서 풀었다 곧바로 다시 걸면 그사이 스크롤이 제자리로 튀어 오른다.
+ */
+function finishClose({ unlock }) {
+  stopWaiting?.();
+  stopWaiting = null;
+  const page = closingPage;
+  closingPage = null;
+  if (!page) return;
+  page.hidden = true;
+  if (unlock) unlockPageScroll();
+}
 
 export function getOpenPage() {
   return openedPage;
 }
 
 export function showPage(page) {
-  stopWaiting?.();
-  stopWaiting = null;
+  // 곧 다른 화면을 열므로 잠금은 그대로 이어받는다.
+  finishClose({ unlock: false });
   // 이미 다른 화면이 열려 있으면 갈아 끼운다. 두 장이 겹치면 뒤로 가기가 꼬인다.
   if (openedPage && openedPage !== page) {
     openedPage.classList.remove("is-visible");
@@ -54,11 +76,10 @@ export function hidePage() {
   if (focused instanceof HTMLElement && page.contains(focused)) focused.blur();
   page.classList.remove("is-visible");
 
-  stopWaiting?.();
+  finishClose({ unlock: true });
+  closingPage = page;
   stopWaiting = afterMotion(page, () => {
-    stopWaiting = null;
-    page.hidden = true;
-    unlockPageScroll();
+    finishClose({ unlock: true });
     requestAnimationFrame(() => lastFocusedElement?.focus?.());
   });
 }
@@ -67,6 +88,7 @@ export function hidePage() {
 export function closePageNow() {
   stopWaiting?.();
   stopWaiting = null;
+  closingPage = null;
   elements.pages.forEach((page) => {
     page.classList.remove("is-visible");
     page.hidden = true;
