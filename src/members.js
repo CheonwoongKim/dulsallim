@@ -25,7 +25,7 @@ export function getMemberGoal(id) {
   return members.find((member) => member.id === id)?.goal ?? null;
 }
 
-/** 고를 수 있는 아바타 색. DB의 check 제약과 같은 목록이어야 한다. */
+/** 빠르게 고를 수 있는 기본 아바타 색. 이 밖의 6자리 HEX도 직접 선택할 수 있다. */
 export const PALETTE = [
   { value: "#20211e", label: "먹" },
   { value: "#f2674b", label: "살구" },
@@ -34,3 +34,24 @@ export const PALETTE = [
   { value: "#c2883f", label: "황토" },
   { value: "#8d6a91", label: "자두" },
 ];
+
+const AVATAR_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+/** 브라우저·서버에 항상 같은 형식으로 보내도록 유효한 색을 소문자 HEX로 맞춘다. */
+export function normalizeAvatarColor(color) {
+  return typeof color === "string" && AVATAR_COLOR_PATTERN.test(color)
+    ? color.toLowerCase()
+    : null;
+}
+
+/**
+ * 서버에서 받은 색을 화면에 쓸 수 있는 값으로 만든다. 이상하면 기본색으로 돌린다.
+ *
+ * 이 색은 추이 범례에서 style 속성 안에 그대로 끼워 넣어진다. HEX 가 아닌 값이 들어오면
+ * 따옴표를 닫고 나가 태그를 새로 만들 수 있다 — 실제로 스크립트 실행까지 확인했다.
+ * 지금은 DB 의 check 제약이 막아 주지만, 화면 쪽에도 같은 잣대를 둔다.
+ * 제약은 마이그레이션을 안 돌리거나 나중에 손대면 언제든 느슨해질 수 있다.
+ */
+export function toDisplayColor(color) {
+  return normalizeAvatarColor(color) ?? PALETTE[0].value;
+}

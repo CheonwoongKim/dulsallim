@@ -22,9 +22,9 @@ create table if not exists profiles (
   id           uuid primary key references auth.users(id) on delete cascade,
   household_id uuid not null references households(id) on delete cascade,
   display_name text not null,
-  -- 목록·요약에서 두 사람을 구분하는 색. 팔레트 밖의 값은 DB가 거절한다.
+  -- 목록·요약에서 두 사람을 구분하는 색. 직접 고른 6자리 HEX만 허용한다.
   avatar_color text not null default '#20211e'
-    check (avatar_color in ('#20211e', '#f2674b', '#8da697', '#5b7fa6', '#c2883f', '#8d6a91')),
+    check (avatar_color ~ '^#[0-9a-f]{6}$'),
   -- 한 달에 이만큼까지 쓰겠다는 다짐. 비어 있으면 정하지 않은 것이다.
   monthly_goal integer check (monthly_goal is null or monthly_goal > 0),
   -- 내가 심어 둔 소비 잔소리를 울릴지. 지우지 않고 잠시 멈출 수 있게 한다.

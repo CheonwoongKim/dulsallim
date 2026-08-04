@@ -205,6 +205,20 @@ with checks as (
   where pubname = 'supabase_realtime'
     and schemaname = 'public'
     and tablename in ('expenses', 'expense_notes', 'fixed_costs')
+
+  union all
+
+  -- 16) 아바타 색상이 고정 팔레트가 아니라 안전한 6자리 HEX 범위로 열려 있는가
+  select
+    16,
+    '아바타 직접 색상',
+    case when count(*) = 1 then '6자리 HEX 허용' else '제약 확인 필요' end,
+    case when count(*) = 1 then 'OK' else 'FAIL' end,
+    'migration-avatar-custom-color.sql 을 실행하세요'
+  from pg_constraint
+  where conrelid = 'profiles'::regclass
+    and conname = 'profiles_avatar_color_check'
+    and pg_get_constraintdef(oid) like '%[0-9a-f]{6}%'
 )
 
 select status, item, detail, hint

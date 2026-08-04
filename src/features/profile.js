@@ -1,6 +1,6 @@
 import { elements } from "../dom.js";
 import { formatMoney } from "../expenses.js";
-import { PALETTE, getMembers } from "../members.js";
+import { PALETTE, getMembers, normalizeAvatarColor } from "../members.js";
 import { paintMembers, render } from "../render.js";
 import { updateProfile } from "../data/remote.js";
 import { formatAmountInput, isValidAmount, readAmount } from "../money.js";
@@ -10,6 +10,7 @@ import { showToast } from "../ui/toast.js";
 import { getProfile, updateCurrentProfile } from "./auth.js";
 
 const MAX_NAME = 12;
+const PRESET_COLORS = new Set(PALETTE.map(({ value }) => value));
 
 let pickedColor = null;
 
@@ -31,13 +32,17 @@ function buildPalette() {
     button.setAttribute("aria-label", label);
     return button;
   });
-  elements.profilePalette.replaceChildren(...swatches);
+  elements.profilePalette.prepend(...swatches);
 }
 
 function markSelectedSwatch() {
   elements.profilePalette.querySelectorAll(".swatch").forEach((swatch) => {
     swatch.setAttribute("aria-pressed", String(swatch.dataset.color === pickedColor));
   });
+
+  const customSwatch = elements.profileCustomColor.closest(".custom-swatch");
+  customSwatch.classList.toggle("is-selected", !PRESET_COLORS.has(pickedColor));
+  customSwatch.style.setProperty("--custom-color", elements.profileCustomColor.value);
 }
 
 /**
@@ -58,8 +63,9 @@ export function openProfilePage() {
   const profile = getProfile();
   if (!profile) return;
 
-  if (!elements.profilePalette.children.length) buildPalette();
-  pickedColor = profile.avatar_color;
+  if (!elements.profilePalette.querySelector(".swatch")) buildPalette();
+  pickedColor = normalizeAvatarColor(profile.avatar_color) || PALETTE[0].value;
+  elements.profileCustomColor.value = pickedColor;
   elements.profileName.value = profile.display_name;
   elements.profileGoal.value = profile.monthly_goal ? formatMoney(profile.monthly_goal) : "";
   paintPartnerGoal();
@@ -70,9 +76,15 @@ export function openProfilePage() {
 }
 
 export function pickColor(color) {
-  pickedColor = color;
+  const normalized = normalizeAvatarColor(color);
+  if (!normalized) return;
+  pickedColor = normalized;
   markSelectedSwatch();
   syncPreview();
+}
+
+export function handleCustomColorInput(event) {
+  pickColor(event.target.value);
 }
 
 export function handleNameInput() {
@@ -98,6 +110,11 @@ export async function handleProfileSubmit(event) {
   if (name.length > MAX_NAME) {
     elements.profileError.textContent = `표시 이름은 ${MAX_NAME}자까지 넣을 수 있어요.`;
     elements.profileName.focus();
+    return;
+  }
+  if (!normalizeAvatarColor(pickedColor)) {
+    elements.profileError.textContent = "아바타 색상을 다시 선택해 주세요.";
+    elements.profileCustomColor.focus();
     return;
   }
 

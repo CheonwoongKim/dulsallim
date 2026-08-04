@@ -1,3 +1,4 @@
+import { toDisplayColor } from "../members.js";
 import { supabase } from "../supabase.js";
 import {
   fromExpense,
@@ -42,7 +43,7 @@ export async function fetchMembers(householdId) {
   return rows.map((row) => ({
     id: row.id,
     name: row.display_name,
-    color: row.avatar_color,
+    color: toDisplayColor(row.avatar_color),
     goal: row.monthly_goal,
   }));
 }

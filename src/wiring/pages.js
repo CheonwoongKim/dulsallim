@@ -13,6 +13,7 @@ import {
 } from "../features/nag.js";
 import { closeNotes, handleNoteSubmit } from "../features/notes.js";
 import {
+  handleCustomColorInput,
   handleGoalInput,
   handleNameInput,
   handleProfileSubmit,
@@ -75,6 +76,9 @@ elements.pages.forEach((page) => {
 elements.profileForm.addEventListener("submit", handleProfileSubmit);
 elements.profileName.addEventListener("input", handleNameInput);
 elements.profileGoal.addEventListener("input", handleGoalInput);
+// input 은 끌면서 계속 울리고 change 는 고르고 나서 한 번 운다. 브라우저마다 오는 쪽이 달라 둘 다 받는다.
+elements.profileCustomColor.addEventListener("input", handleCustomColorInput);
+elements.profileCustomColor.addEventListener("change", handleCustomColorInput);
 elements.profilePalette.addEventListener("click", (event) => {
   const swatch = event.target.closest(".swatch");
   if (swatch) pickColor(swatch.dataset.color);

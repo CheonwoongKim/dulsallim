@@ -87,6 +87,7 @@ export const elements = {
   profileForm: document.querySelector("#profile-form"),
   profileName: document.querySelector("#profile-name"),
   profilePalette: document.querySelector("#profile-palette"),
+  profileCustomColor: document.querySelector("#profile-custom-color"),
   profilePreview: document.querySelector("#profile-preview"),
   profilePreviewName: document.querySelector("#profile-preview-name"),
   profileGoal: document.querySelector("#profile-goal"),
