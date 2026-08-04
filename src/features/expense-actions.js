@@ -16,6 +16,7 @@ import {
   setViewMode,
 } from "../store.js";
 import { closeOpenRow } from "../ui/swipe.js";
+import { withViewTransition } from "../ui/view-transition.js";
 import { hideToast, showToast } from "../ui/toast.js";
 
 export async function deleteExpense(id) {
@@ -107,8 +108,10 @@ export function toggleDateFilter(date) {
  * 무엇 때문에 걸린 필터인지 알 수 없다.
  */
 export function toggleView(mode) {
-  setViewMode(mode);
-  if (mode === "list") setDateFilter(null);
   closeOpenRow();
-  render();
+  withViewTransition(() => {
+    setViewMode(mode);
+    if (mode === "list") setDateFilter(null);
+    render();
+  });
 }

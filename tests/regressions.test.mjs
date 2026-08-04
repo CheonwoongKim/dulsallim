@@ -1436,6 +1436,40 @@ test("분류 선택지는 한 곳에서 만든다", () => {
   assert.match(fn("boot"), /^function boot\(\) \{[^;]*fillCategoryOptions\(\);/);
 });
 
+test("JS 가 넣는 길이 값에는 타입이 밝혀져 있다", () => {
+  /*
+   * 이름만 있는 커스텀 속성은 아무 글자나 들어가고, 이상한 값이 들어오면 그 값을 쓰는
+   * 선언이 통째로 무효가 된다 — 제목의 top 이 죽으면 머리 밑에 깔린다.
+   * 타입을 밝히면 이상한 값은 무시되고 initial-value 로 돌아간다.
+   * 계측: 쓰레기값을 넣어도 제목 top 이 132 → 0px 로 돌아갈 뿐 규칙은 살아 있다.
+   */
+  const 넣는것 = [...app.matchAll(/setProperty\("(--[a-z-]+)"/g)].map((m) => m[1]);
+  const 길이값 = [...new Set(넣는것)].filter((이름) => 이름 !== "--custom-color");
+  for (const 이름 of 길이값) {
+    assert.match(css, new RegExp(`@property ${이름} \\{[^}]*syntax: "<length>"`),
+      `${이름} 에 타입이 없다`);
+    assert.match(css, new RegExp(`@property ${이름} \\{[^}]*initial-value:`));
+  }
+  assert.ok(길이값.length >= 4, `길이 값이 ${길이값.length}개뿐이다 — 정규식을 확인할 것`);
+});
+
+test("목록과 캘린더는 툭 바뀌지 않고 이어진다", () => {
+  /*
+   * 같은 자리를 완전히 다른 그림으로 갈아 끼운다. 브라우저가 바꾸기 전후를 스냅숏으로
+   * 떠서 겹쳐 주면 "같은 자리가 모양을 바꿨다"로 읽힌다.
+   * 지원하지 않는 브라우저에서는 그냥 즉시 바뀐다 — 잃는 것은 연출뿐이다.
+   */
+  assert.match(fn("toggleView"), /withViewTransition\(\(\) => \{/);
+  assert.match(fn("withViewTransition"), /document\.startViewTransition\?\./, "없으면 그냥 바꾼다");
+  assert.match(fn("withViewTransition"), /prefers-reduced-motion: reduce/);
+  /*
+   * 이름을 하나로 묶으면 안 된다. 캘린더에서 날짜를 고르면 목록과 캘린더가 함께 보이는데,
+   * 같은 시점에 같은 이름이 둘이면 브라우저가 연출을 통째로 건너뛴다.
+   */
+  assert.match(css, /#expense-calendar \{[^}]*view-transition-name: ledger-calendar/);
+  assert.match(css, /\.expense-list \{[^}]*view-transition-name: ledger-list/);
+});
+
 test("본 화면 단락 사이 여백은 머리를 바꾸기 전과 같다", () => {
   /*
    * 머리 구조를 바꾸면서 여백이 함께 줄었다 — 달 이동 줄과 "함께 쓴 금액" 사이가
