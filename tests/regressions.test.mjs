@@ -1233,17 +1233,18 @@ test("접는 지점과 펴는 지점이 다르다", () => {
   assert.ok(펴기 < 접기, `펴는 지점 ${펴기} 이 접는 지점 ${접기} 보다 낮아야 한다`);
 });
 
-test("접어도 돌아올 길이 남을 때만 접는다", () => {
+test("어느 화면에서나 스크롤할 여지를 남겨 둔다", () => {
   /*
-   * 한때 이 조건을 뺐었다. "목록이 짧은 달에는 아예 접히지 않는다"는 이유였다.
-   * 그런데 그 자리가 바로 갇히는 자리였다 — 접으면 스크롤할 거리가 0 이 되어
-   * 위로 올려 다시 펼 방법이 사라진다(캘린더 화면 계측: 펼침 156px → 접힘 0px).
+   * 내용이 화면을 못 채우면 스크롤할 거리가 없어 머리가 접히지도 펴지지도 않는다.
+   * 계측: 사람 필터를 걸면 24px, 캘린더로 보면 접은 뒤 0px 까지 줄었다.
+   * 손가락을 밀어도 아무 일이 없거나, 접힌 채 되돌릴 방법이 사라졌다.
    *
-   * 잃는 것도 크지 않다. 펼친 채로 스크롤할 수 있는 만큼이 곧 아직 못 본 부분이라,
-   * 접지 않아도 조금 내리면 다 보인다. 접기는 그 수고를 덜어 줄 뿐이다.
-   * 갇히는 것은 되돌릴 방법이 없는 고장이고, 조금 더 내리는 것은 불편이다.
+   * 접기를 막는 대신 여지를 남긴다. 96px 은 접는 지점(72px)을 넘기고,
+   * 접힌 뒤의 48px 은 펴는 지점(24px)을 넉넉히 넘기되 접는 지점에는 닿지 않는다.
    */
-  assert.match(fn("measure"), /y > CONDENSE_AT && roomToCondense\(\)\) setCondensed\(true\)/);
+  assert.match(css, /\.app-shell \{[^}]*min-height: calc\(100svh \+ 96px\)/);
+  assert.match(css, /\.app-shell\.is-condensed \{[^}]*min-height: calc\(100svh \+ 48px\)/);
+  assert.match(fn("measure"), /!condensed && y > CONDENSE_AT\) setCondensed\(true\)/);
 });
 
 test("되감긴 것을 사용자가 올린 것으로 읽지 않는다", () => {
@@ -1254,7 +1255,7 @@ test("되감긴 것을 사용자가 올린 것으로 읽지 않는다", () => {
   assert.match(fn("userIsAtTop"), /maxScrollable\(\) >= EXPAND_AT && window\.scrollY < EXPAND_AT/);
   assert.match(fn("measure"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
   // 다시 그리는 순간의 scrollY 로는 판단하지 않는다 — 아래 검사 참고.
-  assert.doesNotMatch(fn("recheckAfterRender"), /userIsAtTop/);
+  assert.doesNotMatch(fn("recheckAfterRender"), /setCondensed/);
 });
 
 test("접어도 달 이동은 남긴다", () => {
@@ -1605,10 +1606,8 @@ test("캘린더에서 날짜를 골라도 접힘이 저절로 풀리지 않는�
    * 펴지면서 레이아웃이 350px 자라 스크롤이 되돌아간 것처럼도 보였다.
    * 계측: 접힘 → scrollY 252 → 캘린더에서 0 → 날짜 선택 후 스크롤 가능량 812 로 늘며 펴짐.
    */
-  // 다시 그릴 때 펴는 유일한 경우는 "갇혔을 때"다. scrollY 는 보지 않는다.
-  assert.doesNotMatch(fn("recheckAfterRender"), /userIsAtTop|window\.scrollY/,
+  assert.doesNotMatch(fn("recheckAfterRender"), /setCondensed|userIsAtTop/,
     "다시 그리는 순간의 scrollY 로는 펴는 판단을 하지 않는다");
-  assert.match(fn("trappedWhileCondensed"), /maxScrollable\(\) < EXPAND_AT/);
   // 펴는 판단은 실제 스크롤에만 맡긴다.
   assert.match(fn("measure"), /condensed && userIsAtTop\(\)\) setCondensed\(false\)/);
   assert.doesNotMatch(app, /recheckCondense/, "옛 이름이 남아 있으면 무엇을 하는지 오해한다");
@@ -1650,30 +1649,4 @@ test("펴질 때 브라우저가 스크롤을 되돌려 도로 접히지 않게 
   assert.match(suspend, /setTimeout\([\s\S]{0,120}CONDENSE_MS\)/);
 });
 
-test("접어도 돌아올 길이 없으면 접지 않는다", () => {
-  /*
-   * 접으면 머리가 줄고 요약 카드가 사라져 문서가 그만큼 짧아진다.
-   * 캘린더 화면은 목록이 숨어 있어 원래도 짧다 — 접으면 스크롤할 거리가 0 이 되어
-   * 위로 올려 다시 펼 방법이 사라졌다(계측: 펼침 156px → 접힘 0px).
-   * 접어서 더 보여 줄 것도 없는 자리라, 아예 접지 않는 편이 낫다.
-   */
-  assert.match(fn("measure"), /y > CONDENSE_AT && roomToCondense\(\)\) setCondensed\(true\)/);
-  const room = fn("roomToCondense");
-  assert.match(room, /maxScrollable\(\) - 줄어들 >= EXPAND_AT/);
-  // 줄어드는 만큼은 지금 화면에서 잰다. 머리와 요약 카드가 사라지는 높이다.
-  assert.match(room, /overviewHead[\s\S]{0,80}overview\?\.offsetHeight/);
-});
 
-test("접힌 뒤 스크롤할 거리가 사라지면 대신 펴 준다", () => {
-  /*
-   * 목록에서 접고 캘린더로 넘어가면 목록이 숨어 문서가 짧아진다(61px → 0px).
-   * 위로 올릴 것이 없으니 되돌릴 방법도 없다.
-   */
-  assert.match(fn("recheckAfterRender"), /condensed && trappedWhileCondensed\(\)\) setCondensed\(false\)/);
-  assert.match(fn("trappedWhileCondensed"), /maxScrollable\(\) < EXPAND_AT/);
-  /*
-   * 문서가 "길어진" 경우는 걸리지 않아야 한다 — 캘린더에서 날짜를 골라 목록이 나오는 때다.
-   * 그때 펴 버리면 머리가 저절로 커진다(예전 버그).
-   */
-  assert.doesNotMatch(fn("recheckAfterRender"), /userIsAtTop/);
-});
