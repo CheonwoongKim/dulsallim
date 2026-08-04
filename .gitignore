@@ -14,3 +14,4 @@ output/
 .build.log
 .deploy.log
 .pull.log
+.gstack/
