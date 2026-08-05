@@ -77,8 +77,9 @@ export function paintAnalysis() {
   paintCompare(elements.compareLastYear, compared.lastYear);
 
   // 머리의 큰 숫자와 같은 범위를 본다. 범위가 다르면 분류를 다 더해도 위 숫자와 안 맞는다.
-  const inMonth = (key) => sumByCategory(untilDay(getMonthlyExpenses(mine, key), compared.maxDay));
-  const categories = inMonth(monthKey);
+  const inMonth = (key) => untilDay(getMonthlyExpenses(mine, key), compared.maxDay);
+  const monthly = inMonth(monthKey);
+  const categories = sumByCategory(monthly);
 
   // 견줄 기록이 없는 달은 고를 수 없다. 골라 둔 채 그런 달로 넘어오면 저절로 꺼진다.
   const against = compareWith === "previous" ? compared.previous : compareWith === "lastYear" ? compared.lastYear : null;
@@ -89,19 +90,70 @@ export function paintAnalysis() {
     return;
   }
 
+  // "전체"일 때만 막대 안을 사람별로 가른다. 한 사람을 고른 상태에서는 나눌 것이 없다.
+  const split = memberFilter ? null : splitByMember(monthly);
+
   elements.analysisList.innerHTML = against
-    ? paintCompared(categories, inMonth(against.month))
-    : paintShares(categories, compared.total);
+    ? paintCompared(categories, sumByCategory(inMonth(against.month)))
+    : paintShares(categories, compared.total, split);
 }
 
-/** 비교 끔: 막대는 그 달 총액 대비 비중. 옆의 %와 같은 것을 가리킨다. */
-function paintShares(categories, total) {
+/**
+ * 분류 → 사람 → 금액.
+ * 분류별 합계만으로는 한 막대 안에서 누가 얼마인지 알 수 없어 지출을 한 번 더 접는다.
+ */
+function splitByMember(monthly) {
+  return monthly.reduce((acc, expense) => {
+    const perMember = acc[expense.category] || {};
+    perMember[expense.member] = (perMember[expense.member] || 0) + expense.amount;
+    acc[expense.category] = perMember;
+    return acc;
+  }, {});
+}
+
+/**
+ * 가장 옅은 몫에 덮는 흰 천의 두께(%).
+ * 더 덮으면 회색 트랙과 헷갈려 막대가 거기서 끝난 것처럼 보인다 — 그러면 길이가 거짓말이 된다.
+ */
+const VEIL_MAX = 45;
+
+/**
+ * 막대 안을 사람별로 가른다. 전체 길이는 건드리지 않고 그 안에서만 나눈다.
+ *
+ * 색상은 분류 색 그대로 두고 흰 천을 덮어 진하기만 달리한다. 본 화면처럼 사람 색을 쓰면
+ * 무슨 분류인지 알 수 없고, 무늬는 4px 높이에서 얼룩으로만 보인다.
+ *
+ * 두께는 명부에서의 자리로 정한다 — 그 줄에 쓴 사람만으로 매기면 혼자 쓴 분류에서
+ * 아무나 맨 진한 색이 되어 줄마다 뜻이 달라진다. 명부로 정하면 어느 줄에서나 같은 진하기가 같은 사람이다.
+ *
+ * 0원인 사람은 조각을 만들지 않는다. 안 쓴 사람의 자리가 보이면 쓴 것으로 읽힌다.
+ */
+function paintSplit(shares, total, members) {
+  return members
+    .map((member, index) => ({
+      amount: shares[member.id] || 0,
+      // 앞사람은 분류 색 그대로(0%), 뒤로 갈수록 옅게. 사람이 늘면 칸만 촘촘해지고 끝은 그대로다.
+      veil: members.length > 1 ? (index / (members.length - 1)) * VEIL_MAX : 0,
+    }))
+    .filter(({ amount }) => amount > 0)
+    .map(({ amount, veil }) => `<span style="width:${(amount / total) * 100}%;--veil:${veil}%"></span>`)
+    .join("");
+}
+
+/**
+ * 비교 끔: 막대는 그 달 총액 대비 비중. 옆의 %와 같은 것을 가리킨다.
+ * @param split 분류 → 사람 → 금액. null이면 나누지 않고 한 덩어리로 그린다.
+ */
+function paintShares(categories, total, split) {
+  const members = getMembers();
   return categories
     .map(
       (category) => `
       <div class="analysis-row">
         <span class="analysis-name">${escapeHtml(category.label)}</span>
-        <span class="analysis-bar"><i style="width:${(category.total / total) * 100}%;background:${category.color}"></i></span>
+        <span class="analysis-bar"><i style="width:${(category.total / total) * 100}%;background:${category.color}">${
+          split ? paintSplit(split[category.key] || {}, category.total, members) : ""
+        }</i></span>
         <span class="analysis-amount">${formatMoney(category.total)}원</span>
         <span class="analysis-percent">${category.percent}%</span>
       </div>`,
