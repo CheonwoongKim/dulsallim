@@ -216,6 +216,11 @@
   justify-content: space-between;
 }
 
+/*
+ * 계단 밖 값이지만 리듬이 아니라 눈으로 맞춘 자리다.
+ * 아이콘(24)이 누를 자리(42) 한가운데 있어, 상자를 글줄에 맞추면 그림이 안으로 들어가 보인다.
+ * 그림의 가장자리가 오른쪽 여백과 나란해지도록 상자를 그만큼 끌어낸다.
+ */
 .close-button {
   margin: -5px -7px 0 0;
 }
@@ -329,7 +334,7 @@
 }
 
 .fixed-hint {
-  margin: -6px 0 0;
+  margin: calc(var(--space-2) * -1) 0 0;
   color: var(--ink-soft);
   font-size: 12px;
   line-height: 1.6;

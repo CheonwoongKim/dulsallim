@@ -109,6 +109,7 @@
   background: var(--custom-color);
 }
 
+/* 계단 밖 값이지만 리듬이 아니다 — 동그라미 모서리에 걸쳐 놓으려고 밖으로 뺀 만큼이다. */
 .custom-swatch-icon {
   position: absolute;
   right: -3px;
@@ -237,7 +238,7 @@
 }
 
 .partner-goal {
-  margin: -6px 0 0;
+  margin: calc(var(--space-2) * -1) 0 0;
   padding: var(--space-3) var(--space-3);
   border-radius: 12px;
   background: var(--paper-deep);

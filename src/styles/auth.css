@@ -43,7 +43,7 @@
 /* 이메일 기억하기 */
 .remember-row {
   display: flex;
-  margin-top: -4px;
+  margin-top: calc(var(--space-1) * -1);
   gap: 9px;
   align-items: center;
   color: var(--ink-soft);
