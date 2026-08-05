@@ -3,13 +3,17 @@
   font-size: 19px;
   font-weight: var(--weight-bold);
   letter-spacing: -0.04em;
-  /*
-   * 여기서는 이 글자가 줄 높이를 스스로 정한다 — 본 화면과 달리 옆 화살표(42)보다 크다.
-   * 그래서 공용 여백을 10 에서 8 로 계단에 맞추자 줄이 47 에서 43 으로 줄고
-   * 아래 내용이 통째로 4px 올라갔다. 이 화면은 아직 차례가 아니라 원래 높이로 묶어 둔다.
-   * 이 화면을 손볼 때 줄 높이를 글자에 맡기지 말고 직접 정하면 이 예외는 사라진다.
-   */
-  padding-block: 10px;
+}
+
+/*
+ * 줄 높이는 줄이 정한다.
+ *
+ * 이 화면의 달 글자는 19px 이라 옆 화살표(42)보다 커서, 그냥 두면 글자의 안쪽 여백이
+ * 줄 높이를 정하게 된다. 그러면 공용 여백을 한 칸 줄이는 것만으로 이 화면 전체가
+ * 통째로 4px 올라간다 — 실제로 그랬다(비교 버튼 y317 → y312).
+ */
+#analysis-page .month-control {
+  min-height: var(--space-12);
 }
 
 /* 전체 / 사람. 입력 폼의 결제자 선택과 같은 생김새를 쓰되 사람 수만큼 늘어난다. */
@@ -21,7 +25,7 @@
   display: flex;
   min-height: 42px;
   min-width: 0;
-  padding: 6px var(--space-2);
+  padding: var(--space-2) var(--space-2);
   border: 0;
   border-radius: 11px;
   align-items: center;
@@ -55,7 +59,7 @@
 /* 지난달·작년 비교. 누르면 아래 분류별 막대에 그 달이 함께 그려진다. */
 .compare-list {
   display: grid;
-  padding: 6px;
+  padding: var(--space-2);
   border-radius: 16px;
   gap: var(--space-05);
   background: var(--white);
@@ -64,10 +68,10 @@
 
 .compare-list button {
   display: grid;
-  padding: 10px var(--space-3);
+  padding: var(--space-3) var(--space-3);
   border: 0;
   border-radius: 11px;
-  gap: 10px;
+  gap: var(--space-2);
   align-items: center;
   grid-template-columns: auto 1fr auto;
   background: transparent;
@@ -102,7 +106,7 @@
 }
 
 .compare-hint {
-  margin: -10px 0 0;
+  margin: calc(var(--space-2) * -1) 0 0;
   padding: 0 var(--space-1);
   color: var(--ink-soft);
   font-size: 12px;
@@ -136,12 +140,12 @@
 .analysis-categories {
   display: grid;
   /*
-   * 위쪽 항목들(월·사람·총액·비교)은 '이 달이 어땠나' 한 덩어리라 18px로 촘촘하다.
-   * 여기서부터는 다른 이야기라 한 칸 더 벌린다. 격자 gap 과 더해져 36px 이 된다.
+   * 위쪽 항목들(월·사람·총액·비교)은 '이 달이 어땠나' 한 덩어리라 16px로 촘촘하다.
+   * 여기서부터는 다른 이야기라 한 칸 더 벌린다. 감싼 자리의 gap 과 더해져 32px 이 된다.
    * (선을 긋는 대신 여백으로 나눈다 — 이 앱은 단락선을 쓰지 않는다.)
    */
-  margin-top: 18px;
-  gap: 10px;
+  margin-top: var(--space-4);
+  gap: var(--space-2);
 }
 
 /*
@@ -152,7 +156,7 @@
 #analysis-list {
   display: grid;
   grid-template-columns: auto 1fr auto auto;
-  gap: 18px 10px;
+  gap: var(--space-4) var(--space-2);
   align-items: center;
 }
 
@@ -212,7 +216,7 @@
 /* 비교 켬: 막대 두 줄이 한 칸에 들어간다. */
 .analysis-pair {
   display: grid;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 /* 비교 달은 뒤로 물러나 보이게. 같은 색이라 어느 분류의 짝인지 바로 읽힌다. */
