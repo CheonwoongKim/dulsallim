@@ -567,6 +567,35 @@ test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
   assert.match(css, /\.month-cell\.is-today \{[^}]*color: var\(--accent-dark\)/);
 });
 
+test("디자인 문서는 코드와 어긋나지 않는다", async () => {
+  /*
+   * 문서가 코드와 어긋나면 없느니만 못하다 — 읽은 사람이 틀린 값을 쓴다.
+   * 그래서 세 가지를 본다.
+   *  · 문서가 부르는 토큰이 실제로 있나 (--text-14 만 예외. "없다"는 것을 보이려고 적었다)
+   *  · 실제 토큰인데 문서가 아예 안 다루는 것이 있나
+   *  · 문서가 값까지 적은 것이 코드의 값과 같나
+   */
+  const { readFile } = await import("node:fs/promises");
+  const 문서 = await readFile(new URL("../DESIGN.md", import.meta.url), "utf8");
+  const i = css.indexOf(":root {");
+  const root = css.slice(i, css.indexOf("\n}", i));
+
+  const 부르는것 = [...new Set([...문서.matchAll(/--[a-z][\w-]*/g)].map((m) => m[0]))];
+  const 없는것 = 부르는것.filter((t) => t !== "--text-14" && !root.includes(`${t}:`) && !css.includes(`@property ${t}`));
+  assert.deepEqual(없는것, [], "문서가 없는 토큰을 부르고 있다");
+
+  const 실제 = [...root.matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]);
+  const 빠진것 = 실제.filter((t) => !문서.includes(t));
+  assert.deepEqual(빠진것, [], "새 토큰을 만들고 문서에 적지 않았다");
+
+  const 어긋남 = [];
+  for (const [, 이름, 값] of 문서.matchAll(/(--[\w-]+)\s+(\d+(?:\.\d+)?(?:px|ms|em)|999px|50%)\b/g)) {
+    const m = root.match(new RegExp(`${이름}:\\s*([^;]+);`));
+    if (m && m[1].trim() !== 값) 어긋남.push(`${이름} 문서 ${값} vs 코드 ${m[1].trim()}`);
+  }
+  assert.deepEqual(어긋남, [], "문서에 적힌 값이 코드와 다르다");
+});
+
 test("움직이는 시간은 토큰으로만 적는다", () => {
   /*
    * 12가지였다 — 180·200·220·260·280·420·480·600·620·650 에 기존 토큰 둘.
