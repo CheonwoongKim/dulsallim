@@ -77,9 +77,8 @@ export function paintAnalysis() {
   paintCompare(elements.compareLastYear, compared.lastYear);
 
   // 머리의 큰 숫자와 같은 범위를 본다. 범위가 다르면 분류를 다 더해도 위 숫자와 안 맞는다.
-  const inMonth = (key) => untilDay(getMonthlyExpenses(mine, key), compared.maxDay);
-  const monthly = inMonth(monthKey);
-  const categories = sumByCategory(monthly);
+  const inMonth = (key) => sumByCategory(untilDay(getMonthlyExpenses(mine, key), compared.maxDay));
+  const categories = inMonth(monthKey);
 
   // 견줄 기록이 없는 달은 고를 수 없다. 골라 둔 채 그런 달로 넘어오면 저절로 꺼진다.
   const against = compareWith === "previous" ? compared.previous : compareWith === "lastYear" ? compared.lastYear : null;
@@ -90,89 +89,19 @@ export function paintAnalysis() {
     return;
   }
 
-  /*
-   * 막대 안은 늘 결제자로 가른다 — "전체"에서만 가르고 사람을 고르면 그만두면,
-   * 같은 그림이 화면 상태에 따라 다른 것을 말하게 된다.
-   * 사람을 고른 화면에서는 이미 그 사람 것만 남아 있어 저절로 한 조각이 된다.
-   */
-  const split = splitByMember(monthly);
-
   elements.analysisList.innerHTML = against
-    ? paintCompared(categories, sumByCategory(inMonth(against.month)))
-    : paintShares(categories, split);
+    ? paintCompared(categories, inMonth(against.month))
+    : paintShares(categories, compared.total);
 }
 
-/**
- * 분류 → 사람 → 금액.
- * 분류별 합계만으로는 한 막대 안에서 누가 얼마인지 알 수 없어 지출을 한 번 더 접는다.
- */
-function splitByMember(monthly) {
-  return monthly.reduce((acc, expense) => {
-    const perMember = acc[expense.category] || {};
-    perMember[expense.member] = (perMember[expense.member] || 0) + expense.amount;
-    acc[expense.category] = perMember;
-    return acc;
-  }, {});
-}
-
-/**
- * 가장 옅은 몫에 덮는 흰 천의 두께(%).
- * 더 덮으면 회색 트랙과 헷갈려 그 조각이 빈자리로 읽힌다 — 그러면 그 사람 몫이 사라진다.
- */
-const VEIL_MAX = 45;
-
-/**
- * 트랙을 꽉 채운 막대 안을 사람별 금액 비율로 나눈다.
- *
- * 색상은 분류 색 그대로 두고 흰 천을 덮어 진하기만 달리한다. 본 화면처럼 사람 색을 쓰면
- * 무슨 분류인지 알 수 없고, 무늬는 4px 높이에서 얼룩으로만 보인다.
- *
- * 두께는 명부에서의 자리로 정한다 — 그 줄에 쓴 사람만으로 매기면 혼자 쓴 분류에서
- * 아무나 맨 진한 색이 되어 줄마다 뜻이 달라진다. 명부로 정하면 어느 줄에서나 같은 진하기가 같은 사람이다.
- *
- * 0원인 사람은 조각을 만들지 않는다. 안 쓴 사람의 자리가 보이면 쓴 것으로 읽힌다.
- * 그래서 혼자 쓴 분류와 사람을 골라 놓은 화면에서는 조각 하나가 트랙을 통째로 채운다 —
- * 그 하나도 제 진하기를 그대로 쓰므로 어느 화면에서나 같은 진하기가 같은 사람이다.
- */
-function paintSplit(shares, total, members) {
-  return members
-    .map((member, index) => ({
-      amount: shares[member.id] || 0,
-      // 앞사람은 분류 색 그대로(0%), 뒤로 갈수록 옅게. 사람이 늘면 칸만 촘촘해지고 끝은 그대로다.
-      veil: members.length > 1 ? (index / (members.length - 1)) * VEIL_MAX : 0,
-    }))
-    .filter(({ amount }) => amount > 0)
-    .map(({ amount, veil }) => `<span style="width:${(amount / total) * 100}%;--veil:${veil}%"></span>`)
-    .join("");
-}
-
-/**
- * 비교 끔: 막대는 트랙을 꽉 채우고, 그 안이 사람 분포다. 길이는 아무것도 말하지 않는다.
- *
- * 예전에는 길이가 "그 달 총액 대비 이 분류의 비중"이었다. 그런데 그건 바로 옆의 %가
- * 이미 말하고 있었고, 사람 분포는 그 짧은 막대 안에 끼여 안 보였다 — 393 폭에서
- * 교통(1%)은 막대가 8px 이라 나눌 면적이 아예 없었다. 같은 값을 두 번 말하는 대신
- * 한쪽을 사람에게 내준다. 비중은 옆의 %·금액·금액 순 정렬 셋이 계속 나른다.
- *
- * 꽉 찬 막대가 "이 분류가 100%"로 읽히지 않는 이유는 **모든 줄이 똑같이 꽉 차서**다.
- * 줄마다 길이가 같으면 길이가 변수가 아니게 되어 눈이 거기서 뜻을 찾지 않는다
- * (한 줄만 꽉 차 있으면 100%로 읽힌다 — 여섯 줄이 다 그러면 그렇게 안 읽힌다).
- * 본 화면의 .ratio-bar 가 같은 짜임이라 이 앱에서 이미 본 그림이기도 하다.
- *
- * @param split 분류 → 사람 → 금액
- */
-function paintShares(categories, split) {
-  const members = getMembers();
+/** 비교 끔: 막대는 그 달 총액 대비 비중. 옆의 %와 같은 것을 가리킨다. */
+function paintShares(categories, total) {
   return categories
     .map(
       (category) => `
       <div class="analysis-row">
         <span class="analysis-name">${escapeHtml(category.label)}</span>
-        <span class="analysis-bar is-split"><i style="background:${category.color}">${paintSplit(
-          split[category.key] || {},
-          category.total,
-          members,
-        )}</i></span>
+        <span class="analysis-bar"><i style="width:${(category.total / total) * 100}%;background:${category.color}"></i></span>
         <span class="analysis-amount">${formatMoney(category.total)}원</span>
         <span class="analysis-percent">${category.percent}%</span>
       </div>`,
@@ -211,21 +140,6 @@ function paintCompared(categories, otherCategories) {
     .join("");
 }
 
-/** hidden 은 자리를 없애므로, 같은 문구가 같은 폭에서 차지하는 높이만 읽히지 않는 사본으로 남긴다. */
-let compareHintSpace = null;
-
-function preserveCompareHintSpace() {
-  if (!compareHintSpace) {
-    compareHintSpace = elements.compareHint.cloneNode(true);
-    compareHintSpace.removeAttribute("id");
-    compareHintSpace.classList.add("compare-hint-space");
-    compareHintSpace.setAttribute("aria-hidden", "true");
-    elements.compareHint.after(compareHintSpace);
-  }
-  compareHintSpace.textContent = elements.compareHint.textContent;
-  compareHintSpace.hidden = !elements.compareHint.hidden;
-}
-
 /** 견줄 기록이 있는 달만 고를 수 있게 한다. */
 function paintComparePicker(compared, active) {
   const 가능 = { previous: compared.previous, lastYear: compared.lastYear };
@@ -238,9 +152,8 @@ function paintComparePicker(compared, active) {
     button.setAttribute("aria-pressed", String(Boolean(active) && compareWith === mode));
   });
 
-  // 고를 게 있는데 아직 안 골랐을 때만 알린다. hidden 은 읽기에서도 빼고, 자리는 CSS 가 지킨다.
+  // 고를 게 있는데 아직 안 골랐을 때만 알린다. 한 번 고르고 나면 설명이 필요 없다.
   elements.compareHint.hidden = !고를수있음 || Boolean(active);
-  preserveCompareHintSpace();
 }
 
 /** 같은 것을 다시 누르면 꺼진다. */
