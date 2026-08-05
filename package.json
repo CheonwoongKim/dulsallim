@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "playwright": "^1.62.1",
+    "postcss": "^8.5.25",
     "vite": "^7.0.0"
   },
   "dependencies": {

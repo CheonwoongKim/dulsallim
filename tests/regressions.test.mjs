@@ -9,85 +9,14 @@ import { MAX_AMOUNT, formatAmountInput, isValidAmount, readAmount } from "../src
 /** 배치 크기는 소스에서 읽는다 — 숫자를 두 곳에 적으면 한쪽만 바뀐다. */
 const APPLY_BATCH_SIZE = Number(/const APPLY_BATCH = (\d+);/.exec(app)[1]);
 import { css, fn, html, source as app, sourceLineCounts, STYLE_FILES, sw } from "./helpers/source.mjs";
-
-/** 주석 속 괄호와 세미콜론은 CSS 구조가 아니다. 줄·글자 위치는 보존한다. */
-const 주석을빈칸으로 = (source) => source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "));
-
-/**
- * 여러 줄 값도 선언 하나로 읽고, 어느 선택자와 바로 앞 주석에 속하는지 남긴다.
- * 완전한 CSS 파서는 아니지만 이 파일의 옛 줄 단위 정규식처럼 값의 둘째 줄을 버리지는 않는다.
- */
-function css구조읽기(source) {
-  const text = 주석을빈칸으로(source);
-  const 블록들 = [];
-  const 선언들 = [];
-  const stack = [];
-  let 조각시작 = 0;
-  let quote = "";
-  let 괄호깊이 = 0;
-
-  for (let i = 0; i < text.length; i += 1) {
-    const ch = text[i];
-    if (quote) {
-      if (ch === "\\") i += 1;
-      else if (ch === quote) quote = "";
-      continue;
-    }
-    if (ch === "\"" || ch === "'") {
-      quote = ch;
-      continue;
-    }
-    if (ch === "(") {
-      괄호깊이 += 1;
-      continue;
-    }
-    if (ch === ")") {
-      괄호깊이 -= 1;
-      continue;
-    }
-    if (괄호깊이 > 0) continue;
-
-    if (ch === "{") {
-      const block = { selector: text.slice(조각시작, i).trim(), start: 조각시작, open: i, close: -1 };
-      블록들.push(block);
-      stack.push(block);
-      조각시작 = i + 1;
-      continue;
-    }
-    if (ch === ";") {
-      const 조각 = text.slice(조각시작, i);
-      const 앞공백 = 조각.length - 조각.trimStart().length;
-      const 적은것 = 조각.trim();
-      const colon = 적은것.indexOf(":");
-      const property = 적은것.slice(0, colon).trim();
-      if (colon > 0 && /^[a-zA-Z-][\w-]*$/.test(property) && stack.length > 0) {
-        선언들.push({
-          property,
-          value: 적은것.slice(colon + 1).trim(),
-          selector: stack.at(-1).selector,
-          contexts: stack.map((block) => block.selector),
-          block: stack.at(-1),
-          start: 조각시작 + 앞공백,
-        });
-      }
-      조각시작 = i + 1;
-      continue;
-    }
-    if (ch === "}") {
-      const block = stack.pop();
-      if (block) block.close = i;
-      조각시작 = i + 1;
-    }
-  }
-  return { 블록들, 선언들 };
-}
+import { css구조읽기 } from "./helpers/css-model.mjs";
 
 const 스타일별CSS = Object.fromEntries(await Promise.all(STYLE_FILES.map(async (name) => [
   name,
   await readFile(new URL(`../src/styles/${name}.css`, import.meta.url), "utf8"),
 ])));
-const CSS구조 = css구조읽기(css);
-const 스타일별구조 = Object.fromEntries(STYLE_FILES.map((name) => [name, css구조읽기(스타일별CSS[name])]));
+const CSS구조 = css구조읽기(css, "합친 CSS");
+const 스타일별구조 = Object.fromEntries(STYLE_FILES.map((name) => [name, css구조읽기(스타일별CSS[name], `${name}.css`)]));
 const 루트블록 = 스타일별구조.base.블록들.filter(({ selector }) => selector === ":root")[0];
 const 루트토큰 = new Set(스타일별구조.base.선언들
   .filter(({ selector, property }) => selector === ":root" && property.startsWith("--"))
@@ -100,8 +29,6 @@ const 단일토큰인가 = (value, prefix) => {
   return Boolean(m && 루트토큰.has(m[1]));
 };
 const 선언표시 = ({ selector, property, value }) => `${selector} { ${property}: ${value}; }`;
-const 이유주석이있나 = (declaration) => /\/\*[\s\S]*?\S[\s\S]*?\*\//
-  .test(css.slice(declaration.block.start, declaration.start));
 
 test("제출 검증은 날짜를 반드시 확인한다", () => {
   const validateFn = fn("validateExpenseInput");
@@ -975,7 +902,7 @@ test("간격 계단 위의 값은 토큰으로만 적는다", () => {
       .map((m) => Number(m[1]));
     if (숫자들.some((value) => value < 0)) continue;
     for (const value of 숫자들) {
-      if (계단.includes(value) || !이유주석이있나(declaration)) {
+      if (계단.includes(value) || !declaration.이유주석) {
         날것.push(`${선언표시(declaration)} · ${value}px${계단.includes(value) ? " 는 계단 위" : " 계단 밖 이유 주석 없음"}`);
       }
     }
@@ -998,7 +925,7 @@ test("간격 계단 위의 값은 토큰으로만 적는다", () => {
     const 눈으로맞춘 = declaration.selector === ".close-button"
       && declaration.property === "margin"
       && declaration.value.replace(/\s+/g, " ") === "-5px -7px 0 0"
-      && 이유주석이있나(declaration);
+      && declaration.이유주석;
     if (!눈으로맞춘) 음수날것.push(선언표시(declaration));
   }
   assert.deepEqual(음수날것, [], "위로 당기는 여백을 숫자로 적었다 — calc(var(--space-N) * -1) 을 쓸 것");
