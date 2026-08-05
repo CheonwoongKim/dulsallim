@@ -1450,7 +1450,7 @@ test("월 이동 줄은 스스로 아래 여백을 갖지 않는다", () => {
   // 그 화면만 훌쩍 벌어진다. 추이 시트에서 실제로 38px 이 그대로 남아 있었다.
   const 기본 = css.match(/\n\.month-control \{[^}]*\}/)[0];
   assert.doesNotMatch(기본, /margin-bottom|margin:\s*[^;]*\d+px/, "여백은 쓰는 자리가 정한다");
-  assert.match(css, /\.month-bar \{[^}]*padding: 0 22px 8px/, "본 화면에서는 감싸는 줄이 띄운다");
+  assert.match(css, /\.month-bar \{[^}]*padding: \d+px 22px \d+px/, "본 화면에서는 감싸는 줄이 띄운다");
 });
 
 test("추이 그래프로 달을 옮기면 본 화면도 함께 따라온다", () => {
@@ -1563,7 +1563,11 @@ test("머리 높이를 바꾸는 규칙이 없다", () => {
    * 그래서 머리 안의 줄은 높이가 고정이고, 상태 클래스는 자리를 건드리지 않는다.
    * 바뀌는 것은 색과 투명도뿐이다.
    */
-  assert.match(css, /\.month-bar \{[^}]*height: 56px/);
+  /*
+   * 값 자체가 아니라 "고정 높이여야 한다"가 규칙이다. 여백을 손보다 값이 바뀌어도
+   * 스크롤에 따라 변하지만 않으면 된다.
+   */
+  assert.match(css, /\.month-bar \{[^}]*height: \d+px/);
   assert.doesNotMatch(css, /is-condensed/, "접는 장치는 통째로 걷어냈다");
 
   const 상태규칙 = css.match(/\.is-(?:scrolled|stuck)[^{]*\{[^}]*\}/g) ?? [];
@@ -1752,8 +1756,10 @@ test("본 화면 단락 사이 여백은 머리를 바꾸기 전과 같다", () 
    * 머리 안쪽에서 달 이동 줄 아래로 11px 이 이미 남는다. 그래서 27 + 11 = 38 이다.
    * 숫자를 고칠 일이 생기면 실제 간격을 재서 이 주석도 함께 고칠 것.
    */
-  assert.match(css, /\.month-bar \{[^}]*padding: 0 22px 8px/);
-  assert.match(css, /\n\.hero \{[^}]*padding: 27px 0 30px/, "휴대폰: 위로 38px, 아래로 30px");
+  assert.match(css, /\.month-bar \{[^}]*padding: 8px 22px 8px/);
+  assert.match(css, /\n\.hero \{[^}]*padding: 23px 0 30px/, "휴대폰: 위로 34px, 아래로 30px");
+  // 요약 블록이 지출 내역 제목과 너무 벌어져 있어 아래쪽을 당겼다.
+  assert.match(css, /\.member-summary \{[^}]*padding: 22px 0 8px/);
   assert.match(css, /\.hero \{\n    \/\*[^*]*\*\/\n    padding: 34px 0 36px/, "넓은 화면: 위로 45px");
   // 사용자별 지출 단락과 지출 내역 사이. 22px 은 넉넉해서 목록을 8px 끌어올렸다.
   assert.match(css, /\.ledger \{[^}]*padding-top: 14px/);

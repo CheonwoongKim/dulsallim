@@ -40,11 +40,10 @@
 .hero {
   position: relative;
   /*
-   * 위 27 아래 30. 달 이동 줄과 사이가 38px, 사용자별 지출과 사이가 30px 이 되는 값이다
+   * 위 23 아래 30. 달 이동 줄과 사이가 34px, 사용자별 지출과 사이가 30px 이 되는 값이다
    * (머리 안쪽에서 달 이동 줄 아래로 11px 이 이미 남는다).
-   * 접던 시절과 같은 간격이다 — 머리 구조가 바뀌었다고 자간까지 바뀔 이유는 없다.
    */
-  padding: 27px 0 30px;
+  padding: 23px 0 30px;
   text-align: center;
   animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -164,9 +163,10 @@ main {
 .month-bar {
   display: flex;
   width: min(100%, 780px);
-  height: 56px;
+  /* 위 8 + 화살표 42 + 가운데 정렬로 남는 6 + 아래 8 = 64. 위 여백을 8px 로 두려고 잡은 값이다. */
+  height: 64px;
   margin: 0 auto;
-  padding: 0 22px 8px;
+  padding: 8px 22px 8px;
   align-items: center;
 }
 
@@ -325,7 +325,8 @@ main {
 
 .member-summary {
   display: grid;
-  padding: 22px 0 24px;
+  /* 아래 8. 지출 내역 제목과 너무 벌어져 있어 요약 블록 쪽을 16px 당겼다. */
+  padding: 22px 0 8px;
   grid-template-columns: 1fr 1fr;
   gap: 20px 26px;
 }
