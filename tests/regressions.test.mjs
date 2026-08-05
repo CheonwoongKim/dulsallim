@@ -668,10 +668,24 @@ test("디자인 문서는 코드와 어긋나지 않는다", async () => {
    *  · 문서가 부르는 토큰이 실제로 있나 (--text-14 만 예외. "없다"는 것을 보이려고 적었다)
    *  · 실제 토큰인데 문서가 아예 안 다루는 것이 있나
    *  · 문서가 값까지 적은 것이 코드의 값과 같나
+   *
+   * 마지막 것은 값 표로 쓴 코드 블록만 본다. 산문의 "글자는 20px"까지 훑으면
+   * 어느 숫자가 어느 토큰 값인지 정규식은 알 수 없다. 표에서 이름만 부른 색·그림자와
+   * --focus-outline 도 값은 견주지 않고, 위의 존재 검사만 한다.
+   *
+   * 값 칸은 통째로 견준다. 단위 없는 50·1.6 을 빠뜨렸고(재현: --layer-sheet 52,
+   * --leading-text 1.7), 단순 숫자 하나만 보던 것으로는 clamp도 놓쳤다
+   * (재현: --text-hero clamp(48px, 14vw, 64px)). 숫자·함수로 시작하는 여러 토막은
+   * 공백만 고른 뒤 전부 견주므로 cubic-bezier와 3px solid rgba(...) 같은 값도 잡는다.
+   * --font는 문서가 CSS를 그대로 쓰지 않고 글꼴 부류를 화살표로 적었다. 거기서는
+   * 두 이름과 그 사이의 애플 시스템 글꼴까지만 견주며, 구체적인 fallback 목록은 못 견준다.
    */
   const 문서 = await readFile(new URL("../DESIGN.md", import.meta.url), "utf8");
   assert.ok(루트블록, "base.css 에 :root 가 없다");
   const root = 스타일별CSS.base.slice(루트블록.open + 1, 루트블록.close);
+  const 루트값 = new Map(스타일별구조.base.선언들
+    .filter(({ selector, property }) => selector === ":root" && property.startsWith("--"))
+    .map(({ property, value }) => [property, value]));
 
   const 부르는것 = [...new Set([...문서.matchAll(/--[a-z][\w-]*/g)].map((m) => m[0]))];
   const 없는것 = 부르는것.filter((t) => t !== "--text-14" && !root.includes(`${t}:`) && !css.includes(`@property ${t}`));
@@ -681,10 +695,42 @@ test("디자인 문서는 코드와 어긋나지 않는다", async () => {
   const 빠진것 = 실제.filter((t) => !문서.includes(t));
   assert.deepEqual(빠진것, [], "새 토큰을 만들고 문서에 적지 않았다");
 
+  const 값정리 = (value) => value.trim()
+    .replace(/\s+/g, " ")
+    .replace(/\s*([(),/])\s*/g, "$1");
+  const 코드블록들 = [...문서.matchAll(/```[^\n]*\n([\s\S]*?)```/g)].map((m) => m[1]);
   const 어긋남 = [];
-  for (const [, 이름, 값] of 문서.matchAll(/(--[\w-]+)\s+(\d+(?:\.\d+)?(?:px|ms|em)|999px|50%)\b/g)) {
-    const m = root.match(new RegExp(`${이름}:\\s*([^;]+);`));
-    if (m && m[1].trim() !== 값) 어긋남.push(`${이름} 문서 ${값} vs 코드 ${m[1].trim()}`);
+  for (const block of 코드블록들) {
+    for (const line of block.split("\n")) {
+      const 값칸들 = line.matchAll(/(?:^|\s{2,})(--[\w-]+)\s+(.+?)(?=\s{2,}\S|\s+—(?:\s|$)|$)/g);
+      for (const [, 이름, 값] of 값칸들) {
+        // 설명과 값은 둘 다 낱말일 수 있다. 숫자·함수로 시작한 칸만 CSS 값이라고 믿는다.
+        if (!/^(?:-?(?:\d|\.\d)|[a-zA-Z_-][\w-]*\()/.test(값)) continue;
+        const 코드값 = 루트값.get(이름);
+        if (코드값 && 값정리(코드값) !== 값정리(값)) {
+          어긋남.push(`${이름} 문서 ${값} vs 코드 ${코드값}`);
+        }
+      }
+    }
+  }
+
+  const 글꼴줄 = 코드블록들.flatMap((block) => block.split("\n"))
+    .find((line) => /^--font\s+/.test(line));
+  const 문서글꼴 = 글꼴줄?.match(/^--font\s+(.+)$/)?.[1].split(/\s*→\s*/);
+  const 코드글꼴 = 루트값.get("--font")?.split(",")
+    .map((family) => family.trim().replace(/^(["'])(.*)\1$/, "$2"));
+  if (문서글꼴?.length === 3 && 코드글꼴) {
+    const [첫글꼴, 시스템글꼴, 마지막글꼴] = 문서글꼴;
+    const 첫자리 = 코드글꼴.indexOf(첫글꼴);
+    const 마지막자리 = 코드글꼴.indexOf(마지막글꼴);
+    const 시스템자리 = 코드글꼴.findIndex((family) =>
+      ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo"].includes(family));
+    if (첫자리 !== 0 || !시스템글꼴.includes("애플 시스템")
+      || 시스템자리 <= 첫자리 || 시스템자리 >= 마지막자리) {
+      어긋남.push(`--font 문서 ${문서글꼴.join(" → ")} vs 코드 ${루트값.get("--font")}`);
+    }
+  } else {
+    어긋남.push("--font의 글꼴 부류를 문서와 코드에서 읽을 수 없다");
   }
   assert.deepEqual(어긋남, [], "문서에 적힌 값이 코드와 다르다");
 });
