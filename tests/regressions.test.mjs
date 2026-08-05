@@ -564,6 +564,41 @@ test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
   assert.match(css, /\.month-cell\.is-today \{[^}]*color: var\(--accent-dark\)/);
 });
 
+test("줄 사이와 자간도 토큰으로만 적는다", () => {
+  /*
+   * 줄 사이가 여섯 가지(1·1.5·1.55·1.6·1.65·1.7)였다. 1.5 와 1.6 은 12px 글자에서
+   * 한 줄에 1.2px 차이라 나란히 놓고 봐야 겨우 다르고, 어느 글이 어느 값인지 규칙도 없었다 —
+   * 그래프 설명은 1.5, 고정비 안내는 1.6 인데 둘 다 같은 종류의 안내 글이다.
+   *
+   * 자간은 달랐다. 값이 제각각인 게 아니라 "글자가 클수록 좁힌다"는 규칙이 이미 있었다.
+   * 그래서 글자 계단의 띠마다 하나씩 두고 이름으로 묶었다 — 크기를 고르면 자간이 따라온다.
+   * 띠에서 벗어나 있던 둘은 제자리로 옮겼다(로고 20px 이 -0.05em, 원 표시 17px 이 -0.04em).
+   */
+  for (const 이름 of ["flat", "text"]) {
+    assert.match(css, new RegExp(`--leading-${이름}:`), `--leading-${이름} 토큰이 없다`);
+  }
+  const 띠 = ["hero", "title", "heading", "strong", "body", "small", "eyebrow"];
+  const 값 = 띠.slice(0, 6).map((이름) => {
+    const m = css.match(new RegExp(`--tracking-${이름}: (-?[\\d.]+)em`));
+    assert.ok(m, `--tracking-${이름} 토큰이 없다`);
+    return Number(m[1]);
+  });
+  // 큰 글자일수록 더 좁아야 한다. 순서가 뒤집히면 규칙이 아니라 그냥 목록이 된다.
+  for (let i = 1; i < 값.length; i += 1) {
+    assert.ok(값[i] > 값[i - 1],
+      `${띠[i - 1]}(${값[i - 1]}) 이 ${띠[i]}(${값[i]}) 보다 좁아야 한다`);
+  }
+  assert.match(css, /--tracking-eyebrow: 0\.04em/, "작은 이름표만 거꾸로 벌린다");
+
+  const 밖 = css.split(/:root \{[\s\S]*?\n\}/).join("\n");
+  for (const [이름, 속성, 접두] of [["줄 사이", "line-height", "leading"], ["자간", "letter-spacing", "tracking"]]) {
+    const 날것 = [...밖.matchAll(new RegExp(`${속성}:\\s*([^;]+);`, "g"))]
+      .map((m) => m[1].trim())
+      .filter((값) => !값.startsWith(`var(--${접두}-`));
+    assert.deepEqual(날것, [], `${이름}을 숫자로 적었다 — --${접두}-* 을 쓸 것`);
+  }
+});
+
 test("무엇이 무엇 위에 오는지는 한 목록이 정한다", () => {
   /*
    * 1·5·10·15·20·30·50·70·80 이 흩어져 있었다. 숫자만 봐서는 순서를 알 수 없어

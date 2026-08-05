@@ -40,7 +40,7 @@
   margin: 0;
   font-size: var(--text-20);
   font-weight: var(--weight-bold);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-heading);
 }
 
 .page-body {
@@ -68,7 +68,7 @@
 
 .profile-preview strong {
   font-size: var(--text-17);
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-strong);
 }
 
 .palette {
@@ -123,7 +123,7 @@
   background: var(--paper);
   font-size: var(--text-15);
   font-weight: var(--weight-bold);
-  line-height: 1;
+  line-height: var(--leading-flat);
   place-items: center;
   pointer-events: none;
 }
@@ -205,7 +205,7 @@
   margin: 0;
   color: var(--ink-soft);
   font-size: var(--text-13);
-  line-height: 1.6;
+  line-height: var(--leading-text);
 }
 
 .danger-zone b {
@@ -282,7 +282,7 @@
 .switch-row small {
   color: var(--ink-soft);
   font-size: var(--text-12);
-  line-height: 1.5;
+  line-height: var(--leading-text);
 }
 
 /* 진짜 체크박스는 숨기고 모양만 바꾼다. 키보드·화면 낭독기에는 그대로 체크박스다. */
@@ -393,7 +393,7 @@
   padding: 0 var(--space-05);
   color: var(--ink-soft);
   font-size: var(--text-13);
-  line-height: 1.6;
+  line-height: var(--leading-text);
 }
 
 /* 페이지 머리 오른쪽 끝의 동작 버튼 */

@@ -158,5 +158,5 @@
   margin: 0;
   font-size: var(--text-12);
   color: var(--ink-soft);
-  line-height: 1.5;
+  line-height: var(--leading-text);
 }

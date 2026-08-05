@@ -2,7 +2,7 @@
 #analysis-page .month-label {
   font-size: var(--text-20);
   font-weight: var(--weight-bold);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-heading);
 }
 
 /*
@@ -53,7 +53,7 @@
 .analysis-total strong {
   font-size: var(--text-34);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.05em;
+  letter-spacing: var(--tracking-title);
 }
 
 /* 지난달·작년 비교. 누르면 아래 분류별 막대에 그 달이 함께 그려진다. */

@@ -64,7 +64,7 @@
   color: var(--ink);
   font-size: var(--text-20);
   font-weight: var(--weight-bold);
-  letter-spacing: -0.05em;
+  letter-spacing: var(--tracking-heading);
   text-decoration: none;
 }
 
@@ -269,7 +269,7 @@ main {
   color: var(--ink);
   font-size: var(--text-17);
   font-weight: var(--weight-bold);
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-strong);
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -295,7 +295,7 @@ main {
   color: var(--ink-soft);
   font-size: var(--text-12);
   font-weight: var(--weight-bold);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-eyebrow);
 }
 
 .hero > .eyebrow,
@@ -312,15 +312,15 @@ main {
   justify-content: center;
   font-size: var(--text-hero);
   font-weight: var(--weight-bold);
-  letter-spacing: -0.075em;
-  line-height: 1;
+  letter-spacing: var(--tracking-hero);
+  line-height: var(--leading-flat);
 }
 
 .total-amount .currency {
   margin-left: var(--space-2);
   font-size: var(--text-17);
   font-weight: var(--weight-bold);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-strong);
 }
 
 .member-summary {
@@ -399,7 +399,7 @@ main {
 
 .member-value strong {
   font-size: var(--text-15);
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-body);
 }
 
 .member-value span {

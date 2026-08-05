@@ -38,7 +38,7 @@
 .sheet-header h2 {
   margin: 0;
   font-size: var(--text-28);
-  letter-spacing: -0.055em;
+  letter-spacing: var(--tracking-title);
 }
 
 .section-heading h2 {
@@ -104,7 +104,7 @@
   font-size: var(--text-12);
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-small);
 }
 
 .expense-copy {
@@ -139,7 +139,7 @@
 
 .expense-amount {
   font-size: var(--text-15);
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-body);
   white-space: nowrap;
 }
 
@@ -156,14 +156,14 @@
 .empty-state h3 {
   margin: 0 0 var(--space-2);
   font-size: var(--text-20);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-heading);
 }
 
 .empty-state p {
   margin: 0 0 var(--space-5);
   color: var(--ink-soft);
   font-size: var(--text-13);
-  line-height: 1.65;
+  line-height: var(--leading-text);
   /* 여러 줄로 흐르는 글이다. 마지막 줄에 한 낱말만 남는 것을 줄인다. */
   text-wrap: pretty;
 }

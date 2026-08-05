@@ -25,7 +25,7 @@
 .auth-title {
   margin: 0 0 var(--space-2);
   font-size: var(--text-34);
-  letter-spacing: -0.055em;
+  letter-spacing: var(--tracking-title);
   text-align: center;
 }
 
@@ -67,6 +67,6 @@
   margin: 0;
   color: var(--ink-soft);
   font-size: var(--text-15);
-  line-height: 1.6;
+  line-height: var(--leading-text);
   text-align: center;
 }
