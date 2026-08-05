@@ -4,7 +4,7 @@
   z-index: 80;
   inset: 0;
   display: grid;
-  padding: 24px 22px max(24px, env(safe-area-inset-bottom));
+  padding: var(--space-6) 22px max(var(--space-6), env(safe-area-inset-bottom));
   overflow-y: auto;
   align-content: center;
   justify-items: center;
@@ -33,7 +33,7 @@
 .auth-card input[type="password"] {
   /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
   font-size: 16px;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: border-color var(--motion) ease, box-shadow var(--motion) ease, background var(--motion) ease;
 }
 .auth-card .submit-button[disabled] {
   cursor: default;
@@ -49,7 +49,7 @@
   color: var(--ink-soft);
   cursor: pointer;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   /* 체크박스만 노리다 빗나가지 않도록 글자까지 눌러도 되게 둔다. */
   user-select: none;
 }

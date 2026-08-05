@@ -45,7 +45,7 @@
    */
   padding: 23px 0 30px;
   text-align: center;
-  animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise-in 620ms var(--ease-in-view) both;
 }
 
 .topbar {
@@ -55,7 +55,7 @@
   width: min(100%, 780px);
   height: 76px;
   margin: 0 auto;
-  padding: max(14px, env(safe-area-inset-top)) 22px 8px;
+  padding: max(14px, env(safe-area-inset-top)) 22px var(--space-2);
   align-items: center;
   justify-content: space-between;
 }
@@ -63,7 +63,7 @@
 .brand {
   color: var(--ink);
   font-size: 21px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: -0.05em;
   text-decoration: none;
 }
@@ -71,20 +71,20 @@
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ghost-button {
   min-height: 38px;
   padding: 0 14px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--ink);
   background: transparent;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 700;
-  transition: border-color 160ms ease, background 160ms ease;
+  font-weight: var(--weight-bold);
+  transition: border-color var(--motion) ease, background var(--motion) ease;
 }
 
 .ghost-button:hover {
@@ -110,14 +110,14 @@
 .add-button {
   display: none;
   min-height: 42px;
-  padding: 0 16px;
-  border-radius: 999px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
   align-items: center;
   gap: 7px;
   color: var(--white);
   background: var(--ink);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .add-button svg,
@@ -137,11 +137,11 @@ main {
   z-index: 1;
   width: min(100%, 780px);
   margin: 0 auto;
-  padding: 0 22px 128px;
+  padding: 0 22px var(--space-32);
 }
 
 .overview {
-  animation: rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise-in 620ms var(--ease-in-view) both;
 }
 
 .month-control {
@@ -166,7 +166,7 @@ main {
   /* 위 8 + 화살표 42 + 가운데 정렬로 남는 6 + 아래 8 = 64. 위 여백을 8px 로 두려고 잡은 값이다. */
   height: 64px;
   margin: 0 auto;
-  padding: 8px 22px 8px;
+  padding: var(--space-2) 22px var(--space-2);
   align-items: center;
 }
 
@@ -192,7 +192,7 @@ main {
   position: relative;
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 /*
@@ -236,9 +236,9 @@ main {
 .month-label {
   position: relative;
   min-width: 120px;
-  padding: 10px 8px;
+  padding: 10px var(--space-2);
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   /* 작은 총액과 한 줄에 서면 폭이 좁아진다. "2026년 8 / 월" 로 깨진 적이 있다. */
   white-space: nowrap;
 }
@@ -268,12 +268,12 @@ main {
   opacity: 0;
   color: var(--ink);
   font-size: 17px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: -0.03em;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: flex-grow 240ms ease, opacity 180ms ease;
+  transition: flex-grow var(--motion-slow) ease, opacity 180ms ease;
   pointer-events: none;
 }
 
@@ -294,7 +294,7 @@ main {
   overflow: hidden;
   color: var(--ink-soft);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: 0.04em;
 }
 
@@ -311,7 +311,7 @@ main {
   align-items: baseline;
   justify-content: center;
   font-size: clamp(46px, 14vw, 64px);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: -0.075em;
   line-height: 1;
 }
@@ -319,16 +319,16 @@ main {
 .total-amount .currency {
   margin-left: 7px;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: -0.04em;
 }
 
 .member-summary {
   display: grid;
   /* 아래 8. 지출 내역 제목과 너무 벌어져 있어 요약 블록 쪽을 16px 당겼다. */
-  padding: 22px 0 8px;
+  padding: 22px 0 var(--space-2);
   grid-template-columns: 1fr 1fr;
-  gap: 20px 26px;
+  gap: var(--space-5) 26px;
 }
 
 .member-row {
@@ -346,7 +346,7 @@ main {
   font: inherit;
   text-align: left;
   /* 바깥으로 번지는 box-shadow로 강조해 레이아웃을 밀지 않는다. */
-  transition: background 160ms ease, box-shadow 160ms ease;
+  transition: background var(--motion) ease, box-shadow var(--motion) ease;
 }
 
 .member-row[aria-pressed="true"] {
@@ -364,7 +364,7 @@ main {
   margin: 0;
   overflow: hidden;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -374,11 +374,11 @@ main {
   width: 30px;
   height: 30px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   place-items: center;
   font-style: normal;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--weight-black);
 }
 
 /* 배경색은 사람마다 다르고 서버에 저장된다. 여기서는 글자색만 정한다. */
@@ -401,34 +401,34 @@ main {
 .member-value span {
   color: var(--ink-soft);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .ratio-group {
   display: grid;
   grid-column: 1 / -1;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ratio-bar {
   display: flex;
   height: 4px;
   overflow: hidden;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   background: var(--paper-deep);
 }
 
 .ratio-bar span {
   width: 0;
   height: 100%;
-  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width 600ms var(--ease-in-view);
 }
 
 .ratio-legend {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 
@@ -444,6 +444,6 @@ main {
 
 .member-goal.is-over {
   color: var(--accent-dark);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 

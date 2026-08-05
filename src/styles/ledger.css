@@ -1,7 +1,7 @@
 .ledger {
   /* 사용자별 지출 단락과의 사이. 위쪽이 넉넉해 목록을 조금 끌어올렸다(22 → 14). */
   padding-top: 14px;
-  animation: rise-in 650ms 100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise-in 650ms 100ms var(--ease-in-view) both;
 }
 
 /*
@@ -80,7 +80,7 @@
   /* 버튼이라 기본 테두리·가운데 정렬을 걷어내야 div 였을 때와 같은 모양이 된다. */
   width: 100%;
   min-height: 72px;
-  padding: 13px 2px;
+  padding: 13px var(--space-05);
   border: 0;
   text-align: left;
   appearance: none;
@@ -88,7 +88,7 @@
   align-items: center;
   background: var(--paper);
   grid-template-columns: 42px minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .expense-item + .expense-item {
@@ -96,13 +96,13 @@
 }
 
 .expense-item.is-new {
-  animation: item-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: item-in 480ms var(--ease-in-view) both;
 }
 
 .expense-date {
   color: var(--ink-soft);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
@@ -123,7 +123,7 @@
 .expense-meta {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--ink-soft);
   font-size: 11px;
 }
@@ -132,7 +132,7 @@
   width: 2px;
   height: 2px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: currentColor;
   opacity: 0.45;
 }
@@ -160,7 +160,7 @@
 }
 
 .empty-state p {
-  margin: 0 0 20px;
+  margin: 0 0 var(--space-5);
   color: var(--ink-soft);
   font-size: 13px;
   line-height: 1.65;
@@ -169,11 +169,11 @@
 }
 
 .text-button {
-  padding: 8px;
+  padding: var(--space-2);
   color: var(--accent-dark);
   background: transparent;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: var(--weight-black);
 }
 
 .text-button span {
@@ -193,13 +193,13 @@
   display: grid;
   width: 54px;
   height: 54px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   place-items: center;
   color: var(--white);
   background: var(--ink);
   box-shadow: 0 10px 30px rgba(32, 33, 30, 0.23);
   opacity: 1;
-  transition: opacity 160ms ease, transform 180ms ease, box-shadow 180ms ease;
+  transition: opacity var(--motion) ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
 .floating-add svg {

@@ -10,10 +10,10 @@
 .note-list {
   display: flex;
   min-height: 180px;
-  padding: 4px 22px 12px;
+  padding: var(--space-1) 22px var(--space-3);
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -40,10 +40,10 @@
 }
 
 .note-author {
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   color: var(--ink-soft);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .note-bubble {
@@ -65,7 +65,7 @@
 }
 
 .note-when {
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   color: var(--ink-soft);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
@@ -75,7 +75,7 @@
 .note-form {
   display: flex;
   padding: 10px 22px max(14px, env(safe-area-inset-bottom));
-  gap: 8px;
+  gap: var(--space-2);
   flex: 0 0 auto;
   align-items: center;
   border-top: 1px solid var(--line);
@@ -86,13 +86,13 @@
   width: 100%;
   min-width: 0;
   height: 46px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   border: 1px solid var(--field-line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--field-bg);
   /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
   font-size: 16px;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition: border-color var(--motion) ease, box-shadow var(--motion) ease;
 }
 .note-send {
   display: grid;
@@ -100,7 +100,7 @@
   height: 46px;
   flex: 0 0 auto;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--ink);
   cursor: pointer;
   place-items: center;
@@ -124,5 +124,5 @@
 /* 목록 행에 붙는 대화 표시 */
 .note-count {
   color: var(--accent-dark);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }

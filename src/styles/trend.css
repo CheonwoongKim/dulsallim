@@ -36,7 +36,7 @@
 /* 지금 짚고 있는 달. 어느 달을 보고 있는지 아래 숫자와 이어 준다. */
 .trend-axis.is-active {
   fill: var(--ink);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .trend-scrub {
@@ -84,9 +84,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   width: 100%;
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
   border: 0;
   border-radius: 14px;
   background: var(--paper-deep);
@@ -104,7 +104,7 @@
 
 .trend-readout span {
   display: inline-flex;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
 }
 
@@ -117,7 +117,7 @@
 .trend-amount i {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 .trend-legend {

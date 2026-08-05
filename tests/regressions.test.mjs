@@ -498,6 +498,33 @@ test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
   assert.match(css, /\.month-cell\.is-today \{[^}]*color: var\(--accent-dark\)/);
 });
 
+test("간격 계단 위의 값은 토큰으로만 적는다", () => {
+  /*
+   * 여백 값이 35가지였다 — 12·13·14 가 다 있고 17~24 가 통째로 있었다.
+   * 그건 계단이 아니라 그때그때 눈으로 맞춘 값들이다.
+   *
+   * 계단은 4의 배수로만 오른다. 8 이 1×·1.5×·2×·3× 밀도에서 정수 픽셀로 떨어져
+   * 흐릿해지지 않기 때문이고, 모바일 폭(360·375·390)도 8 로 나눠떨어진다.
+   *
+   * 계단 밖 값(10·14·18·22 …)은 아직 남아 있다. 한꺼번에 당기면 화면이 흔들리므로
+   * 화면을 보면서 하나씩 좁힌다. 다만 계단 위에 있는 값을 다시 숫자로 적지는 않는다 —
+   * 그러면 토큰이 있으나 마나가 된다.
+   */
+  const 계단 = [2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 128];
+  for (const 값 of 계단) {
+    assert.match(css, new RegExp(`--space-(?:05|\\d+): ${값}px`), `${값}px 토큰이 없다`);
+  }
+
+  const 본문 = css.replace(/:root \{[\s\S]*?\n\}/, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const 날것 = [];
+  for (const m of 본문.matchAll(/(?:^|;|\{)\s*((?:padding|margin|gap|row-gap|column-gap)[a-z-]*)\s*:([^;{}]+)/g)) {
+    for (const n of m[2].matchAll(/(?<![\w.-])(\d+)px/g)) {
+      if (계단.includes(Number(n[1]))) 날것.push(`${m[1]}: ${n[1]}px`);
+    }
+  }
+  assert.deepEqual(날것, [], "계단 위 값을 숫자로 적었다 — 토큰을 쓸 것");
+});
+
 test("적는 상자와 손이 닿은 표시는 한 곳에서 정한다", () => {
   /*
    * 로그인 칸, 시트의 입력칸·분류, 날짜 줄, 대화 입력이 같은 상자를 쓴다.
@@ -1450,7 +1477,8 @@ test("월 이동 줄은 스스로 아래 여백을 갖지 않는다", () => {
   // 그 화면만 훌쩍 벌어진다. 추이 시트에서 실제로 38px 이 그대로 남아 있었다.
   const 기본 = css.match(/\n\.month-control \{[^}]*\}/)[0];
   assert.doesNotMatch(기본, /margin-bottom|margin:\s*[^;]*\d+px/, "여백은 쓰는 자리가 정한다");
-  assert.match(css, /\.month-bar \{[^}]*padding: \d+px 22px \d+px/, "본 화면에서는 감싸는 줄이 띄운다");
+  assert.match(css, /\.month-bar \{[^}]*padding: var\(--space-\d+\) 22px var\(--space-\d+\)/,
+    "본 화면에서는 감싸는 줄이 띄운다");
 });
 
 test("추이 그래프로 달을 옮기면 본 화면도 함께 따라온다", () => {
@@ -1756,10 +1784,10 @@ test("본 화면 단락 사이 여백은 머리를 바꾸기 전과 같다", () 
    * 머리 안쪽에서 달 이동 줄 아래로 11px 이 이미 남는다. 그래서 27 + 11 = 38 이다.
    * 숫자를 고칠 일이 생기면 실제 간격을 재서 이 주석도 함께 고칠 것.
    */
-  assert.match(css, /\.month-bar \{[^}]*padding: 8px 22px 8px/);
+  assert.match(css, /\.month-bar \{[^}]*padding: var\(--space-2\) 22px var\(--space-2\)/);
   assert.match(css, /\n\.hero \{[^}]*padding: 23px 0 30px/, "휴대폰: 위로 34px, 아래로 30px");
   // 요약 블록이 지출 내역 제목과 너무 벌어져 있어 아래쪽을 당겼다.
-  assert.match(css, /\.member-summary \{[^}]*padding: 22px 0 8px/);
+  assert.match(css, /\.member-summary \{[^}]*padding: 22px 0 var\(--space-2\)/);
   assert.match(css, /\.hero \{\n    \/\*[^*]*\*\/\n    padding: 34px 0 36px/, "넓은 화면: 위로 45px");
   // 사용자별 지출 단락과 지출 내역 사이. 22px 은 넉넉해서 목록을 8px 끌어올렸다.
   assert.match(css, /\.ledger \{[^}]*padding-top: 14px/);

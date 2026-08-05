@@ -12,7 +12,7 @@
   background: rgba(22, 21, 19, 0.46);
   backdrop-filter: blur(4px);
   opacity: 0;
-  transition: opacity 240ms ease;
+  transition: opacity var(--motion-slow) ease;
 }
 
 .sheet.is-visible::backdrop {
@@ -57,7 +57,7 @@
   box-shadow: var(--shadow);
   opacity: 0;
   transform: translateY(105%);
-  transition: opacity 260ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 260ms ease, transform 420ms var(--ease-in-view);
 }
 
 /*
@@ -95,12 +95,12 @@
 .category-row {
   display: grid;
   min-height: 56px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border: 0;
   border-radius: 13px;
   align-items: center;
   grid-template-columns: 10px minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: var(--space-3);
   color: inherit;
   background: transparent;
   cursor: pointer;
@@ -124,12 +124,12 @@
 .category-dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 .category-name {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .category-amount {
@@ -166,7 +166,7 @@
 
 .year-control strong {
   font-size: 17px;
-  font-weight: 800;
+  font-weight: var(--weight-black);
   text-align: center;
 }
 
@@ -182,8 +182,8 @@
   background: var(--field-bg);
   cursor: pointer;
   font-size: 14px;
-  font-weight: 700;
-  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+  font-weight: var(--weight-bold);
+  transition: border-color var(--motion) ease, background var(--motion) ease, color var(--motion) ease;
 }
 
 /* 14px 굵은 글자라 큰 글자 기준을 못 받는다. --accent 는 2.95 로 모자랐다. */
@@ -203,7 +203,7 @@
   height: 4px;
   margin: 0 auto 19px;
   flex: 0 0 auto;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   background: #d8d4cc;
 }
 
@@ -229,7 +229,7 @@
    */
   gap: 21px;
   min-height: 0;
-  padding: 0 22px max(24px, env(safe-area-inset-bottom));
+  padding: 0 22px max(var(--space-6), env(safe-area-inset-bottom));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -246,7 +246,7 @@
  * 줄이 스스로 56px 을 갖고 있어 사이까지 벌리면 한 화면에 몇 개 안 들어온다.
  */
 .category-list {
-  padding-bottom: 8px;
+  padding-bottom: var(--space-2);
   gap: 0;
   align-content: start;
 }
@@ -262,7 +262,7 @@
 
 .fixed-list {
   display: grid;
-  gap: 2px;
+  gap: var(--space-05);
 }
 
 .fixed-list:empty::after {
@@ -276,11 +276,11 @@
 .fixed-surface {
   display: grid;
   min-height: 66px;
-  padding: 13px 2px;
+  padding: 13px var(--space-05);
   align-items: center;
   background: var(--white);
   grid-template-columns: 40px minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .fixed-item + .fixed-item {
@@ -290,7 +290,7 @@
 .fixed-day {
   color: var(--ink-soft);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -309,7 +309,7 @@
 .fixed-copy span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--ink-soft);
   font-size: 11px;
 }
@@ -318,7 +318,7 @@
   width: 2px;
   height: 2px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: currentColor;
   opacity: 0.45;
 }
@@ -337,7 +337,7 @@
 
 .fixed-form-actions {
   display: grid;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
 }
@@ -348,7 +348,7 @@
 }
 
 .day-input-wrap input[type="text"] {
-  padding-right: 40px;
+  padding-right: var(--space-10);
 }
 
 .day-input-wrap b {
@@ -373,11 +373,11 @@
 .field-group legend {
   color: #5f5e58;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .member-picker legend {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   padding: 0;
 }
 
@@ -389,7 +389,7 @@
 .field-group input[type="text"],
 .field-group select {
   font-size: 16px;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: border-color var(--motion) ease, box-shadow var(--motion) ease, background var(--motion) ease;
 }
 
 .date-control {
@@ -399,7 +399,7 @@
   justify-content: space-between;
   gap: 10px;
   font-size: 16px;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: border-color var(--motion) ease, box-shadow var(--motion) ease, background var(--motion) ease;
 }
 
 .date-control:hover {
@@ -436,11 +436,11 @@
 }
 .segmented-control {
   display: grid;
-  padding: 4px;
+  padding: var(--space-1);
   border-radius: 15px;
   background: #eeeae2;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .segmented-control label {
@@ -458,14 +458,14 @@
 .segmented-control label > span {
   display: flex;
   min-height: 48px;
-  padding: 6px 8px;
+  padding: 6px var(--space-2);
   border-radius: 11px;
   align-items: center;
   justify-content: center;
   color: var(--ink-soft);
   font-size: 13px;
-  font-weight: 700;
-  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  font-weight: var(--weight-bold);
+  transition: color var(--motion) ease, background var(--motion) ease, box-shadow var(--motion) ease;
 }
 
 .segmented-control input:checked + span {
@@ -481,7 +481,7 @@
 .form-row {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .amount-field .amount-input-wrap {
@@ -491,9 +491,9 @@
 
 .amount-field input[type="text"] {
   height: 50px;
-  padding-right: 48px;
+  padding-right: var(--space-12);
   font-size: 16px;
-  font-weight: 800;
+  font-weight: var(--weight-black);
   letter-spacing: -0.03em;
 }
 
@@ -530,7 +530,7 @@
 .submit-button {
   display: flex;
   min-height: 56px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   padding: 0 19px;
   border-radius: 15px;
   align-items: center;
@@ -538,9 +538,9 @@
   gap: 6px;
   color: var(--white);
   background: var(--accent);
-  font-weight: 800;
+  font-weight: var(--weight-black);
   box-shadow: 0 9px 24px rgba(216, 77, 52, 0.21);
-  transition: background 160ms ease, transform 160ms ease;
+  transition: background var(--motion) ease, transform var(--motion) ease;
 }
 
 .submit-button:hover {
@@ -561,7 +561,7 @@
   width: min(calc(100% - 36px), 430px);
   min-height: 52px;
   margin: auto;
-  padding: 10px 12px 10px 17px;
+  padding: 10px var(--space-3) 10px 17px;
   border-radius: 15px;
   align-items: center;
   justify-content: space-between;
@@ -586,7 +586,7 @@
   color: #ff9b87;
   background: transparent;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--weight-black);
   cursor: pointer;
 }
 
@@ -613,7 +613,7 @@ body.sheet-open .app-shell {
 
 /* 금액칸 아래 "저장하면 얼마 남는지". 눈에 띄되 입력을 방해하지 않게 작고 옅게 둔다. */
 .goal-notice {
-  margin-top: 2px;
+  margin-top: var(--space-05);
   color: var(--ink-soft);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -621,5 +621,5 @@ body.sheet-open .app-shell {
 
 .goal-notice.is-over {
   color: var(--accent-dark);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }

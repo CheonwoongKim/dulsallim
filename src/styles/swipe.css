@@ -11,7 +11,7 @@
 
 .swipe-surface {
   position: relative;
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform var(--motion-slow) var(--ease-in-view);
 }
 
 /* 닫힌 동안에는 행 밖에 있어 색이 새어 보이지 않는다. */
@@ -21,8 +21,8 @@
   bottom: 0;
   left: 100%;
   display: flex;
-  padding-left: 16px;
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  padding-left: var(--space-4);
+  transition: transform var(--motion-slow) var(--ease-in-view);
 }
 
 .swipe-row.is-dragging .swipe-surface,
@@ -37,7 +37,7 @@
   color: var(--white);
   cursor: pointer;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .swipe-action:focus-visible {
