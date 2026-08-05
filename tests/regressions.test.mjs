@@ -404,7 +404,7 @@ test("거르기와 보기 방식은 오른쪽에 나란히 선다", () => {
    * 토글과 딱 붙으면 한 덩어리로 보이므로 6px 만 띄운다.
    */
   assert.match(css, /#open-category-sheet \{[^}]*margin-left: auto/);
-  assert.match(css, /#open-category-sheet \{[^}]*margin-right: \d+px/);
+  assert.match(css, /#open-category-sheet \{[^}]*margin-right: var\(--space-\d+\)/);
   assert.match(css, /\.section-heading \{[^}]*justify-content: space-between/);
 });
 
@@ -462,14 +462,37 @@ test("아이콘 버튼은 보이는 크기보다 넓게 눌린다", () => {
   /*
    * 42px 은 애플이 말하는 44px 에 2px 모자란다. 동그라미를 키우면 머리 줄이 두꺼워지므로
    * 자리만 넓힌다. 가로로 크게 넓히면 옆 버튼과 겹쳐 경계에서 어느 쪽이 눌릴지 알 수 없다 —
-   * 달 이동은 사이가 5px, 상단 아이콘은 8px 이라 1px 씩이면 겹치지 않는다.
+   * 달 이동은 사이가 4px, 상단 아이콘은 8px 이라 1px 씩이면 겹치지 않는다.
    * 계측: 설정·마이페이지·분석·달 이동 화살표가 42×42 → 44×44 가 됐다.
+   *
+   * 값이 토큰이 되었으므로 :root 에서 풀어서 센다. 숫자만 보면 토큰을 쓴 순간 깨진다.
    */
+  const 토큰 = (이름) => Number(css.match(new RegExp(`${이름}: (\\d+)px`))[1]);
+  const 길이 = (글) => (글.startsWith("var(") ? 토큰(글.slice(4, -1)) : Number(글.replace("px", "")));
+
   const 크기 = Number(css.match(/\.icon-button \{[^}]*width: (\d+)px/)[1]);
   const 넓힘 = Number(css.match(/\.icon-button::after \{[^}]*inset: -(\d+)px/)[1]);
   assert.ok(크기 + 넓힘 * 2 >= 44, `아이콘 누를 자리가 ${크기 + 넓힘 * 2}px 로 44px 에 못 미친다`);
-  const 라벨높이 = Number(css.match(/\n\.month-label \{[^}]*padding: (\d+)px/)[1]) * 2 + 21;
-  assert.match(css, /\.month-label::after \{[^}]*inset: -\d+px 0/, "가로로 넓히면 옆 화살표와 겹친다");
+
+  // 달 라벨은 글자 21px + 위아래 안쪽 여백. 거기에 ::after 로 넓힌 만큼 더한다.
+  const 라벨여백 = 길이(css.match(/\n\.month-label \{[^}]*padding: (\S+)/)[1]);
+  const 라벨넓힘 = Number(css.match(/\.month-label::after \{[^}]*inset: -(\d+)px 0/)[1]);
+  const 라벨높이 = 라벨여백 * 2 + 21 + 라벨넓힘 * 2;
+  assert.ok(라벨높이 >= 44, `달 라벨 누를 자리가 ${라벨높이}px 로 44px 에 못 미친다`);
+});
+
+test("분석 화면의 달 글자는 제 높이를 묶어 둔다", () => {
+  /*
+   * 본 화면에서 달 라벨은 옆 화살표(42px)보다 작아 줄 높이에 관여하지 않는다.
+   * 분석 화면은 글자가 19px 이라 이것이 줄 높이를 정한다 — 공용 여백을 10 에서 8 로
+   * 계단에 맞추자 줄이 47 에서 43 이 되고 아래 내용이 통째로 4px 올라갔다.
+   * 계측: 비교 버튼 y317 → y312.
+   *
+   * 계단에 맞는 값(8·12) 중 47 을 만드는 것이 없어 이 화면 차례가 올 때까지 10 으로 묶는다.
+   * 지우면 분석 화면이 조용히 4px 올라간다.
+   */
+  assert.match(css, /#analysis-page \.month-label \{[^}]*padding-block: 10px/,
+    "분석 화면 달 글자의 여백이 풀렸다 — 아래 내용이 4px 올라간다");
 });
 
 test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
@@ -1477,7 +1500,7 @@ test("월 이동 줄은 스스로 아래 여백을 갖지 않는다", () => {
   // 그 화면만 훌쩍 벌어진다. 추이 시트에서 실제로 38px 이 그대로 남아 있었다.
   const 기본 = css.match(/\n\.month-control \{[^}]*\}/)[0];
   assert.doesNotMatch(기본, /margin-bottom|margin:\s*[^;]*\d+px/, "여백은 쓰는 자리가 정한다");
-  assert.match(css, /\.month-bar \{[^}]*padding: var\(--space-\d+\) 22px var\(--space-\d+\)/,
+  assert.match(css, /\.month-bar \{[^}]*padding: var\(--space-\d+\) var\(--space-\d+\) var\(--space-\d+\)/,
     "본 화면에서는 감싸는 줄이 띄운다");
 });
 
@@ -1784,13 +1807,13 @@ test("본 화면 단락 사이 여백은 머리를 바꾸기 전과 같다", () 
    * 머리 안쪽에서 달 이동 줄 아래로 11px 이 이미 남는다. 그래서 27 + 11 = 38 이다.
    * 숫자를 고칠 일이 생기면 실제 간격을 재서 이 주석도 함께 고칠 것.
    */
-  assert.match(css, /\.month-bar \{[^}]*padding: var\(--space-2\) 22px var\(--space-2\)/);
-  assert.match(css, /\n\.hero \{[^}]*padding: 23px 0 30px/, "휴대폰: 위로 34px, 아래로 30px");
+  assert.match(css, /\.month-bar \{[^}]*padding: var\(--space-2\) var\(--space-6\) var\(--space-2\)/);
+  assert.match(css, /\n\.hero \{[^}]*padding: var\(--space-6\) 0 var\(--space-8\)/, "휴대폰: 위로 35px, 아래로 32px");
   // 요약 블록이 지출 내역 제목과 너무 벌어져 있어 아래쪽을 당겼다.
-  assert.match(css, /\.member-summary \{[^}]*padding: 22px 0 var\(--space-2\)/);
+  assert.match(css, /\.member-summary \{[^}]*padding: var\(--space-5\) 0 var\(--space-2\)/);
   assert.match(css, /\.hero \{\n    \/\*[^*]*\*\/\n    padding: 34px 0 36px/, "넓은 화면: 위로 45px");
   // 사용자별 지출 단락과 지출 내역 사이. 22px 은 넉넉해서 목록을 8px 끌어올렸다.
-  assert.match(css, /\.ledger \{[^}]*padding-top: 14px/);
+  assert.match(css, /\.ledger \{[^}]*padding-top: var\(--space-3\)/);
 });
 
 test("맨 위에서 달 이동 줄은 가운데에 선다", () => {

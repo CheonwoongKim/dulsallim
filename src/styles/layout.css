@@ -43,7 +43,7 @@
    * 위 23 아래 30. 달 이동 줄과 사이가 34px, 사용자별 지출과 사이가 30px 이 되는 값이다
    * (머리 안쪽에서 달 이동 줄 아래로 11px 이 이미 남는다).
    */
-  padding: 23px 0 30px;
+  padding: var(--space-6) 0 var(--space-8);
   text-align: center;
   animation: rise-in 620ms var(--ease-in-view) both;
 }
@@ -55,7 +55,7 @@
   width: min(100%, 780px);
   height: 76px;
   margin: 0 auto;
-  padding: max(14px, env(safe-area-inset-top)) 22px var(--space-2);
+  padding: max(var(--space-4), env(safe-area-inset-top)) var(--space-6) var(--space-2);
   align-items: center;
   justify-content: space-between;
 }
@@ -76,7 +76,7 @@
 
 .ghost-button {
   min-height: 38px;
-  padding: 0 14px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   color: var(--ink);
@@ -94,7 +94,7 @@
 
 .ghost-button.wide {
   min-height: 56px;
-  padding: 0 22px;
+  padding: 0 var(--space-6);
 }
 
 .add-button,
@@ -113,7 +113,7 @@
   padding: 0 var(--space-4);
   border-radius: var(--radius-pill);
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
   color: var(--white);
   background: var(--ink);
   font-size: 14px;
@@ -137,7 +137,7 @@ main {
   z-index: 1;
   width: min(100%, 780px);
   margin: 0 auto;
-  padding: 0 22px var(--space-32);
+  padding: 0 var(--space-6) var(--space-32);
 }
 
 .overview {
@@ -153,7 +153,7 @@ main {
   margin: 0;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: var(--space-1);
 }
 
 /*
@@ -166,7 +166,7 @@ main {
   /* 위 8 + 화살표 42 + 가운데 정렬로 남는 6 + 아래 8 = 64. 위 여백을 8px 로 두려고 잡은 값이다. */
   height: 64px;
   margin: 0 auto;
-  padding: var(--space-2) 22px var(--space-2);
+  padding: var(--space-2) var(--space-6) var(--space-2);
   align-items: center;
 }
 
@@ -236,18 +236,18 @@ main {
 .month-label {
   position: relative;
   min-width: 120px;
-  padding: 10px var(--space-2);
+  padding: var(--space-2) var(--space-2);
   font-size: 15px;
   font-weight: var(--weight-bold);
   /* 작은 총액과 한 줄에 서면 폭이 좁아진다. "2026년 8 / 월" 로 깨진 적이 있다. */
   white-space: nowrap;
 }
 
-/* 41px 이라 세로로만 넓힌다. 가로는 이미 120px 이고, 넓히면 옆 화살표와 겹친다. */
+/* 37px 이라 세로로만 넓힌다. 가로는 이미 120px 이고, 넓히면 옆 화살표와 겹친다. */
 .month-label::after {
   content: "";
   position: absolute;
-  inset: -2px 0;
+  inset: -4px 0;
 }
 
 /*
@@ -290,7 +290,7 @@ main {
 
 .eyebrow {
   height: 15px;
-  margin: 0 0 9px;
+  margin: 0 0 var(--space-2);
   overflow: hidden;
   color: var(--ink-soft);
   font-size: 12px;
@@ -317,7 +317,7 @@ main {
 }
 
 .total-amount .currency {
-  margin-left: 7px;
+  margin-left: var(--space-2);
   font-size: 18px;
   font-weight: var(--weight-bold);
   letter-spacing: -0.04em;
@@ -325,10 +325,14 @@ main {
 
 .member-summary {
   display: grid;
-  /* 아래 8. 지출 내역 제목과 너무 벌어져 있어 요약 블록 쪽을 16px 당겼다. */
-  padding: 22px 0 var(--space-2);
+  /*
+   * 아래 8. 지출 내역 제목과 너무 벌어져 있어 요약 블록 쪽을 16px 당겼다.
+   * 위 20. 큰 금액과의 사이는 hero 아래 여백 32 와 합쳐 52 가 된다 —
+   * 계단에 맞추느라 둘 다 24 로 올렸더니 56 이 되어 이 화면에서 가장 큰 틈이 눈에 띄게 벌어졌다.
+   */
+  padding: var(--space-5) 0 var(--space-2);
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-5) 26px;
+  gap: var(--space-5) var(--space-6);
 }
 
 .member-row {
@@ -339,7 +343,7 @@ main {
   border-radius: 5px;
   align-items: center;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 9px;
+  gap: var(--space-2);
   color: inherit;
   background: transparent;
   cursor: pointer;
@@ -357,7 +361,7 @@ main {
 .member-body {
   display: grid;
   min-width: 0;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .member-name {
