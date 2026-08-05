@@ -9,6 +9,7 @@ const DISMISS_DISTANCE = 96;
 export const SHEETS = [
   elements.sheet,
   elements.monthSheet,
+  elements.categorySheet,
   elements.fixedSheet,
   elements.notesSheet,
   elements.nagSheet,

@@ -135,6 +135,9 @@
         <section class="ledger" aria-labelledby="ledger-title">
           <div class="section-heading">
             <h2 id="ledger-title">지출 내역<span class="record-count" id="record-count">(0)</span><button class="ledger-filter" type="button" id="ledger-filter" hidden></button></h2>
+            <button class="icon-button" type="button" id="open-category-sheet" aria-haspopup="dialog" aria-label="분류로 거르기">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            </button>
             <div class="view-toggle" role="group" aria-label="보기 방식">
               <button type="button" data-view="list" aria-pressed="true" aria-label="목록으로 보기">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>
@@ -386,6 +389,21 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
       </form>
+    </dialog>
+
+    <dialog class="sheet month-sheet" id="category-sheet" aria-labelledby="category-sheet-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow">분류로 거르기</p>
+          <h2 id="category-sheet-title">무엇을 볼까요?</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-category-sheet" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="sheet-scroll category-list" id="category-list" role="group" aria-labelledby="category-sheet-title"></div>
     </dialog>
 
     <dialog class="sheet month-sheet" id="month-sheet" aria-labelledby="month-sheet-title" hidden>

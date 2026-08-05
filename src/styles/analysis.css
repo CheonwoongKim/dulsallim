@@ -150,26 +150,6 @@
 }
 
 /* 줄은 묶음일 뿐, 칸은 위 격자에 직접 놓인다. */
-/*
- * 분류 줄은 눌러서 그 분류만 볼 수 있다. <button> 이라 기본 모양을 걷어낸다.
- * 겉모습은 예전 <div> 와 같게 두고, 눌리는 느낌만 얹는다.
- */
-.analysis-row {
-  width: 100%;
-  padding: 0;
-  border: 0;
-  color: inherit;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  transition: opacity 160ms ease;
-}
-
-.analysis-row:active {
-  opacity: 0.55;
-}
-
 .analysis-row {
   display: contents;
 }

@@ -1,3 +1,4 @@
+import { closeCategorySheet, openCategorySheet, pickCategory } from "../features/category-sheet.js";
 import { elements } from "../dom.js";
 import {
   clearFilters,
@@ -40,6 +41,12 @@ elements.memberSlots.forEach(({ row }) => {
   row.addEventListener("click", () => toggleMemberFilter(row.dataset.member));
 });
 elements.ledgerFilter.addEventListener("click", clearFilters);
+elements.openCategorySheet.addEventListener("click", openCategorySheet);
+closeOnPress(elements.closeCategorySheet, closeCategorySheet);
+elements.categoryList.addEventListener("click", (event) => {
+  const 줄 = event.target.closest("[data-category]");
+  if (줄) pickCategory(줄.dataset.category);
+});
 elements.prevMonth.addEventListener("click", () => shiftMonth(-1));
 elements.nextMonth.addEventListener("click", () => shiftMonth(1));
 

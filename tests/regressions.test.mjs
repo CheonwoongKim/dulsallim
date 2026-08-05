@@ -394,24 +394,38 @@ test("고정비가 자동으로 채워질 때는 알리지 않는다", async () 
   assert.match(sql, /revoke all on app_secrets from anon, authenticated/);
 });
 
-test("분석에서 분류를 눌러 그 분류만 볼 수 있다", () => {
+test("분류로 거르는 자리는 목록 옆에 있다", () => {
   /*
-   * 합계만 보고 "그래서 뭘 샀는데?" 로 넘어갈 길이 없었다. 한 달 마흔 건이면
-   * 목록을 끝까지 훑어야 했다. 사람 필터와 같은 규칙이다 — 다시 누르면 풀린다.
+   * 처음에는 분석 화면에서 분류를 누르게 했다. 그런데 누르면 보던 화면에서 튕겨 나와
+   * 홈으로 끌려갔고, 무엇이 바뀌었는지 되짚어야 했다. 누를 수 있다는 표시도 없었다.
+   * 분석은 이해하는 곳, 목록은 찾는 곳이다 — 거르는 일은 거르는 자리에서 한다.
+   *
+   * 사람은 요약 카드, 날짜는 캘린더가 이미 홈에 있다. 분류도 같은 자리에 둔다.
    */
-  assert.match(html, /<div id="analysis-list">/);
-  assert.match(fn("paintShares"), /<button class="analysis-row" type="button" data-category=/);
-  assert.match(fn("toggleCategoryFilter"), /setCategoryFilter\(nextCategoryFilter\(getCategoryFilter\(\), category\)\)/);
-  // 거르고 나면 분석을 닫는다. 목록이 그 화면 뒤에 있어 안 닫으면 결과가 안 보인다.
-  assert.match(fn("toggleCategoryFilter"), /hidePage\(\)/);
-  assert.match(fn("nextCategoryFilter"), /current === category \? null : category/);
+  assert.match(html, /<button class="icon-button" type="button" id="open-category-sheet"/);
+  assert.match(html, /<dialog class="sheet month-sheet" id="category-sheet"/);
+  // 고르면 시트만 닫는다. 보던 화면은 그대로 둔다.
+  const 고르기 = fn("pickCategory");
+  assert.match(고르기, /closeCategorySheet\(\)/);
+  assert.doesNotMatch(고르기, /hidePage/, "화면을 떠나지 않는다");
+  // 그 달에 쓴 분류만, 많이 쓴 순. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다.
+  assert.match(fn("이번달분류"), /sort\(\(a, b\) => b\.total - a\.total/);
+  // 푸는 길이 시트 안에도 있어야 한다.
+  assert.match(fn("그리기"), /data-category=""[\s\S]{0,80}전체/);
   /*
    * 캘린더 숫자에는 분류를 걸지 않는다. 걸면 그 분류가 없는 날이 통째로 비어
    * 달력이 "그날은 안 썼다" 로 읽힌다.
    */
-  const 그리기 = fn("render");
-  assert.match(그리기, /filterByCategory\(filterByDate\(byMember, dateFilter\), categoryFilter\)/);
-  assert.doesNotMatch(그리기, /renderCalendar\([^)]*categoryFilter/);
+  const 그리기목록 = fn("render");
+  assert.match(그리기목록, /filterByCategory\(filterByDate\(byMember, dateFilter\), categoryFilter\)/);
+  assert.doesNotMatch(그리기목록, /renderCalendar\([^)]*categoryFilter/);
+});
+
+test("분석 화면은 보는 곳으로 되돌렸다", () => {
+  // 한 가지 일에 길이 둘이면, 그것도 하나는 순간이동이면 더 헷갈린다.
+  assert.match(fn("paintShares"), /<div class="analysis-row">/);
+  assert.doesNotMatch(fn("paintShares"), /data-category/);
+  assert.doesNotMatch(app, /function toggleCategoryFilter/);
 });
 
 test("걸린 조건은 제목에 뜨고 눌러서 풀 수 있다", () => {

@@ -1,9 +1,10 @@
-import { nextCategoryFilter, nextDateFilter, nextMemberFilter } from "../expenses.js";
+import {
+  nextDateFilter,
+  nextMemberFilter } from "../expenses.js";
 import { openForm } from "./expense-form.js";
 import { render } from "../render.js";
 import {
   addExpense,
-  getCategoryFilter,
   getDateFilter,
   getExpenses,
   getMemberFilter,
@@ -17,7 +18,6 @@ import {
   setPendingDelete,
   setViewMode,
 } from "../store.js";
-import { hidePage } from "../ui/page.js";
 import { closeOpenRow } from "../ui/swipe.js";
 import { withViewTransition } from "../ui/view-transition.js";
 import { hideToast, showToast } from "../ui/toast.js";
@@ -110,20 +110,6 @@ export function toggleDateFilter(date) {
  * 목록으로 돌아갈 때 날짜 필터는 푼다 — 캘린더에서 고른 날인데 캘린더가 사라지면
  * 무엇 때문에 걸린 필터인지 알 수 없다.
  */
-/**
- * 분석에서 분류를 눌러 그 분류만 본다.
- *
- * 합계만 보고 "그래서 뭘 샀는데?"로 넘어갈 길이 없었다. 한 달 마흔 건이면
- * 목록을 끝까지 훑어야 했다. 사람 필터와 같은 규칙이다 — 다시 누르면 풀린다.
- *
- * 거르고 나면 분석 화면을 닫는다. 목록이 그 화면 뒤에 있어 안 닫으면 결과가 안 보인다.
- */
-export function toggleCategoryFilter(category) {
-  setCategoryFilter(nextCategoryFilter(getCategoryFilter(), category));
-  closeOpenRow();
-  hidePage();
-  render();
-}
 
 /**
  * 지출 내역 제목에 붙은 조건을 눌러 한꺼번에 푼다.
