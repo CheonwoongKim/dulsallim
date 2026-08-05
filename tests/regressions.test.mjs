@@ -564,6 +564,34 @@ test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
   assert.match(css, /\.month-cell\.is-today \{[^}]*color: var\(--accent-dark\)/);
 });
 
+test("글자 크기는 계단 위의 토큰으로만 적는다", () => {
+  /*
+   * 18가지였다 — 8·10·11·12·13·14·15·16·17·18·19·20·21·27·28·32·34 에 총액의 clamp 까지.
+   * 그 사이 1px 차이들은 계단이 아니라 그때그때 눈으로 맞춘 값이다.
+   *
+   * 간격의 4·8 계단을 글자에 쓰면 안 된다. 작은 쪽에서는 11 다음이 16 이라 너무 성기고
+   * 큰 쪽에서는 촘촘하다. 그래서 애플이 아이폰에서 쓰는 계단을 그대로 쓴다 —
+   * 이 앱은 아이폰 전용이고, 그 값들은 이 화면에서 눈으로 구분되도록 맞춰진 것이다.
+   *
+   * 14 는 애플 계단에 없어 15 로 합쳤다(지출 항목·금액 15곳). 목록 한 줄 높이 72 와
+   * 보이는 줄 수는 그대로였다.
+   */
+  const 계단 = [11, 12, 13, 15, 16, 17, 20, 28, 34];
+  for (const 값 of 계단) {
+    assert.match(css, new RegExp(`--text-${값}: ${값}px`), `--text-${값} 토큰이 없다`);
+  }
+  // 계단에 없는 이름을 두면 "있는 줄 알고" 쓰게 된다. 14 가 없는 것이 곧 규칙이다.
+  for (const 계단밖 of [14, 18, 19, 21, 22, 27, 32]) {
+    assert.doesNotMatch(css, new RegExp(`--text-${계단밖}:`), `--text-${계단밖} 은 계단에 없다`);
+  }
+
+  const 본문 = css.replace(/:root \{[\s\S]*?\n\}/, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const 날것 = [...본문.matchAll(/font-size:\s*([^;]+);/g)]
+    .map((m) => m[1].trim())
+    .filter((값) => !값.startsWith("var(--text-"));
+  assert.deepEqual(날것, [], "글자 크기를 숫자로 적었다 — --text-N 토큰을 쓸 것");
+});
+
 test("간격 계단 위의 값은 토큰으로만 적는다", () => {
   /*
    * 여백 값이 35가지였다 — 12·13·14 가 다 있고 17~24 가 통째로 있었다.
@@ -787,9 +815,10 @@ test("대화를 불러오는 사이 시트가 바뀌면 늦게 온 결과를 버
 });
 
 test("대화 입력도 iOS 자동 확대를 막는다", () => {
-  const match = css.match(/\.note-form input \{[\s\S]*?font-size:\s*(\d+)px/);
+  const match = css.match(/\.note-form input \{[\s\S]*?font-size:\s*(\S+?);/);
   assert.ok(match, "입력 폰트 규칙을 찾지 못했습니다");
-  assert.ok(Number(match[1]) >= 16, `${match[1]}px (16px 미만이면 iOS가 확대함)`);
+  const 크기 = Number(css.match(new RegExp(`${match[1].slice(4, -1)}: (\\d+)px`))[1]);
+  assert.ok(크기 >= 16, `${크기}px (16px 미만이면 iOS가 확대함)`);
 });
 
 test("대화 시트는 헤더·입력줄이 고정되고 메시지만 스크롤한다", () => {

@@ -71,7 +71,7 @@
 .calendar-weekday {
   padding-bottom: var(--space-2);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: var(--weight-bold);
   text-align: center;
 }
@@ -98,7 +98,7 @@
 
 .calendar-day {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-12);
   font-variant-numeric: tabular-nums;
 }
 
@@ -107,7 +107,7 @@
   overflow: hidden;
   max-width: 100%;
   color: var(--ink);
-  font-size: 10px;
+  font-size: var(--text-11);
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-bold);
   text-overflow: ellipsis;

@@ -74,14 +74,18 @@ test("폼 입력 필드는 iOS 자동 확대를 막기 위해 16px 이상이다"
    * 닫는 괄호를 넘어 다음 규칙의 값을 읽는다 — 엉뚱한 14px 을 잡아 실패했다.
    */
   const rules = {
-    "지출 항목·분류": /\.field-group input\[type="text"\],\s*\n\.field-group select \{[^}]*font-size:\s*(\d+)px/,
-    "날짜": /\n\.date-control \{[^}]*font-size:\s*(\d+)px/,
-    "금액": /\.amount-field input\[type="text"\] \{[^}]*font-size:\s*(\d+)px/,
+    "지출 항목·분류": /\.field-group input\[type="text"\],\s*\n\.field-group select \{[^}]*font-size:\s*(\S+?);/,
+    "날짜": /\n\.date-control \{[^}]*font-size:\s*(\S+?);/,
+    "금액": /\.amount-field input\[type="text"\] \{[^}]*font-size:\s*(\S+?);/,
   };
+  // 값이 토큰이 되었으므로 :root 에서 풀어서 잰다. 숫자만 보면 토큰을 쓴 순간 못 읽는다.
+  const 픽셀 = (값) => Number((값.startsWith("var(")
+    ? css.match(new RegExp(`${값.slice(4, -1)}: (\\d+)px`))[1]
+    : 값).toString().replace("px", ""));
   for (const [name, pattern] of Object.entries(rules)) {
     const match = css.match(pattern);
     assert.ok(match, `${name} 필드의 font-size 규칙을 찾지 못했습니다`);
-    assert.ok(Number(match[1]) >= 16, `${name} 필드가 ${match[1]}px (16px 미만이면 iOS가 확대함)`);
+    assert.ok(픽셀(match[1]) >= 16, `${name} 필드가 ${match[1]} (16px 미만이면 iOS가 확대함)`);
   }
 });
 

@@ -1,6 +1,6 @@
 /* 분석 페이지 */
 #analysis-page .month-label {
-  font-size: 19px;
+  font-size: var(--text-20);
   font-weight: var(--weight-bold);
   letter-spacing: -0.04em;
 }
@@ -33,7 +33,7 @@
   color: var(--ink-soft);
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-bold);
   transition: color var(--motion) ease, background var(--motion) ease, box-shadow var(--motion) ease;
 }
@@ -51,7 +51,7 @@
 }
 
 .analysis-total strong {
-  font-size: 32px;
+  font-size: var(--text-34);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.05em;
 }
@@ -109,17 +109,17 @@
   margin: calc(var(--space-2) * -1) 0 0;
   padding: 0 var(--space-1);
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-12);
 }
 
 .compare-name {
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-13);
 }
 
 .compare-value {
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--text-15);
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-bold);
   text-align: right;
@@ -167,7 +167,7 @@
 
 .analysis-name {
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -196,7 +196,7 @@
 
 .analysis-amount,
 .analysis-percent {
-  font-size: 13px;
+  font-size: var(--text-13);
   /* 숫자 폭을 고정해 자릿수가 달라도 열이 흔들리지 않는다. */
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -209,7 +209,7 @@
 
 .analysis-percent {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-12);
   font-weight: var(--weight-bold);
 }
 
@@ -227,5 +227,5 @@
 .analysis-empty {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-13);
 }

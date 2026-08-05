@@ -37,12 +37,12 @@
 .section-heading h2,
 .sheet-header h2 {
   margin: 0;
-  font-size: 27px;
+  font-size: var(--text-28);
   letter-spacing: -0.055em;
 }
 
 .section-heading h2 {
-  font-size: 20px;
+  font-size: var(--text-20);
 }
 
 /*
@@ -101,7 +101,7 @@
 
 .expense-date {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-12);
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -115,7 +115,7 @@
   display: block;
   overflow: hidden;
   margin-bottom: var(--space-1);
-  font-size: 14px;
+  font-size: var(--text-15);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -125,7 +125,7 @@
   align-items: center;
   gap: var(--space-1);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 .expense-meta i {
@@ -138,7 +138,7 @@
 }
 
 .expense-amount {
-  font-size: 14px;
+  font-size: var(--text-15);
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
@@ -155,14 +155,14 @@
 
 .empty-state h3 {
   margin: 0 0 var(--space-2);
-  font-size: 21px;
+  font-size: var(--text-20);
   letter-spacing: -0.04em;
 }
 
 .empty-state p {
   margin: 0 0 var(--space-5);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.65;
   /* 여러 줄로 흐르는 글이다. 마지막 줄에 한 낱말만 남는 것을 줄인다. */
   text-wrap: pretty;
@@ -172,7 +172,7 @@
   padding: var(--space-2);
   color: var(--accent-dark);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-black);
 }
 

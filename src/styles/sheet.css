@@ -128,13 +128,13 @@
 }
 
 .category-name {
-  font-size: 15px;
+  font-size: var(--text-15);
   font-weight: var(--weight-bold);
 }
 
 .category-amount {
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--text-15);
   font-variant-numeric: tabular-nums;
 }
 
@@ -142,7 +142,7 @@
   margin: 0;
   padding: var(--space-6) 0;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--text-15);
   text-align: center;
 }
 
@@ -165,7 +165,7 @@
 }
 
 .year-control strong {
-  font-size: 17px;
+  font-size: var(--text-17);
   font-weight: var(--weight-black);
   text-align: center;
 }
@@ -181,7 +181,7 @@
   border-radius: 13px;
   background: var(--field-bg);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--text-15);
   font-weight: var(--weight-bold);
   transition: border-color var(--motion) ease, background var(--motion) ease, color var(--motion) ease;
 }
@@ -274,7 +274,7 @@
   padding: var(--space-6) 0;
   color: var(--ink-soft);
   content: "아직 등록한 고정비가 없어요";
-  font-size: 13px;
+  font-size: var(--text-13);
   text-align: center;
 }
 
@@ -294,7 +294,7 @@
 
 .fixed-day {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-12);
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
 }
@@ -306,7 +306,7 @@
 .fixed-copy strong {
   display: block;
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--text-15);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -316,7 +316,7 @@
   align-items: center;
   gap: var(--space-1);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 .fixed-copy span i {
@@ -329,14 +329,14 @@
 }
 
 .fixed-amount {
-  font-size: 14px;
+  font-size: var(--text-15);
   letter-spacing: -0.02em;
 }
 
 .fixed-hint {
   margin: calc(var(--space-2) * -1) 0 0;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-12);
   line-height: 1.6;
 }
 
@@ -361,7 +361,7 @@
   top: 50%;
   right: 16px;
   color: var(--ink-soft);
-  font-size: 15px;
+  font-size: var(--text-15);
   transform: translateY(-50%);
 }
 
@@ -377,7 +377,7 @@
 .field-group > span:not(.date-control):not(.amount-input-wrap),
 .field-group legend {
   color: #5f5e58;
-  font-size: 12px;
+  font-size: var(--text-12);
   font-weight: var(--weight-bold);
 }
 
@@ -393,7 +393,7 @@
 
 .field-group input[type="text"],
 .field-group select {
-  font-size: 16px;
+  font-size: var(--text-16);
   transition: border-color var(--motion) ease, box-shadow var(--motion) ease, background var(--motion) ease;
 }
 
@@ -403,7 +403,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  font-size: 16px;
+  font-size: var(--text-16);
   transition: border-color var(--motion) ease, box-shadow var(--motion) ease, background var(--motion) ease;
 }
 
@@ -468,7 +468,7 @@
   align-items: center;
   justify-content: center;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-bold);
   transition: color var(--motion) ease, background var(--motion) ease, box-shadow var(--motion) ease;
 }
@@ -497,7 +497,7 @@
 .amount-field input[type="text"] {
   height: 50px;
   padding-right: var(--space-12);
-  font-size: 16px;
+  font-size: var(--text-16);
   font-weight: var(--weight-black);
   letter-spacing: -0.03em;
 }
@@ -507,7 +507,7 @@
   top: 50%;
   right: 16px;
   color: var(--ink-soft);
-  font-size: 15px;
+  font-size: var(--text-15);
   transform: translateY(-50%);
 }
 
@@ -515,7 +515,7 @@
 .field-notice {
   display: none;
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 .field-notice:not(:empty) {
@@ -525,7 +525,7 @@
 .field-error {
   display: none;
   color: var(--accent-dark);
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 .field-error:not(:empty) {
@@ -577,7 +577,7 @@
   color: var(--white);
   background: var(--ink);
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
-  font-size: 13px;
+  font-size: var(--text-13);
   opacity: 0;
   transform: translateY(18px);
   transition: opacity 180ms ease, transform 220ms ease;
@@ -594,7 +594,7 @@
   border: 0;
   color: #ff9b87;
   background: transparent;
-  font-size: 12px;
+  font-size: var(--text-12);
   font-weight: var(--weight-black);
   cursor: pointer;
 }
@@ -624,7 +624,7 @@ body.sheet-open .app-shell {
 .goal-notice {
   margin-top: var(--space-05);
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-12);
   font-variant-numeric: tabular-nums;
 }
 

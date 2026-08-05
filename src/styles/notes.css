@@ -21,7 +21,7 @@
 .note-empty {
   margin: auto 0;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.7;
   text-align: center;
 }
@@ -42,7 +42,7 @@
 .note-author {
   padding: 0 var(--space-1);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: var(--weight-bold);
 }
 
@@ -51,7 +51,7 @@
   padding: var(--space-2) var(--space-3);
   border-radius: 16px 16px 16px 4px;
   background: var(--paper-deep);
-  font-size: 14px;
+  font-size: var(--text-15);
   line-height: 1.55;
   /* 띄어쓰기 없는 긴 문자열이 시트를 밀어내지 않게 한다. */
   overflow-wrap: anywhere;
@@ -67,7 +67,7 @@
 .note-when {
   padding: 0 var(--space-1);
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--text-11);
   font-variant-numeric: tabular-nums;
 }
 
@@ -91,7 +91,7 @@
   border-radius: var(--radius-pill);
   background: var(--field-bg);
   /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
-  font-size: 16px;
+  font-size: var(--text-16);
   transition: border-color var(--motion) ease, box-shadow var(--motion) ease;
 }
 .note-send {
