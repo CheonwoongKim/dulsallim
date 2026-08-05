@@ -186,7 +186,7 @@
   transition: border-color var(--motion) ease, background var(--motion) ease, color var(--motion) ease;
 }
 
-/* 14px 굵은 글자라 큰 글자 기준을 못 받는다. --accent 는 2.95 로 모자랐다. */
+/* 15px 굵은 글자라 큰 글자 기준을 못 받는다. --accent 는 2.95 로 모자랐다. */
 .month-cell.is-today {
   border-color: var(--accent-dark);
   color: var(--accent-dark);
@@ -247,7 +247,7 @@
 /*
  * 분류로 거르기.
  *
- * .sheet-scroll 의 공용 gap(21px)을 덮는다 — 그 규칙보다 뒤에 있어야 이긴다.
+ * .sheet-scroll 의 공용 gap(20px)을 덮는다 — 그 규칙보다 뒤에 있어야 이긴다.
  * 줄이 스스로 56px 을 갖고 있어 사이까지 벌리면 한 화면에 몇 개 안 들어온다.
  */
 .category-list {
