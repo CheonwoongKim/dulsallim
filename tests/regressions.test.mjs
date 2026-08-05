@@ -481,6 +481,21 @@ test("아이콘 버튼은 보이는 크기보다 넓게 눌린다", () => {
   assert.ok(라벨높이 >= 44, `달 라벨 누를 자리가 ${라벨높이}px 로 44px 에 못 미친다`);
 });
 
+test("스위치 손잡이는 판 크기에서 자리를 계산한다", () => {
+  /*
+   * 판 46×28 에 손잡이 22 면 위아래로 3 씩 남는다. 켰을 때 미는 거리 18 도
+   * 46 - 22 - 3*2 다 — 세 숫자가 모두 두 크기에서 나온다.
+   *
+   * 그래서 3 을 계단에 맞춰 4 로 올리면 손잡이가 위로 1 치우친다(위 4, 아래 2).
+   * 숫자로 적어 두면 판 크기를 바꿀 때 한 곳만 고치고 어긋난 것을 못 본다.
+   */
+  assert.match(css, /--switch-inset: calc\(\(var\(--switch-h\) - var\(--switch-knob\)\) \/ 2\)/,
+    "손잡이 자리를 숫자로 적으면 판 크기와 어긋난다");
+  assert.match(css, /\.switch::after \{[^}]*top: var\(--switch-inset\)[^}]*left: var\(--switch-inset\)/s);
+  assert.match(css, /:checked \+ \.switch::after \{[^}]*translateX\(calc\(var\(--switch-w\) - var\(--switch-knob\) - var\(--switch-inset\) \* 2\)\)/,
+    "미는 거리를 숫자로 적으면 판 너비를 바꿀 때 손잡이가 끝에 못 간다");
+});
+
 test("토스트의 좌우 여백은 left/right 가 아니라 폭이 정한다", () => {
   /*
    * margin: auto 로 가운데 서므로 left/right 는 설 자리의 경계만 정하고,
