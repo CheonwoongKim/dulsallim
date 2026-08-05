@@ -394,6 +394,20 @@ test("고정비가 자동으로 채워질 때는 알리지 않는다", async () 
   assert.match(sql, /revoke all on app_secrets from anon, authenticated/);
 });
 
+test("거르기와 보기 방식은 오른쪽에 나란히 선다", () => {
+  /*
+   * 제목 줄은 space-between 이라 아이는 셋이 되면 균등하게 벌어진다.
+   * 그러면 필터 버튼만 제목과 토글 한가운데에 떠서 무엇에 딸린 것인지 알 수 없다
+   * (계측: 양옆이 63px·62px 로 똑같았다).
+   *
+   * 남는 자리를 왼쪽 여백이 다 가져가면 둘이 오른쪽에 나란히 선다.
+   * 토글과 딱 붙으면 한 덩어리로 보이므로 6px 만 띄운다.
+   */
+  assert.match(css, /#open-category-sheet \{[^}]*margin-left: auto/);
+  assert.match(css, /#open-category-sheet \{[^}]*margin-right: \d+px/);
+  assert.match(css, /\.section-heading \{[^}]*justify-content: space-between/);
+});
+
 test("분류로 거르는 자리는 목록 옆에 있다", () => {
   /*
    * 처음에는 분석 화면에서 분류를 누르게 했다. 그런데 누르면 보던 화면에서 튕겨 나와
