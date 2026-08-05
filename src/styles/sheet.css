@@ -57,7 +57,7 @@
   box-shadow: var(--shadow);
   opacity: 0;
   transform: translateY(105%);
-  transition: opacity 260ms ease, transform 420ms var(--ease-in-view);
+  transition: opacity var(--motion-slow) ease, transform var(--motion-slide) var(--ease-in-view);
 }
 
 /*
@@ -94,7 +94,7 @@
 
 .category-row {
   display: grid;
-  min-height: 56px;
+  min-height: var(--control-lg);
   padding: 0 var(--space-1);
   border: 0;
   border-radius: var(--radius-12);
@@ -200,7 +200,7 @@
 
 .sheet-handle {
   width: 38px;
-  height: 4px;
+  height: var(--bar-thin);
   margin: 0 auto var(--space-5);
   flex: 0 0 auto;
   border-radius: var(--radius-pill);
@@ -499,7 +499,7 @@
 }
 
 .amount-field input[type="text"] {
-  height: 50px;
+  height: var(--field-height);
   padding-right: var(--space-12);
   font-size: var(--text-16);
   font-weight: var(--weight-black);
@@ -538,7 +538,7 @@
 
 .submit-button {
   display: flex;
-  min-height: 56px;
+  min-height: var(--control-lg);
   margin-top: var(--space-1);
   padding: 0 var(--space-5);
   border-radius: var(--radius-16);
@@ -584,7 +584,7 @@
   font-size: var(--text-13);
   opacity: 0;
   transform: translateY(18px);
-  transition: opacity 180ms ease, transform 220ms ease;
+  transition: opacity var(--motion) ease, transform var(--motion-slow) ease;
 }
 
 .toast.is-visible {

@@ -470,9 +470,12 @@ test("아이콘 버튼은 보이는 크기보다 넓게 눌린다", () => {
   const 토큰 = (이름) => Number(css.match(new RegExp(`${이름}: (\\d+)px`))[1]);
   const 길이 = (글) => (글.startsWith("var(") ? 토큰(글.slice(4, -1)) : Number(글.replace("px", "")));
 
-  const 크기 = Number(css.match(/\.icon-button \{[^}]*width: (\d+)px/)[1]);
-  const 넓힘 = Number(css.match(/\.icon-button::after \{[^}]*inset: -(\d+)px/)[1]);
-  assert.ok(크기 + 넓힘 * 2 >= 44, `아이콘 누를 자리가 ${크기 + 넓힘 * 2}px 로 44px 에 못 미친다`);
+  const 최소 = 토큰("--tap-min");
+  assert.equal(길이(css.match(/\.icon-button \{[^}]*width: (\S+?);/)[1]), 토큰("--control-sm"));
+  // 넓히는 만큼을 숫자로 적으면 단추 크기를 바꿀 때 어긋난다. 모자란 만큼을 계산해서 쓴다.
+  assert.match(css, /\.icon-button::after \{[^}]*inset: calc\(\(var\(--tap-min\) - var\(--control-sm\)\) \/ -2\)/,
+    "넓히는 만큼을 44 에서 역산할 것");
+  assert.ok(최소 >= 44, `손이 닿는 최소가 ${최소}px 이다`);
 
   // 달 라벨은 글자 21px + 위아래 안쪽 여백. 거기에 ::after 로 넓힌 만큼 더한다.
   const 라벨여백 = 길이(css.match(/\n\.month-label \{[^}]*padding: (\S+)/)[1]);
@@ -562,6 +565,37 @@ test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
   }
   // 캘린더의 오늘 표시는 14px 굵은 글자라 큰 글자 기준(3:1)을 못 받는다.
   assert.match(css, /\.month-cell\.is-today \{[^}]*color: var\(--accent-dark\)/);
+});
+
+test("움직이는 시간은 토큰으로만 적는다", () => {
+  /*
+   * 12가지였다 — 180·200·220·260·280·420·480·600·620·650 에 기존 토큰 둘.
+   * 20~30ms 차이는 눈으로 구분되지 않는다. 성격이 셋뿐이라 그만큼만 둔다.
+   *
+   * 시트만 두 개를 쓴다 — 투명도는 240, 올라오는 거리는 420.
+   * 같은 시간을 주면 다 올라오기 전에 이미 또렷해져 뚝 끊겨 보인다.
+   *
+   * 움직임을 줄여 달라는 설정(prefers-reduced-motion)의 0.01ms 는 값이 아니라
+   * "사실상 끄기"다. 여기서 세지 않는다.
+   */
+  const 차례 = ["motion", "motion-slow", "motion-slide", "motion-enter"];
+  const 값 = 차례.map((이름) => {
+    const m = css.match(new RegExp(`--${이름}: (\\d+)ms`));
+    assert.ok(m, `--${이름} 토큰이 없다`);
+    return Number(m[1]);
+  });
+  for (let i = 1; i < 값.length; i += 1) {
+    assert.ok(값[i] > 값[i - 1], `--${차례[i - 1]}(${값[i - 1]}) 이 --${차례[i]}(${값[i]}) 보다 짧아야 한다`);
+  }
+  assert.match(css, /--motion-delay: \d+ms/);
+
+  const 밖 = css.split(/:root \{[\s\S]*?\n\}/).join("\n");
+  const 날것 = 밖
+    .split("\n")
+    .filter((줄) => /^\s*(transition|animation)(-duration)?:/.test(줄))
+    .filter((줄) => !줄.includes("0.01ms"))
+    .flatMap((줄) => [...줄.matchAll(/(?<!var\(--[\w-]{0,30})\b\d+m?s\b/g)].map((m) => `${m[0]} · ${줄.trim().slice(0, 46)}`));
+  assert.deepEqual(날것, [], "움직이는 시간을 숫자로 적었다 — --motion-* 을 쓸 것");
 });
 
 test("줄 사이와 자간도 토큰으로만 적는다", () => {
@@ -762,7 +796,7 @@ test("적는 상자와 손이 닿은 표시는 한 곳에서 정한다", () => {
    * 실제로 값이 조금씩 어긋나 있었다.
    */
   const 세기 = (re) => (css.match(re) ?? []).length;
-  assert.equal(세기(/height: 50px;\n  padding: 0 var\(--space-3\);\n  border: 1px solid var\(--field-line\)/g), 1,
+  assert.equal(세기(/height: var\(--field-height\);\n  padding: 0 var\(--space-3\);\n  border: 1px solid var\(--field-line\)/g), 1,
     "상자를 두 곳 이상에서 정하고 있다");
   // 손이 닿은 표시는 :root 에서 한 번만 정하고, 쓰는 자리에서는 이름으로 부른다.
   assert.equal(세기(/0 0 0 3px rgba\(242, 103, 75, 0\.11\)/g), 1,
@@ -1393,10 +1427,12 @@ test("막대 길이는 옆에 적힌 %와 같은 것을 가리킨다", () => {
 
 test("비중을 나타내는 막대는 화면이 달라도 같은 두께다", () => {
   // 같은 뜻의 그림이 화면마다 두께가 다르면 서로 다른 것으로 읽힌다.
-  const 분석 = css.match(/\.analysis-bar \{[^}]*?height:\s*(\d+)px/);
-  const 본화면 = css.match(/\.ratio-bar \{[^}]*?height:\s*(\d+)px/);
+  const 분석 = css.match(/\.analysis-bar \{[^}]*?height:\s*(\S+?);/);
+  const 본화면 = css.match(/\.ratio-bar \{[^}]*?height:\s*(\S+?);/);
   assert.ok(분석 && 본화면, "두 막대의 height 규칙을 찾지 못했다");
-  assert.equal(분석[1], 본화면[1], `분석 ${분석[1]}px vs 본 화면 ${본화면[1]}px`);
+  assert.equal(분석[1], 본화면[1], `분석 ${분석[1]} vs 본 화면 ${본화면[1]}`);
+  // 같은 숫자를 두 번 적는 것으로는 부족하다. 한쪽만 고치면 조용히 어긋난다.
+  assert.match(분석[1], /^var\(--bar-thin\)$/, "두께를 이름 하나로 정할 것");
 });
 
 test("비교 막대 둘은 같은 자로 잰다", () => {
@@ -2119,9 +2155,9 @@ test("시트를 열면 포커스가 모달 안으로 들어간다", () => {
 test("목록·캘린더 토글은 보이는 크기보다 넓게 눌린다", () => {
   // 알약을 크게 그리면 제목 줄이 두꺼워진다. 보이는 크기는 두고 누를 자리만 넓힌다.
   // 가로로도 넓히면 두 버튼의 자리가 겹쳐 경계에서 어느 쪽이 눌릴지 알 수 없어진다.
-  const 높이 = Number(css.match(/\.view-toggle button \{[^}]*height: (\d+)px/)[1]);
-  const 넓힘 = Number(css.match(/\.view-toggle button::after \{[^}]*inset: -(\d+)px 0/)[1]);
-  assert.ok(높이 + 넓힘 * 2 >= 44, `누를 자리가 ${높이 + 넓힘 * 2}px 로 44px 에 못 미친다`);
+  assert.match(css, /\.view-toggle button \{[^}]*--pill-height: \d+px/, "알약 높이를 이름으로 둘 것");
+  assert.match(css, /\.view-toggle button::after \{[^}]*inset: calc\(\(var\(--tap-min\) - var\(--pill-height\)\) \/ -2\) 0/,
+    "넓히는 만큼을 44 에서 역산할 것 — 알약 높이를 바꾸면 자리도 따라와야 한다");
 });
 
 test("밀린 고정비를 한 건씩 줄 세우지 않는다", () => {

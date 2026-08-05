@@ -45,15 +45,15 @@
    */
   padding: var(--space-6) 0 var(--space-8);
   text-align: center;
-  animation: rise-in 620ms var(--ease-in-view) both;
+  animation: rise-in var(--motion-enter) var(--ease-in-view) both;
 }
 
 .topbar {
   position: relative;
   z-index: var(--layer-above);
   display: flex;
-  width: min(100%, 780px);
-  height: 76px;
+  width: min(100%, var(--content-width));
+  height: var(--head-height);
   margin: 0 auto;
   padding: max(var(--space-4), env(safe-area-inset-top)) var(--space-6) var(--space-2);
   align-items: center;
@@ -93,7 +93,7 @@
 }
 
 .ghost-button.wide {
-  min-height: 56px;
+  min-height: var(--control-lg);
   padding: 0 var(--space-6);
 }
 
@@ -109,7 +109,7 @@
 
 .add-button {
   display: none;
-  min-height: 42px;
+  min-height: var(--control-sm);
   padding: 0 var(--space-4);
   border-radius: var(--radius-pill);
   align-items: center;
@@ -135,13 +135,13 @@
 main {
   position: relative;
   z-index: var(--layer-content);
-  width: min(100%, 780px);
+  width: min(100%, var(--content-width));
   margin: 0 auto;
   padding: 0 var(--space-6) var(--space-32);
 }
 
 .overview {
-  animation: rise-in 620ms var(--ease-in-view) both;
+  animation: rise-in var(--motion-enter) var(--ease-in-view) both;
 }
 
 .month-control {
@@ -162,7 +162,7 @@ main {
  */
 .month-bar {
   display: flex;
-  width: min(100%, 780px);
+  width: min(100%, var(--content-width));
   /* 위 8 + 화살표 42 + 가운데 정렬로 남는 6 + 아래 8 = 64. 위 여백을 8px 로 두려고 잡은 값이다. */
   height: 64px;
   margin: 0 auto;
@@ -190,8 +190,8 @@ main {
 
 .icon-button {
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: var(--control-sm);
+  height: var(--control-sm);
   border-radius: var(--radius-round);
 }
 
@@ -205,7 +205,8 @@ main {
 .icon-button::after {
   content: "";
   position: absolute;
-  inset: -1px;
+  /* 보이는 크기에서 모자란 만큼만 넓힌다. 숫자로 적으면 단추 크기를 바꿀 때 어긋난다. */
+  inset: calc((var(--tap-min) - var(--control-sm)) / -2);
 }
 
 /* 눌러도 안 되는 버튼은 그렇게 보여야 한다. 화면마다 따로 정하지 않는다. */
@@ -273,7 +274,7 @@ main {
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: flex-grow var(--motion-slow) ease, opacity 180ms ease;
+  transition: flex-grow var(--motion-slow) ease, opacity var(--motion) ease;
   pointer-events: none;
 }
 
@@ -416,7 +417,7 @@ main {
 
 .ratio-bar {
   display: flex;
-  height: 4px;
+  height: var(--bar-thin);
   overflow: hidden;
   border-radius: var(--radius-pill);
   background: var(--paper-deep);
@@ -425,7 +426,7 @@ main {
 .ratio-bar span {
   width: 0;
   height: 100%;
-  transition: width 600ms var(--ease-in-view);
+  transition: width var(--motion-enter) var(--ease-in-view);
 }
 
 .ratio-legend {

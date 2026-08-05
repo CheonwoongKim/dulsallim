@@ -9,7 +9,7 @@
   background: var(--paper);
   /* 옆에서 밀려 들어와 "다른 곳으로 갔다"는 느낌을 준다. */
   transform: translateX(100%);
-  transition: transform 280ms var(--ease-in-view);
+  transition: transform var(--motion-slow) var(--ease-in-view);
 }
 
 .page.is-visible {
@@ -27,8 +27,8 @@
   z-index: var(--layer-above);
   top: 0;
   display: flex;
-  width: min(100%, 780px);
-  height: 76px;
+  width: min(100%, var(--content-width));
+  height: var(--head-height);
   margin: 0 auto;
   padding: max(var(--space-4), env(safe-area-inset-top)) var(--space-6) var(--space-2);
   gap: var(--space-2);
@@ -45,7 +45,7 @@
 
 .page-body {
   display: grid;
-  width: min(100%, 780px);
+  width: min(100%, var(--content-width));
   margin: 0 auto;
   padding: var(--space-2) var(--space-6) max(var(--space-8), env(safe-area-inset-bottom));
   gap: var(--space-4);
@@ -309,7 +309,7 @@
   flex: 0 0 auto;
   border-radius: var(--radius-pill);
   background: var(--field-line);
-  transition: background 200ms ease;
+  transition: background var(--motion) ease;
 }
 
 .switch::after {
@@ -322,7 +322,7 @@
   background: var(--white);
   box-shadow: var(--shadow-knob);
   content: "";
-  transition: transform 200ms var(--ease-in-view);
+  transition: transform var(--motion) var(--ease-in-view);
 }
 
 .switch-input:checked + .switch {

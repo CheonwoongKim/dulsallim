@@ -1,7 +1,7 @@
 .ledger {
   /* 사용자별 지출 단락과의 사이. 위쪽이 넉넉해 목록을 조금 끌어올렸다(22 → 14). */
   padding-top: var(--space-3);
-  animation: rise-in 650ms 100ms var(--ease-in-view) both;
+  animation: rise-in var(--motion-enter) var(--motion-delay) var(--ease-in-view) both;
 }
 
 /*
@@ -96,7 +96,7 @@
 }
 
 .expense-item.is-new {
-  animation: item-in 480ms var(--ease-in-view) both;
+  animation: item-in var(--motion-slide) var(--ease-in-view) both;
 }
 
 .expense-date {
@@ -178,7 +178,7 @@
 
 .text-button span {
   display: inline-block;
-  transition: transform 180ms ease;
+  transition: transform var(--motion) ease;
 }
 
 .text-button:hover span {
@@ -199,7 +199,7 @@
   background: var(--ink);
   box-shadow: var(--shadow-fab);
   opacity: 1;
-  transition: opacity var(--motion) ease, transform 180ms ease, box-shadow 180ms ease;
+  transition: opacity var(--motion) ease, transform var(--motion) ease, box-shadow var(--motion) ease;
 }
 
 .floating-add svg {
