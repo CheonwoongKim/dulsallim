@@ -34,6 +34,21 @@
   margin-right: var(--space-1);
 }
 
+/*
+ * 이 단추만 그림을 토글과 같은 17px 로 줄인다.
+ *
+ * 머리 줄 아이콘은 배경 있는 동그라미 안에 들어 그 동그라미가 크기를 말해 주는데,
+ * 이 단추는 배경이 투명해 20px 그림 자체가 크기로 읽힌다. 바로 옆 알약 속 17px 둘과
+ * 나란히 서니 18% 커 보였다(계측: 20 대 17).
+ *
+ * 공용 `.icon-button svg` 를 줄이면 머리 줄 아이콘 셋이 함께 줄어든다. 여기만 건다.
+ * 상자(42×42)와 ::after 로 넓힌 누를 자리(44×44)는 그대로다 — 그림만 줄인다.
+ */
+#open-category-sheet svg {
+  width: 17px;
+  height: 17px;
+}
+
 .section-heading h2,
 .sheet-header h2 {
   margin: 0;
