@@ -564,6 +564,35 @@ test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
   assert.match(css, /\.month-cell\.is-today \{[^}]*color: var\(--accent-dark\)/);
 });
 
+test("모서리는 계단 위의 토큰으로만 적는다", () => {
+  /*
+   * 11가지가 흩어져 있었다 — 2·5·8·9·11·12·13·14·15·16·28.
+   * 1px 차이는 눈으로 구분되지 않으면서 나란히 놓인 카드와 단추의 곡률만 어긋나게 한다.
+   *
+   * 간격과 같은 4의 배수를 쓴다. 모서리와 안쪽 여백이 맞물리기 때문이다 —
+   * 안쪽 모서리는 "바깥 모서리 - 안쪽 여백"이라야 두 곡선이 같은 중심을 돈다.
+   * 두 값이 같은 계단 위에 있어야 그 뺄셈도 계단 위로 떨어진다.
+   *
+   * 예전에는 field/card/sheet 라는 이름이 있었는데 아무 데도 쓰이지 않았고
+   * 그 값(13·16·28)이 그대로 날것으로 적혀 있었다. 이름에 크기를 적으면 그 일이 안 생긴다.
+   */
+  for (const 값 of [4, 8, 12, 16, 28]) {
+    assert.match(css, new RegExp(`--radius-${값}: ${값}px`), `--radius-${값} 토큰이 없다`);
+  }
+  assert.match(css, /--radius-pill: 999px/);
+  assert.match(css, /--radius-round: 50%/);
+
+  const 본문 = css.replace(/:root \{[\s\S]*?\n\}/, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const 날것 = [...본문.matchAll(/border-radius:\s*([^;]+);/g)]
+    .map((m) => m[1].trim())
+    .filter((값) => /\d+px/.test(값) && !값.includes("var(--radius"));
+  assert.deepEqual(날것, [], "모서리를 숫자로 적었다 — --radius-N 토큰을 쓸 것");
+
+  // 결제자 고르는 칸은 감싼 상자에서 여백을 뺀 값이다. 숫자로 적으면 바깥만 바꿨을 때 어긋난다.
+  assert.match(css, /\.segmented-control label > span \{[^}]*border-radius: calc\(var\(--radius-16\) - var\(--space-1\)\)/,
+    "안쪽 모서리를 바깥 모서리에서 계산하지 않으면 두 곡선의 중심이 어긋난다");
+});
+
 test("글자 크기는 계단 위의 토큰으로만 적는다", () => {
   /*
    * 18가지였다 — 8·10·11·12·13·14·15·16·17·18·19·20·21·27·28·32·34 에 총액의 clamp 까지.

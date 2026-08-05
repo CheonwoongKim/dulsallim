@@ -156,7 +156,7 @@
   display: flex;
   padding: var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-16);
   color: var(--ink);
   background: var(--white);
   cursor: pointer;
@@ -240,7 +240,7 @@
 .partner-goal {
   margin: calc(var(--space-2) * -1) 0 0;
   padding: var(--space-3) var(--space-3);
-  border-radius: 12px;
+  border-radius: var(--radius-12);
   background: var(--paper-deep);
   color: var(--ink-soft);
   font-size: var(--text-13);
@@ -251,7 +251,7 @@
 .nag-target {
   margin: 0;
   padding: var(--space-3) var(--space-3);
-  border-radius: 12px;
+  border-radius: var(--radius-12);
   background: var(--paper-deep);
   color: var(--ink-soft);
   font-size: var(--text-13);
@@ -262,7 +262,7 @@
   display: flex;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-16);
   gap: var(--space-3);
   align-items: center;
   justify-content: space-between;
@@ -348,7 +348,7 @@
   display: grid;
   padding: var(--space-3) var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-16);
   gap: var(--space-2);
   align-items: center;
   background: var(--white);

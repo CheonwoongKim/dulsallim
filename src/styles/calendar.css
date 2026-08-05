@@ -81,7 +81,7 @@
   min-width: 0;
   padding: var(--space-1) var(--space-05);
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--radius-8);
   flex-direction: column;
   gap: var(--space-05);
   align-items: center;

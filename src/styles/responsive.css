@@ -38,7 +38,7 @@
     bottom: auto;
     max-height: calc(100svh - 48px);
     padding: var(--space-6) 0 0;
-    border-radius: 28px;
+    border-radius: var(--radius-28);
     transform: translateY(calc(-50% + 24px)) scale(0.98);
   }
 
