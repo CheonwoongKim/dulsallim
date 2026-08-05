@@ -481,6 +481,33 @@ test("아이콘 버튼은 보이는 크기보다 넓게 눌린다", () => {
   assert.ok(라벨높이 >= 44, `달 라벨 누를 자리가 ${라벨높이}px 로 44px 에 못 미친다`);
 });
 
+test("토스트의 좌우 여백은 left/right 가 아니라 폭이 정한다", () => {
+  /*
+   * margin: auto 로 가운데 서므로 left/right 는 설 자리의 경계만 정하고,
+   * 실제로 보이는 좌우 여백은 (창 - 폭) / 2 다. 붙박이라 100% 는 창 전체를 가리킨다.
+   *
+   * left/right 만 고치고 폭을 그대로 두면 화면에서는 아무것도 안 움직인다.
+   * 계측: left/right 를 18 에서 16 으로 바꿨는데 x 는 18 그대로였다.
+   */
+  const 폭뺀값 = css.match(/\.toast \{[^}]*width: min\(calc\(100% - var\((--space-\d+)\)\)/)[1];
+  const 옆값 = css.match(/\.toast \{[^}]*left: var\((--space-\d+)\)/)[1];
+  const 토큰 = (이름) => Number(css.match(new RegExp(`${이름}: (\\d+)px`))[1]);
+  assert.equal(토큰(폭뺀값) / 2, 토큰(옆값),
+    "폭에서 빼는 값의 절반과 left/right 가 다르면 둘 중 하나는 아무 일도 하지 않는다");
+});
+
+test("시트의 좌우 여백은 본 화면과 같다", () => {
+  /*
+   * 시트가 열려도 글이 서는 자리는 그대로여야 한다. 다르면 열고 닫을 때마다 좌우로 흔들린다.
+   * 본 화면은 main, 시트는 sheet-header 와 sheet-scroll 이 각자 갖고 있다.
+   */
+  const 본 = css.match(/\nmain \{[^}]*padding: 0 var\((--space-\d+)\)/)[1];
+  for (const 규칙 of [/\.sheet-header \{[^}]*padding: 0 var\((--space-\d+)\)/,
+                     /\.sheet-scroll \{[^}]*padding: 0 var\((--space-\d+)\)/]) {
+    assert.equal(css.match(규칙)[1], 본, "시트 좌우 여백이 본 화면과 어긋난다");
+  }
+});
+
 test("분석 화면의 달 글자는 제 높이를 묶어 둔다", () => {
   /*
    * 본 화면에서 달 라벨은 옆 화살표(42px)보다 작아 줄 높이에 관여하지 않는다.
