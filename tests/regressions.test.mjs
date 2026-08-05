@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { formatMoney } from "../src/expenses.js";
@@ -7,7 +8,100 @@ import { MAX_AMOUNT, formatAmountInput, isValidAmount, readAmount } from "../src
 
 /** 배치 크기는 소스에서 읽는다 — 숫자를 두 곳에 적으면 한쪽만 바뀐다. */
 const APPLY_BATCH_SIZE = Number(/const APPLY_BATCH = (\d+);/.exec(app)[1]);
-import { css, fn, html, source as app, sourceLineCounts, sw } from "./helpers/source.mjs";
+import { css, fn, html, source as app, sourceLineCounts, STYLE_FILES, sw } from "./helpers/source.mjs";
+
+/** 주석 속 괄호와 세미콜론은 CSS 구조가 아니다. 줄·글자 위치는 보존한다. */
+const 주석을빈칸으로 = (source) => source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "));
+
+/**
+ * 여러 줄 값도 선언 하나로 읽고, 어느 선택자와 바로 앞 주석에 속하는지 남긴다.
+ * 완전한 CSS 파서는 아니지만 이 파일의 옛 줄 단위 정규식처럼 값의 둘째 줄을 버리지는 않는다.
+ */
+function css구조읽기(source) {
+  const text = 주석을빈칸으로(source);
+  const 블록들 = [];
+  const 선언들 = [];
+  const stack = [];
+  let 조각시작 = 0;
+  let quote = "";
+  let 괄호깊이 = 0;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === "\\") i += 1;
+      else if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === "\"" || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "(") {
+      괄호깊이 += 1;
+      continue;
+    }
+    if (ch === ")") {
+      괄호깊이 -= 1;
+      continue;
+    }
+    if (괄호깊이 > 0) continue;
+
+    if (ch === "{") {
+      const block = { selector: text.slice(조각시작, i).trim(), start: 조각시작, open: i, close: -1 };
+      블록들.push(block);
+      stack.push(block);
+      조각시작 = i + 1;
+      continue;
+    }
+    if (ch === ";") {
+      const 조각 = text.slice(조각시작, i);
+      const 앞공백 = 조각.length - 조각.trimStart().length;
+      const 적은것 = 조각.trim();
+      const colon = 적은것.indexOf(":");
+      const property = 적은것.slice(0, colon).trim();
+      if (colon > 0 && /^[a-zA-Z-][\w-]*$/.test(property) && stack.length > 0) {
+        선언들.push({
+          property,
+          value: 적은것.slice(colon + 1).trim(),
+          selector: stack.at(-1).selector,
+          contexts: stack.map((block) => block.selector),
+          block: stack.at(-1),
+          start: 조각시작 + 앞공백,
+        });
+      }
+      조각시작 = i + 1;
+      continue;
+    }
+    if (ch === "}") {
+      const block = stack.pop();
+      if (block) block.close = i;
+      조각시작 = i + 1;
+    }
+  }
+  return { 블록들, 선언들 };
+}
+
+const 스타일별CSS = Object.fromEntries(await Promise.all(STYLE_FILES.map(async (name) => [
+  name,
+  await readFile(new URL(`../src/styles/${name}.css`, import.meta.url), "utf8"),
+])));
+const CSS구조 = css구조읽기(css);
+const 스타일별구조 = Object.fromEntries(STYLE_FILES.map((name) => [name, css구조읽기(스타일별CSS[name])]));
+const 루트블록 = 스타일별구조.base.블록들.filter(({ selector }) => selector === ":root")[0];
+const 루트토큰 = new Set(스타일별구조.base.선언들
+  .filter(({ selector, property }) => selector === ":root" && property.startsWith("--"))
+  .map(({ property }) => property));
+
+const 토큰참조 = (value) => [...value.matchAll(/var\(\s*(--[\w-]+)(\s*,)?[^)]*\)/g)]
+  .map((m) => ({ name: m[1], fallback: Boolean(m[2]) }));
+const 단일토큰인가 = (value, prefix) => {
+  const m = value.match(new RegExp(`^var\\(\\s*(--${prefix}-[\\w-]+)\\s*\\)$`));
+  return Boolean(m && 루트토큰.has(m[1]));
+};
+const 선언표시 = ({ selector, property, value }) => `${selector} { ${property}: ${value}; }`;
+const 이유주석이있나 = (declaration) => /\/\*[\s\S]*?\S[\s\S]*?\*\//
+  .test(css.slice(declaration.block.start, declaration.start));
 
 test("제출 검증은 날짜를 반드시 확인한다", () => {
   const validateFn = fn("validateExpenseInput");
@@ -575,10 +669,9 @@ test("디자인 문서는 코드와 어긋나지 않는다", async () => {
    *  · 실제 토큰인데 문서가 아예 안 다루는 것이 있나
    *  · 문서가 값까지 적은 것이 코드의 값과 같나
    */
-  const { readFile } = await import("node:fs/promises");
   const 문서 = await readFile(new URL("../DESIGN.md", import.meta.url), "utf8");
-  const i = css.indexOf(":root {");
-  const root = css.slice(i, css.indexOf("\n}", i));
+  assert.ok(루트블록, "base.css 에 :root 가 없다");
+  const root = 스타일별CSS.base.slice(루트블록.open + 1, 루트블록.close);
 
   const 부르는것 = [...new Set([...문서.matchAll(/--[a-z][\w-]*/g)].map((m) => m[0]))];
   const 없는것 = 부르는것.filter((t) => t !== "--text-14" && !root.includes(`${t}:`) && !css.includes(`@property ${t}`));
@@ -606,6 +699,9 @@ test("움직이는 시간은 토큰으로만 적는다", () => {
    *
    * 움직임을 줄여 달라는 설정(prefers-reduced-motion)의 0.01ms 는 값이 아니라
    * "사실상 끄기"다. 여기서 세지 않는다.
+   *
+   * 줄로 훑으면 transition-delay 와 다음 줄에 적은 shorthand 시간을 놓쳤다(재현: 123ms).
+   * 선언 전체를 읽어야 var() 뒤에 쉼표로 숫자 시간을 덧붙인 것도 함께 막을 수 있다.
    */
   const 차례 = ["motion", "motion-slow", "motion-slide", "motion-enter"];
   const 값 = 차례.map((이름) => {
@@ -618,12 +714,20 @@ test("움직이는 시간은 토큰으로만 적는다", () => {
   }
   assert.match(css, /--motion-delay: \d+ms/);
 
-  const 밖 = css.split(/:root \{[\s\S]*?\n\}/).join("\n");
-  const 날것 = 밖
-    .split("\n")
-    .filter((줄) => /^\s*(transition|animation)(-duration)?:/.test(줄))
-    .filter((줄) => !줄.includes("0.01ms"))
-    .flatMap((줄) => [...줄.matchAll(/(?<!var\(--[\w-]{0,30})\b\d+m?s\b/g)].map((m) => `${m[0]} · ${줄.trim().slice(0, 46)}`));
+  const 날것 = CSS구조.선언들
+    .filter(({ selector, property }) => selector !== ":root" && /^(?:transition|animation)(?:-(?:duration|delay))?$/.test(property))
+    .flatMap((declaration) => {
+      const 토큰오류 = 토큰참조(declaration.value)
+        .some(({ name, fallback }) => fallback || !루트토큰.has(name));
+      const 줄인움직임 = declaration.contexts
+        .some((selector) => selector.includes("prefers-reduced-motion: reduce"));
+      const 숫자시간 = [...declaration.value.matchAll(/(?<![\w.-])-?(?:\d*\.)?\d+m?s\b/g)]
+        .map((m) => m[0])
+        .filter((value) => value !== "0.01ms" || !줄인움직임);
+      return 토큰오류 || 숫자시간.length > 0
+        ? [`${선언표시(declaration)}${숫자시간.length ? ` · ${숫자시간.join(", ")}` : " · 없는 토큰 또는 fallback"}`]
+        : [];
+    });
   assert.deepEqual(날것, [], "움직이는 시간을 숫자로 적었다 — --motion-* 을 쓸 것");
 });
 
@@ -653,11 +757,11 @@ test("줄 사이와 자간도 토큰으로만 적는다", () => {
   }
   assert.match(css, /--tracking-eyebrow: 0\.04em/, "작은 이름표만 거꾸로 벌린다");
 
-  const 밖 = css.split(/:root \{[\s\S]*?\n\}/).join("\n");
   for (const [이름, 속성, 접두] of [["줄 사이", "line-height", "leading"], ["자간", "letter-spacing", "tracking"]]) {
-    const 날것 = [...밖.matchAll(new RegExp(`${속성}:\\s*([^;]+);`, "g"))]
-      .map((m) => m[1].trim())
-      .filter((값) => !값.startsWith(`var(--${접두}-`));
+    const 날것 = CSS구조.선언들
+      .filter(({ selector, property }) => selector !== ":root" && property === 속성)
+      .filter(({ value }) => !단일토큰인가(value, 접두))
+      .map(선언표시);
     assert.deepEqual(날것, [], `${이름}을 숫자로 적었다 — --${접두}-* 을 쓸 것`);
   }
 });
@@ -688,10 +792,14 @@ test("무엇이 무엇 위에 오는지는 한 목록이 정한다", () => {
   const 지역 = Number(css.match(/--layer-above: (\d+)/)[1]);
   assert.ok(지역 <= 값[0], "지역 값이 전역 사다리 위로 올라가 있다");
 
-  const 조각 = css.split(/:root \{[\s\S]*?\n\}/).join("\n");
-  const 날것 = [...조각.matchAll(/z-index:\s*([^;]+);/g)]
-    .map((m) => m[1].trim())
-    .filter((값) => !값.startsWith("var(--layer"));
+  /*
+   * 접두사만 보면 var(--layer-rogue, 999) 도 목록의 값처럼 보였다(재현).
+   * z-index 는 base.css 에 실제로 선언된 --layer-* 하나만 fallback 없이 쓴다.
+   */
+  const 날것 = CSS구조.선언들
+    .filter(({ selector, property }) => selector !== ":root" && property === "z-index")
+    .filter(({ value }) => !단일토큰인가(value, "layer"))
+    .map(선언표시);
   assert.deepEqual(날것, [], "겹침 순서를 숫자로 적었다 — --layer-* 을 쓸 것");
 });
 
@@ -704,14 +812,18 @@ test("색과 그림자는 :root 에서만 정한다", () => {
    *  · border-top: 1px solid rgba(32, 33, 30, 0.07) 이 ledger·sheet 두 곳에
    *
    * 이 검사는 "값을 어디서 정하나"만 본다 — 어떤 색인지는 사람이 정한다.
+   * 합친 CSS 에서 :root 를 몽땅 지우면 다른 파일의 둘째 :root 도 사라졌다(재현: --rogue: #000).
+   * 줄 하나에 var() 가 있거나 값이 다음 줄로 내려가도 선언의 나머지 색을 끝까지 본다.
    */
-  const 조각 = css.split(/:root \{[\s\S]*?\n\}/);
-  const 밖 = 조각.join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
-  const 날것 = 밖
-    .split("\n")
-    .map((줄) => 줄.trim())
-    .filter((줄) => /^[a-z-]+\s*:/.test(줄) && !/var\(--/.test(줄))
-    .filter((줄) => /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(줄));
+  const 루트위치 = STYLE_FILES.flatMap((name) => 스타일별구조[name].블록들
+    .filter(({ selector }) => selector === ":root")
+    .map(() => name));
+  assert.deepEqual(루트위치, ["base"], "값은 base.css 의 :root 하나에서만 정할 것");
+
+  const 날것 = CSS구조.선언들
+    .filter(({ selector, value }) => selector !== ":root"
+      && /#[0-9a-fA-F]{3,8}\b|(?:rgb|hsl)a?\(|(?:oklch|oklab|lch|lab|color)\(/.test(value))
+    .map(선언표시);
   assert.deepEqual(날것, [], ":root 밖에서 색을 정하고 있다 — 토큰을 만들어 쓸 것");
 });
 
@@ -733,10 +845,25 @@ test("모서리는 계단 위의 토큰으로만 적는다", () => {
   assert.match(css, /--radius-pill: 999px/);
   assert.match(css, /--radius-round: 50%/);
 
-  const 본문 = css.replace(/:root \{[\s\S]*?\n\}/, "").replace(/\/\*[\s\S]*?\*\//g, "");
-  const 날것 = [...본문.matchAll(/border-radius:\s*([^;]+);/g)]
-    .map((m) => m[1].trim())
-    .filter((값) => /\d+px/.test(값) && !값.includes("var(--radius"));
+  /*
+   * var() 하나만 있으면 안전하다고 치면 calc(var(--radius-16) + 3px) 가 통과했다(재현).
+   * 계산에는 실제 --radius-*·--space-* 토큰과 단위 없는 0만 남을 수 있다.
+   */
+  const 날것 = CSS구조.선언들
+    .filter(({ selector, property }) => selector !== ":root" && property === "border-radius")
+    .filter(({ value }) => {
+      const refs = 토큰참조(value);
+      if (refs.length === 0 || refs.some(({ name, fallback }) => fallback
+        || !루트토큰.has(name)
+        || (!name.startsWith("--radius-") && !name.startsWith("--space-")))) return true;
+      const 나머지 = value
+        .replace(/var\(\s*--[\w-]+\s*\)/g, "")
+        .replace(/\bcalc\b/g, "")
+        .replace(/(?<![\w.])0(?![\w.])/g, "")
+        .replace(/[\s(),/+*-]/g, "");
+      return 나머지 !== "";
+    })
+    .map(선언표시);
   assert.deepEqual(날것, [], "모서리를 숫자로 적었다 — --radius-N 토큰을 쓸 것");
 
   // 결제자 고르는 칸은 감싼 상자에서 여백을 뺀 값이다. 숫자로 적으면 바깥만 바꿨을 때 어긋난다.
@@ -765,10 +892,11 @@ test("글자 크기는 계단 위의 토큰으로만 적는다", () => {
     assert.doesNotMatch(css, new RegExp(`--text-${계단밖}:`), `--text-${계단밖} 은 계단에 없다`);
   }
 
-  const 본문 = css.replace(/:root \{[\s\S]*?\n\}/, "").replace(/\/\*[\s\S]*?\*\//g, "");
-  const 날것 = [...본문.matchAll(/font-size:\s*([^;]+);/g)]
-    .map((m) => m[1].trim())
-    .filter((값) => !값.startsWith("var(--text-"));
+  /* var(--text-14, 14px) 는 접두사가 맞아도 없는 토큰과 날것 fallback 이다(재현). */
+  const 날것 = CSS구조.선언들
+    .filter(({ selector, property }) => selector !== ":root" && property === "font-size")
+    .filter(({ value }) => !단일토큰인가(value, "text"))
+    .map(선언표시);
   assert.deepEqual(날것, [], "글자 크기를 숫자로 적었다 — --text-N 토큰을 쓸 것");
 });
 
@@ -778,25 +906,35 @@ test("간격 계단 위의 값은 토큰으로만 적는다", () => {
    * 그건 계단이 아니라 그때그때 눈으로 맞춘 값들이다.
    *
    * 계단은 4의 배수로만 오른다. 8 이 1×·1.5×·2×·3× 밀도에서 정수 픽셀로 떨어져
-   * 흐릿해지지 않기 때문이고, 모바일 폭(360·375·390)도 8 로 나눠떨어진다.
+   * 흐릿해지지 않기 때문이고, 4 는 그 반 칸이라 부품 안쪽을 더 촘촘히 맞출 수 있다.
    *
-   * 계단 밖 값(10·14·18·22 …)은 아직 남아 있다. 한꺼번에 당기면 화면이 흔들리므로
-   * 화면을 보면서 하나씩 좁힌다. 다만 계단 위에 있는 값을 다시 숫자로 적지는 않는다 —
-   * 그러면 토큰이 있으나 마나가 된다.
+   * 계단 밖 값을 꼭 써야 하면 그 자리의 주석으로 이유를 남긴다. 예전 검사는 반대로
+   * 계단 위 리터럴만 막아 padding: 18px 를 말없이 써도 통과했다(재현).
+   * 계단 위 값은 이유가 있어도 숫자로 다시 적지 않는다 — 그러면 토큰이 있으나 마나가 된다.
    */
   const 계단 = [2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 128];
   for (const 값 of 계단) {
     assert.match(css, new RegExp(`--space-(?:05|\\d+): ${값}px`), `${값}px 토큰이 없다`);
   }
 
-  const 본문 = css.replace(/:root \{[\s\S]*?\n\}/, "").replace(/\/\*[\s\S]*?\*\//g, "");
   const 날것 = [];
-  for (const m of 본문.matchAll(/(?:^|;|\{)\s*((?:padding|margin|gap|row-gap|column-gap)[a-z-]*)\s*:([^;{}]+)/g)) {
-    for (const n of m[2].matchAll(/(?<![\w.-])(\d+)px/g)) {
-      if (계단.includes(Number(n[1]))) 날것.push(`${m[1]}: ${n[1]}px`);
+  const 간격선언 = CSS구조.선언들.filter(({ selector, property }) => selector !== ":root"
+    && /^(?:padding|margin|gap|row-gap|column-gap)(?:-[a-z-]+)?$/.test(property));
+  for (const declaration of 간격선언) {
+    const refs = 토큰참조(declaration.value);
+    if (refs.some(({ name, fallback }) => fallback || !루트토큰.has(name) || !name.startsWith("--space-"))) {
+      날것.push(`${선언표시(declaration)} · 없는 간격 토큰 또는 fallback`);
+    }
+    const 숫자들 = [...declaration.value.matchAll(/(?<![\w.-])(-?(?:\d*\.)?\d+)px\b/g)]
+      .map((m) => Number(m[1]));
+    if (숫자들.some((value) => value < 0)) continue;
+    for (const value of 숫자들) {
+      if (계단.includes(value) || !이유주석이있나(declaration)) {
+        날것.push(`${선언표시(declaration)} · ${value}px${계단.includes(value) ? " 는 계단 위" : " 계단 밖 이유 주석 없음"}`);
+      }
     }
   }
-  assert.deepEqual(날것, [], "계단 위 값을 숫자로 적었다 — 토큰을 쓸 것");
+  assert.deepEqual(날것, [], "간격 숫자는 토큰을 쓰고, 계단 밖 예외는 그 자리에 이유를 적을 것");
 
   /*
    * 위로 당기는 여백도 같은 계단을 쓴다.
@@ -804,16 +942,18 @@ test("간격 계단 위의 값은 토큰으로만 적는다", () => {
    * 처음 훑을 때 이걸 놓쳤다 — 앞의 정규식은 숫자 앞의 빼기를 글자로 쳐서 음수를 아예 안 봤다.
    * 그래서 본 화면·시트·설정을 "계단 밖 0곳"이라고 적고도 -10·-6 이 남아 있었다.
    *
-   * 눈으로 맞춘 자리는 리듬이 아니라 그림의 생김새에 맞춘 값이라 여기 이름을 적어 남긴다.
-   * 목록에 없는 음수가 새로 생기면 그건 누군가 계단을 벗어난 것이다.
+   * 선언 글자만 허용 목록과 비교했더니 다른 선택자에 그대로 복사해도 통과했고,
+   * 정수만 찾던 정규식은 -0.5px 도 놓쳤다(재현). 선택자·값·그 자리의 이유를 함께 본다.
    */
-  const 눈으로맞춘 = ["margin: -5px -7px 0 0"];
   const 음수날것 = [];
-  for (const m of 본문.matchAll(/(?:^|;|\{)\s*((?:padding|margin|gap|row-gap|column-gap)[a-z-]*)\s*:([^;{}]+)/g)) {
-    const 적은것 = `${m[1]}:${m[2]}`.replace(/\s+/g, " ").trim();
-    if (!/-\d+px/.test(적은것)) continue;
-    if (눈으로맞춘.includes(적은것)) continue;
-    음수날것.push(적은것);
+  for (const declaration of 간격선언) {
+    const 음수 = [...declaration.value.matchAll(/(?<![\w.-])-(?:\d*\.)?\d+px\b/g)];
+    if (음수.length === 0) continue;
+    const 눈으로맞춘 = declaration.selector === ".close-button"
+      && declaration.property === "margin"
+      && declaration.value.replace(/\s+/g, " ") === "-5px -7px 0 0"
+      && 이유주석이있나(declaration);
+    if (!눈으로맞춘) 음수날것.push(선언표시(declaration));
   }
   assert.deepEqual(음수날것, [], "위로 당기는 여백을 숫자로 적었다 — calc(var(--space-N) * -1) 을 쓸 것");
 });
