@@ -15,3 +15,6 @@ output/
 .deploy.log
 .pull.log
 .gstack/
+
+# supabase CLI 가 프로젝트를 기억해 두는 자리. 저장소에 둘 것이 아니다.
+supabase/.temp/
