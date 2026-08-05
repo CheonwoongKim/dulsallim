@@ -1,7 +1,7 @@
 /* 로그인 게이트. 인증 전에는 앱이 아예 보이지 않는다. */
 .auth-gate {
   position: fixed;
-  z-index: 80;
+  z-index: var(--layer-gate);
   inset: 0;
   display: grid;
   padding: var(--space-6) var(--space-6) max(var(--space-6), env(safe-area-inset-bottom));

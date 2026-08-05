@@ -29,7 +29,7 @@
   border: 0;
   color: inherit;
   position: fixed;
-  z-index: 50;
+  z-index: var(--layer-sheet);
   /*
    * <dialog> 기본값은 top: 0 이다. 아래(bottom)와 함께 위(top)까지 정해지면
    * margin: auto 가 남는 자리를 위아래로 똑같이 나눠 시트를 화면 한가운데로 밀어 올린다
@@ -562,7 +562,7 @@
 
 .toast {
   position: fixed;
-  z-index: 70;
+  z-index: var(--layer-toast);
   right: var(--space-4);
   bottom: max(var(--space-6), env(safe-area-inset-bottom));
   left: var(--space-4);

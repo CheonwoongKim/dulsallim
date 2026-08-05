@@ -1,7 +1,7 @@
 /* 마이페이지·설정: 가계부를 완전히 덮는 전체 화면 */
 .page {
   position: fixed;
-  z-index: 30;
+  z-index: var(--layer-page);
   inset: 0;
   display: flex;
   overflow-y: auto;
@@ -24,7 +24,7 @@
 
 .page-head {
   position: sticky;
-  z-index: 1;
+  z-index: var(--layer-above);
   top: 0;
   display: flex;
   width: min(100%, 780px);

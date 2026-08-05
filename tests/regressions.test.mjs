@@ -564,6 +564,39 @@ test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
   assert.match(css, /\.month-cell\.is-today \{[^}]*color: var\(--accent-dark\)/);
 });
 
+test("무엇이 무엇 위에 오는지는 한 목록이 정한다", () => {
+  /*
+   * 1·5·10·15·20·30·50·70·80 이 흩어져 있었다. 숫자만 봐서는 순서를 알 수 없어
+   * 새 요소를 넣을 때마다 눈치껏 골랐다 — 토스트가 FAB 뒤로 숨은 적이 있다.
+   *
+   * 아홉 개처럼 보였지만 실제로 겨루는 것은 일곱이다. 나머지 셋(머리 줄 안의 상단 줄,
+   * main 안의 지출 내역 제목, 화면 안의 제목 줄)은 감싼 요소가 이미 제 맥락을 만들어서
+   * 형제하고만 겨룬다. 거기에 전역 값을 쓰면 "머리 줄보다 위"처럼 읽히지만 아무 뜻도 없다.
+   *
+   * 그래서 검사도 두 가지를 본다 — 목록의 차례가 지켜지는지, 그리고 지역 자리에
+   * 전역 값이 새어 들어가지 않았는지.
+   */
+  const 차례 = ["content", "float", "header", "page", "sheet", "toast", "gate"];
+  const 값 = 차례.map((이름) => {
+    const m = css.match(new RegExp(`--layer-${이름}: (\\d+)`));
+    assert.ok(m, `--layer-${이름} 토큰이 없다`);
+    return Number(m[1]);
+  });
+  for (let i = 1; i < 값.length; i += 1) {
+    assert.ok(값[i] > 값[i - 1],
+      `${차례[i - 1]}(${값[i - 1]}) 이 ${차례[i]}(${값[i]}) 보다 아래에 있어야 한다`);
+  }
+  // 지역 자리는 형제보다만 위면 된다. 전역 사다리의 맨 아래보다 높으면 잘못 읽힌다.
+  const 지역 = Number(css.match(/--layer-above: (\d+)/)[1]);
+  assert.ok(지역 <= 값[0], "지역 값이 전역 사다리 위로 올라가 있다");
+
+  const 조각 = css.split(/:root \{[\s\S]*?\n\}/).join("\n");
+  const 날것 = [...조각.matchAll(/z-index:\s*([^;]+);/g)]
+    .map((m) => m[1].trim())
+    .filter((값) => !값.startsWith("var(--layer"));
+  assert.deepEqual(날것, [], "겹침 순서를 숫자로 적었다 — --layer-* 을 쓸 것");
+});
+
 test("색과 그림자는 :root 에서만 정한다", () => {
   /*
    * 23곳이 날것이었다 — 그림자의 rgba, 초점 테두리, 회색 몇 가지.

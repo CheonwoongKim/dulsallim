@@ -12,7 +12,7 @@
  */
 .section-heading {
   position: sticky;
-  z-index: 10;
+  z-index: var(--layer-above);
   top: var(--header-h, 0px);
   display: flex;
   padding: var(--space-2) 0 var(--space-3);
@@ -187,7 +187,7 @@
 
 .floating-add {
   position: fixed;
-  z-index: 15;
+  z-index: var(--layer-float);
   right: max(var(--space-6), calc((100vw - 736px) / 2));
   bottom: max(20px, env(safe-area-inset-bottom));
   display: grid;

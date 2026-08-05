@@ -6,7 +6,7 @@
 
 .app-header {
   position: sticky;
-  z-index: 20;
+  z-index: var(--layer-header);
   top: 0;
   background: var(--paper);
 }
@@ -50,7 +50,7 @@
 
 .topbar {
   position: relative;
-  z-index: 5;
+  z-index: var(--layer-above);
   display: flex;
   width: min(100%, 780px);
   height: 76px;
@@ -134,7 +134,7 @@
 
 main {
   position: relative;
-  z-index: 1;
+  z-index: var(--layer-content);
   width: min(100%, 780px);
   margin: 0 auto;
   padding: 0 var(--space-6) var(--space-32);
