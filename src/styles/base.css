@@ -22,6 +22,37 @@
   --sage: #8da697;
   --white: #fffdf8;
   --shadow: 0 18px 60px rgba(38, 32, 25, 0.16);
+
+  /*
+   * 손이 닿거나 눌린 자리, 그리고 화면 뒤에 깔리는 색.
+   * 같은 값을 여러 파일에 적어 두면 한 곳만 바뀐다 — 실제로 초점 테두리가 세 곳에 있었다.
+   */
+  --focus-outline: 3px solid rgba(242, 103, 75, 0.25); /* outline 통째로 쓴다 */
+  --focus-glow: 0 0 0 3px rgba(242, 103, 75, 0.11); /* 적는 칸에 손이 닿았을 때 */
+  --tint-hover: rgba(32, 33, 30, 0.04);
+  --tint-active: rgba(32, 33, 30, 0.06);
+  --line-row: rgba(32, 33, 30, 0.07); /* 줄과 줄 사이. --line 보다 옅다 */
+  --line-mark: #d8d2c7; /* 고를 수 있다는 동그라미 테두리 */
+  --track: #eeeae2; /* 고르는 칸이 놓이는 바닥 */
+  --handle: #d8d4cc; /* 시트 위 손잡이 */
+  --field-bg-focus: #fff; /* 손이 닿은 적는 칸. 종이색이 아니라 흰색이라야 도드라진다 */
+  --ink-label: #5f5e58; /* 작은 이름표. --ink-soft 로는 종이 위에서 4.5:1 에 못 미쳤다 */
+  --accent-soft: #ff9b87; /* 어두운 바탕 위의 강조색. 토스트의 되돌리기 */
+  --backdrop: rgba(22, 21, 19, 0.46); /* 시트 뒤에 까는 막 */
+  --overscroll: #e9e5dc; /* 끝까지 당겼을 때 뒤에 보이는 색 */
+
+  /*
+   * 그림자.
+   *
+   * 여덟 가지다. 값이 제각각이라(색도 번짐도 다르다) 지금은 쓰임새대로 이름만 붙인다.
+   * 세 단계쯤으로 줄일 수 있어 보이지만 그건 눈에 보이는 변화라 따로 볼 일이다.
+   */
+  --shadow-knob: 0 1px 3px rgba(35, 31, 26, 0.25); /* 스위치 손잡이 */
+  --shadow-raised: 0 2px 8px rgba(35, 31, 26, 0.08); /* 고른 칸이 떠 보이게 */
+  --shadow-fab-press: 0 5px 18px rgba(32, 33, 30, 0.2);
+  --shadow-fab: 0 10px 30px rgba(32, 33, 30, 0.23);
+  --shadow-toast: 0 10px 32px rgba(0, 0, 0, 0.2);
+  --shadow-accent: 0 9px 24px rgba(216, 77, 52, 0.21); /* 저장 단추. 강조색이 번진다 */
   --font: "Gowun Dodum", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 
   /*
@@ -185,8 +216,8 @@
 .date-control:focus-within {
   border-color: var(--accent);
   outline: 0;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(242, 103, 75, 0.11);
+  background: var(--field-bg-focus);
+  box-shadow: var(--focus-glow);
 }
 
 * {
@@ -198,7 +229,7 @@
 }
 
 html {
-  background: #e9e5dc;
+  background: var(--overscroll);
   -webkit-text-size-adjust: 100%;
 }
 
@@ -227,7 +258,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 3px solid rgba(242, 103, 75, 0.25);
+  outline: var(--focus-outline);
   outline-offset: 2px;
 }
 

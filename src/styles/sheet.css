@@ -9,7 +9,7 @@
  * 커스텀 속성을 물려받는다(WebKit 확인).
  */
 .sheet::backdrop {
-  background: rgba(22, 21, 19, 0.46);
+  background: var(--backdrop);
   backdrop-filter: blur(4px);
   opacity: 0;
   transition: opacity var(--motion-slow) ease;
@@ -204,7 +204,7 @@
   margin: 0 auto var(--space-5);
   flex: 0 0 auto;
   border-radius: var(--radius-pill);
-  background: #d8d4cc;
+  background: var(--handle);
 }
 
 .sheet-header {
@@ -289,7 +289,7 @@
 }
 
 .fixed-item + .fixed-item {
-  border-top: 1px solid rgba(32, 33, 30, 0.07);
+  border-top: 1px solid var(--line-row);
 }
 
 .fixed-day {
@@ -376,7 +376,7 @@
 
 .field-group > span:not(.date-control):not(.amount-input-wrap),
 .field-group legend {
-  color: #5f5e58;
+  color: var(--ink-label);
   font-size: var(--text-12);
   font-weight: var(--weight-bold);
 }
@@ -443,7 +443,7 @@
   display: grid;
   padding: var(--space-1);
   border-radius: var(--radius-16);
-  background: #eeeae2;
+  background: var(--track);
   grid-template-columns: 1fr 1fr;
   gap: var(--space-1);
 }
@@ -480,11 +480,11 @@
 .segmented-control input:checked + span {
   color: var(--ink);
   background: var(--white);
-  box-shadow: 0 2px 8px rgba(35, 31, 26, 0.08);
+  box-shadow: var(--shadow-raised);
 }
 
 .segmented-control input:focus-visible + span {
-  outline: 3px solid rgba(242, 103, 75, 0.25);
+  outline: var(--focus-outline);
 }
 
 .form-row {
@@ -548,7 +548,7 @@
   color: var(--white);
   background: var(--accent);
   font-weight: var(--weight-black);
-  box-shadow: 0 9px 24px rgba(216, 77, 52, 0.21);
+  box-shadow: var(--shadow-accent);
   transition: background var(--motion) ease, transform var(--motion) ease;
 }
 
@@ -580,7 +580,7 @@
   justify-content: space-between;
   color: var(--white);
   background: var(--ink);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-toast);
   font-size: var(--text-13);
   opacity: 0;
   transform: translateY(18px);
@@ -596,7 +596,7 @@
   min-height: 34px;
   padding: 0 var(--space-2);
   border: 0;
-  color: #ff9b87;
+  color: var(--accent-soft);
   background: transparent;
   font-size: var(--text-12);
   font-weight: var(--weight-black);

@@ -89,7 +89,7 @@
 
 .ghost-button:hover {
   border-color: var(--line-strong);
-  background: rgba(32, 33, 30, 0.04);
+  background: var(--tint-hover);
 }
 
 .ghost-button.wide {
@@ -219,7 +219,7 @@ main {
 }
 
 .icon-button:active {
-  background: rgba(32, 33, 30, 0.06);
+  background: var(--tint-active);
   transform: scale(0.94);
 }
 

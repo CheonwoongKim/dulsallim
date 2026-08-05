@@ -564,6 +564,26 @@ test("강조색을 글자로 쓰는 자리는 읽히는 밝기다", () => {
   assert.match(css, /\.month-cell\.is-today \{[^}]*color: var\(--accent-dark\)/);
 });
 
+test("색과 그림자는 :root 에서만 정한다", () => {
+  /*
+   * 23곳이 날것이었다 — 그림자의 rgba, 초점 테두리, 회색 몇 가지.
+   * 같은 값이 여러 파일에 흩어져 있으면 한 곳만 바뀐다:
+   *  · outline: 3px solid rgba(242, 103, 75, 0.25) 가 base·page·sheet 세 곳에
+   *  · box-shadow: 0 2px 8px rgba(35, 31, 26, 0.08) 이 analysis·sheet 두 곳에
+   *  · border-top: 1px solid rgba(32, 33, 30, 0.07) 이 ledger·sheet 두 곳에
+   *
+   * 이 검사는 "값을 어디서 정하나"만 본다 — 어떤 색인지는 사람이 정한다.
+   */
+  const 조각 = css.split(/:root \{[\s\S]*?\n\}/);
+  const 밖 = 조각.join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
+  const 날것 = 밖
+    .split("\n")
+    .map((줄) => 줄.trim())
+    .filter((줄) => /^[a-z-]+\s*:/.test(줄) && !/var\(--/.test(줄))
+    .filter((줄) => /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(줄));
+  assert.deepEqual(날것, [], ":root 밖에서 색을 정하고 있다 — 토큰을 만들어 쓸 것");
+});
+
 test("모서리는 계단 위의 토큰으로만 적는다", () => {
   /*
    * 11가지가 흩어져 있었다 — 2·5·8·9·11·12·13·14·15·16·28.
@@ -676,8 +696,14 @@ test("적는 상자와 손이 닿은 표시는 한 곳에서 정한다", () => {
   const 세기 = (re) => (css.match(re) ?? []).length;
   assert.equal(세기(/height: 50px;\n  padding: 0 var\(--space-3\);\n  border: 1px solid var\(--field-line\)/g), 1,
     "상자를 두 곳 이상에서 정하고 있다");
-  assert.equal(세기(/box-shadow: 0 0 0 3px rgba\(242, 103, 75, 0\.11\)/g), 1,
+  // 손이 닿은 표시는 :root 에서 한 번만 정하고, 쓰는 자리에서는 이름으로 부른다.
+  assert.equal(세기(/0 0 0 3px rgba\(242, 103, 75, 0\.11\)/g), 1,
     "손이 닿은 표시를 두 곳 이상에서 정하고 있다");
+  assert.match(css, /box-shadow: var\(--focus-glow\)/);
+  assert.equal(세기(/3px solid rgba\(242, 103, 75, 0\.25\)/g), 1,
+    "초점 테두리를 두 곳 이상에서 정하고 있다");
+  assert.ok(세기(/outline: var\(--focus-outline\)/g) >= 3,
+    "초점 테두리를 쓰는 자리가 줄었다 — 어딘가 다시 숫자로 적었을 수 있다");
   // 같은 색을 여러 곳에 적어 두면 한 곳만 바뀐다. :root 밖에는 리터럴을 두지 않는다.
   assert.match(css, /--field-line: #ddd8cf/);
   assert.equal(세기(/#ddd8cf|#fcfaf5|#f7f3eb/g), 3, ":root 밖에 같은 색을 다시 적어 두었다");
