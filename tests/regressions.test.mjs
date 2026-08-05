@@ -1556,15 +1556,38 @@ test("분석 막대는 줄마다 같은 길이를 쓴다", () => {
   assert.match(app, /class="analysis-percent"/);
 });
 
-test("막대 길이는 옆에 적힌 %와 같은 것을 가리킨다", () => {
-  // 1등 분류 기준으로 그리면 47%인데 꽉 찬 막대가 되어 '거의 다 식비'로 읽힌다.
+test("비교를 끈 막대는 길이 대신 사람 분포를 말한다", () => {
+  /*
+   * 길이로 비중을 그리면 옆의 %와 같은 것을 두 번 말하면서, 사람 분포는 그 짧은 막대
+   * 안에 끼여 사라진다 — 트랙 203px 에서 교통(1%)은 8px 이라 나눌 면적이 없었다(계측).
+   * 이제 어느 분류든 트랙을 꽉 채우고, 그 안을 사람별 금액 비율로만 나눈다.
+   */
   const paint = fn("paintShares");
-  assert.match(paint, /width:\$\{\(category\.total \/ total\) \* 100\}%/);
-  assert.doesNotMatch(paint, /categories\[0\]\.total/, "1등을 기준으로 삼으면 안 된다");
-  // 회색 트랙이 100% 자리를 지켜야 비교 대상이 생긴다.
+  assert.doesNotMatch(paint, /category\.total \/ total/, "길이가 다시 비중을 되풀이하면 안 된다");
+  assert.doesNotMatch(paint, /categories\[0\]\.total/, "1등을 기준으로 삼아도 안 된다");
+  assert.match(paint, /class="analysis-bar is-split"/);
+  assert.match(css, /\.analysis-bar\.is-split i \{[^}]*width: 100%/, "꽉 채우는 것은 CSS 가 정한다");
+  // 그 안은 사람별 금액 비율 그대로다. 바닥값을 두면 작은 몫이 부풀어 비율이 거짓말이 된다.
+  assert.match(fn("paintSplit"), /width:\$\{\(amount \/ total\) \* 100\}%/);
+  assert.doesNotMatch(css, /\.analysis-bar i span \{[^}]*min-width/);
+
+  // 비중은 옆의 %와 금액, 그리고 금액 순 정렬이 계속 나른다.
+  assert.match(paint, /category\.percent/);
+  assert.match(paint, /formatMoney\(category\.total\)/);
+
+  // 길이를 갖는 막대는 비교 켬 하나뿐이라, 회색 트랙과 최소 굵기도 거기서만 뜻이 있다.
   assert.match(css, /\.analysis-bar \{[^}]*background: var\(--paper-deep\)/);
   const floor = Number(css.match(/\.analysis-bar i \{[^}]*min-width:\s*(\d+)px/)[1]);
   assert.ok(floor >= 8, `min-width ${floor}px — 작은 분류가 안 보인다`);
+});
+
+test("막대 안을 가르는 규칙은 사람을 골라도 그대로다", () => {
+  // "전체"에서만 가르고 사람을 고르면 그만두면, 같은 그림이 화면마다 다른 것을 말하게 된다.
+  const paint = fn("paintAnalysis");
+  assert.match(paint, /const split = splitByMember\(monthly\)/);
+  assert.doesNotMatch(paint, /memberFilter \? null : splitByMember/);
+  // 고른 사람 것만 남아 있어 조각 하나가 트랙을 통째로 채운다. 0원인 사람은 조각이 없다.
+  assert.match(fn("paintSplit"), /filter\(\(\{ amount \}\) => amount > 0\)/);
 });
 
 test("비중을 나타내는 막대는 화면이 달라도 같은 두께다", () => {
