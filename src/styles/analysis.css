@@ -112,6 +112,11 @@
   font-size: var(--text-12);
 }
 
+/* 숨은 원본과 자리를 맞바꾼다. 보이지도 읽히지도 않지만 같은 글줄 높이는 그대로 차지한다. */
+.compare-hint-space {
+  visibility: hidden;
+}
+
 .compare-name {
   color: var(--ink-soft);
   font-size: var(--text-13);

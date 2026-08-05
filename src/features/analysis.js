@@ -140,6 +140,21 @@ function paintCompared(categories, otherCategories) {
     .join("");
 }
 
+/** hidden 은 자리를 없애므로, 같은 문구가 같은 폭에서 차지하는 높이만 읽히지 않는 사본으로 남긴다. */
+let compareHintSpace = null;
+
+function preserveCompareHintSpace() {
+  if (!compareHintSpace) {
+    compareHintSpace = elements.compareHint.cloneNode(true);
+    compareHintSpace.removeAttribute("id");
+    compareHintSpace.classList.add("compare-hint-space");
+    compareHintSpace.setAttribute("aria-hidden", "true");
+    elements.compareHint.after(compareHintSpace);
+  }
+  compareHintSpace.textContent = elements.compareHint.textContent;
+  compareHintSpace.hidden = !elements.compareHint.hidden;
+}
+
 /** 견줄 기록이 있는 달만 고를 수 있게 한다. */
 function paintComparePicker(compared, active) {
   const 가능 = { previous: compared.previous, lastYear: compared.lastYear };
@@ -152,8 +167,9 @@ function paintComparePicker(compared, active) {
     button.setAttribute("aria-pressed", String(Boolean(active) && compareWith === mode));
   });
 
-  // 고를 게 있는데 아직 안 골랐을 때만 알린다. 한 번 고르고 나면 설명이 필요 없다.
+  // 고를 게 있는데 아직 안 골랐을 때만 알린다. hidden 은 읽기에서도 빼고, 자리는 CSS 가 지킨다.
   elements.compareHint.hidden = !고를수있음 || Boolean(active);
+  preserveCompareHintSpace();
 }
 
 /** 같은 것을 다시 누르면 꺼진다. */
