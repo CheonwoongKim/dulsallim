@@ -188,7 +188,7 @@
 .floating-add {
   position: fixed;
   z-index: 15;
-  right: max(22px, calc((100vw - 736px) / 2));
+  right: max(var(--space-6), calc((100vw - 736px) / 2));
   bottom: max(20px, env(safe-area-inset-bottom));
   display: grid;
   width: 54px;

@@ -4,7 +4,7 @@
   z-index: 80;
   inset: 0;
   display: grid;
-  padding: var(--space-6) 22px max(var(--space-6), env(safe-area-inset-bottom));
+  padding: var(--space-6) var(--space-6) max(var(--space-6), env(safe-area-inset-bottom));
   overflow-y: auto;
   align-content: center;
   justify-items: center;
@@ -14,7 +14,7 @@
 .auth-card {
   display: grid;
   width: min(100%, 360px);
-  gap: 18px;
+  gap: var(--space-4);
 }
 
 .auth-card .eyebrow {
@@ -23,7 +23,7 @@
 }
 
 .auth-title {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-2);
   font-size: 34px;
   letter-spacing: -0.055em;
   text-align: center;
@@ -44,7 +44,7 @@
 .remember-row {
   display: flex;
   margin-top: calc(var(--space-1) * -1);
-  gap: 9px;
+  gap: var(--space-2);
   align-items: center;
   color: var(--ink-soft);
   cursor: pointer;

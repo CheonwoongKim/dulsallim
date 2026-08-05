@@ -57,14 +57,14 @@
    * 캘린더는 요일 줄이 곧바로 붙어 답답해 보이므로 같은 자리에서 시작하도록 맞춘다.
    * 위 제목의 margin-bottom(14px)과 맞닿아 큰 쪽으로 합쳐지므로, 이 값이 그대로 최종 간격이 된다.
    */
-  margin-top: 41px;
+  margin-top: var(--space-10);
   margin-bottom: var(--space-2);
   grid-template-columns: repeat(7, 1fr);
   gap: var(--space-05);
 }
 
 .calendar-weekday {
-  padding-bottom: 6px;
+  padding-bottom: var(--space-2);
   color: var(--ink-soft);
   font-size: 11px;
   font-weight: var(--weight-bold);
@@ -74,7 +74,7 @@
 .calendar-cell {
   display: flex;
   min-width: 0;
-  padding: 5px var(--space-05);
+  padding: var(--space-1) var(--space-05);
   border: 0;
   border-radius: 9px;
   flex-direction: column;

@@ -617,7 +617,7 @@ test("적는 상자와 손이 닿은 표시는 한 곳에서 정한다", () => {
    * 실제로 값이 조금씩 어긋나 있었다.
    */
   const 세기 = (re) => (css.match(re) ?? []).length;
-  assert.equal(세기(/height: 50px;\n  padding: 0 14px;\n  border: 1px solid var\(--field-line\)/g), 1,
+  assert.equal(세기(/height: 50px;\n  padding: 0 var\(--space-3\);\n  border: 1px solid var\(--field-line\)/g), 1,
     "상자를 두 곳 이상에서 정하고 있다");
   assert.equal(세기(/box-shadow: 0 0 0 3px rgba\(242, 103, 75, 0\.11\)/g), 1,
     "손이 닿은 표시를 두 곳 이상에서 정하고 있다");
@@ -1164,12 +1164,21 @@ test("전환 버튼은 손가락이 닿을 만큼 크다", () => {
   assert.ok(width >= 36 && height >= 28, `${width}×${height}px — 너무 작다`);
 });
 
-test("캘린더도 목록과 같은 높이에서 시작한다", () => {
-  // 목록은 첫 행 안쪽 여백 덕에 41px 아래에서 글자가 시작한다.
-  // 캘린더는 요일 줄이 곧바로 붙어 그만큼을 margin 으로 벌어 준다. 빠지면 답답해 보인다.
-  // 인접 margin 은 큰 쪽으로 합쳐지므로 이 값이 그대로 최종 간격이 된다.
-  const top = Number(css.match(/\.calendar \{[^}]*margin-top:\s*(\d+)px/)[1]);
-  assert.ok(top >= 38 && top <= 44, `margin-top ${top}px — 목록의 41px 과 어긋난다`);
+test("캘린더는 제목에서 띄운 뒤 시작한다", () => {
+  /*
+   * 원래 뜻은 "목록과 같은 높이에서 시작한다" 였다. 목록이 첫 행 안쪽 여백 덕에
+   * 제목에서 41px 아래에서 글자가 시작하니 캘린더도 그만큼 벌어 준다는 것이었다.
+   *
+   * 그 전제는 이미 깨져 있다. 지금 재 보면 목록 글자는 제목 상자에서 16px,
+   * 캘린더 요일 줄은 40px 아래다 — 24px 어긋난다. 머리 줄을 새로 짜면서 목록 쪽이
+   * 좁아졌는데 이 값만 남은 것으로 보인다.
+   *
+   * 맞추려면 캘린더가 24px 위로 올라와야 하는데 그건 눈에 보이는 변화라
+   * 간격을 계단에 맞추는 일과 같이 처리하지 않았다. 여기서는 값이 조용히
+   * 사라지지 않게만 지킨다.
+   */
+  assert.match(css, /\.calendar \{[^}]*margin-top: var\(--space-10\)/,
+    "캘린더가 제목에 바로 붙으면 답답해 보인다");
 });
 
 test("진행 중인 달은 몇 일까지 본 숫자인지 밝힌다", () => {
@@ -1359,7 +1368,7 @@ test("잠긴 아이콘 버튼은 어느 화면에서든 잠겨 보인다", () =>
 
 test("시트 안 항목 간격은 폼마다 따로 정하지 않는다", () => {
   // id 로 하나씩 걸어 두면 새 시트를 만들 때 빠뜨려 라벨이 서로 붙는다.
-  assert.match(css, /\.sheet-scroll \{[\s\S]*?gap:\s*\d+px/);
+  assert.match(css, /\.sheet-scroll \{[\s\S]*?gap:\s*var\(--space-\d+\)/);
   assert.doesNotMatch(css, /#expense-form,\s*\n#fixed-form \{[^}]*gap/);
 });
 
@@ -1873,7 +1882,8 @@ test("본 화면 단락 사이 여백은 머리를 바꾸기 전과 같다", () 
   assert.match(css, /\n\.hero \{[^}]*padding: var\(--space-6\) 0 var\(--space-8\)/, "휴대폰: 위로 35px, 아래로 32px");
   // 요약 블록이 지출 내역 제목과 너무 벌어져 있어 아래쪽을 당겼다.
   assert.match(css, /\.member-summary \{[^}]*padding: var\(--space-5\) 0 var\(--space-2\)/);
-  assert.match(css, /\.hero \{\n    \/\*[^*]*\*\/\n    padding: 34px 0 36px/, "넓은 화면: 위로 45px");
+  assert.match(css, /\.hero \{\n    \/\*[^*]*\*\/\n    padding: var\(--space-8\) 0 var\(--space-8\)/,
+    "넓은 화면: 위아래 32px");
   // 사용자별 지출 단락과 지출 내역 사이. 22px 은 넉넉해서 목록을 8px 끌어올렸다.
   assert.match(css, /\.ledger \{[^}]*padding-top: var\(--space-3\)/);
 });
