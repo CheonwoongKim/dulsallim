@@ -685,7 +685,3 @@ body.sheet-open .app-shell {
   gap: var(--space-2);
 }
 
-/* 한꺼번에 푸는 자리. 고르는 것들과 한 박자 떨어뜨린다. 크기는 .submit-button 이 정한다. */
-.filter-clear {
-  margin-top: var(--space-3);
-}

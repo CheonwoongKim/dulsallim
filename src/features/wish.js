@@ -346,7 +346,6 @@ export function closeWishDetail() {
   });
 }
 
-/** 자세히에서 고치기를 고르면 그 시트를 닫고 담기 시트를 올린다. 두 장이 겹쳐 뜨지 않게 한다. */
 /* ── 칸의 ⋯ 메뉴 ──────────────────────────────────────────── */
 
 /** ⋯ 메뉴가 어느 위시를 위해 열렸나. 닫으면 비운다. */
@@ -409,8 +408,8 @@ export async function agreeOnWish(id) {
 /**
  * 지우기 전에 한 번 묻는다.
  *
- * 밀어서 지우던 때는 밀고 누르는 두 동작이었는데, 격자로 오면서 × 한 번이 됐다.
- * 그림 위에 있는 작은 단추라 스치듯 눌릴 수 있고, 지운 위시는 되돌릴 길이 없다.
+ * ⋯ 메뉴에서 고르는 것만으로는 부족하다. 메뉴는 그림 위 작은 단추에서 열리고 두 줄이
+ * 나란히 있어 손이 미끄러질 수 있는데, 지운 위시는 되돌릴 길이 없다.
  */
 export function askDropWish(id) {
   const wish = getWishes().find((current) => current.id === id);
@@ -454,6 +453,12 @@ export function openAchieveSheet(id) {
   const wish = getWishes().find((current) => current.id === id && current.state !== "achieved");
   if (!wish) return;
 
+  /*
+   * 자세히를 먼저 닫는다. 그대로 두면 시트가 두 장 열린 채가 되는데, 닫는 길
+   * (closeActiveSheet)은 열린 것을 모두 닫는다 — 지출을 고르다 뒤로 가면 자세히까지
+   * 함께 닫혀 목록으로 튕겼다. 시트는 한 번에 한 장이라는 약속을 지킨다.
+   */
+  closeWishDetail();
   achievingWishId = id;
   elements.wishAchieveEyebrow.textContent = wish.name;
 
@@ -468,7 +473,8 @@ export function openAchieveSheet(id) {
   } else {
     elements.wishExpenseList.replaceChildren(...choices.map(createExpenseChoice));
   }
-  showSheet(elements.wishAchieveSheet);
+  // 자세히가 닫히는 연출과 겹치지 않게 한 박자 뒤에 올린다. 고치기·지우기와 같은 줄이다.
+  setTimeout(() => showSheet(elements.wishAchieveSheet), MENU_HANDOFF_MS);
 }
 
 export function closeAchieveSheet() {

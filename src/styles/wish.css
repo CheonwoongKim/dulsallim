@@ -187,62 +187,6 @@
   -webkit-line-clamp: 2;
 }
 
-.wish-meta {
-  color: var(--ink-soft);
-  font-size: var(--text-12);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: var(--tracking-small);
-}
-
-
-/*
- * "나도" 는 이 화면에서 가장 자주 누르는 곳이다. 카드 맨 아래에 가로로 꽉 차게 둔다 —
- * 칸이 좁아 옆에 세우면 이름이 밀리고, 무엇에 대한 "나도" 인지도 흐려진다.
- *
- * 보이는 높이는 38 로 두고, 손이 닿는 자리는 ::after 로 44 까지 넓힌다.
- */
-.wish-agree {
-  /* 보이는 높이를 한 곳에서 정한다. 아래 ::after 가 이 값에서 모자란 만큼을 낸다. */
-  --agree-height: 38px;
-
-  position: relative;
-  min-height: var(--agree-height);
-  /* 위 8. 글과 붙지 않게 띄우고, 카드 아래 여백은 .wish-copy 가 낸다. */
-  margin-top: var(--space-2);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-12);
-  color: var(--white);
-  background: var(--ink);
-  cursor: pointer;
-  font-size: var(--text-13);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-small);
-}
-
-/*
- * 위아래로만 넓힌다. 옆으로 넓히면 옆 칸의 "나도" 와 손닿는 자리가 겹친다 —
- * 격자 사이 틈이 12 뿐이라 양쪽에서 3씩만 나와도 붙는다.
- */
-.wish-agree::after {
-  content: "";
-  position: absolute;
-  inset: calc((var(--tap-min) - var(--agree-height)) / -2) 0;
-}
-
-.wish-agree:active {
-  background: var(--ink-soft);
-}
-
-/* 이미 함께 바라는 것에서 누르는 "이뤘어요". 담기보다 조용해야 한다 — 자주 누를 것이 아니다. */
-.wish-agree.is-quiet {
-  color: var(--ink);
-  background: var(--paper-deep);
-}
-
-.wish-agree.is-quiet:active {
-  background: var(--line);
-}
 
 /* ── 이룬 것 ──────────────────────────────────────────────── */
 
@@ -358,12 +302,3 @@
   gap: var(--space-2);
 }
 
-/* ── 설정 맨 위의 내 줄 ───────────────────────────────────── */
-
-/* .menu-row span 이 모든 span 을 세로 격자로 만든다. 아바타와 글자는 나란히 서야 한다. */
-.menu-row .menu-me {
-  display: flex;
-  min-width: 0;
-  gap: var(--space-3);
-  align-items: center;
-}

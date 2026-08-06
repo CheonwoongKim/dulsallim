@@ -2886,3 +2886,27 @@ test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
     규칙(".icon-button svg").match(/stroke-width: ([\d.]+)/)[1],
   );
 });
+
+test("쓰지 않게 된 모양새와 손잡이를 남기지 않는다", () => {
+  /*
+   * 화면을 고치고 나면 그 화면만 쓰던 규칙이 남는다. 눈에 안 띄어서 계속 쌓이고,
+   * 다음 사람은 그것이 살아 있는 줄 알고 흉내 낸다. 실제로 여섯 개가 남아 있었다 —
+   * .filter-clear · .wish-meta · .wish-agree · .is-quiet · .wish-copy · .menu-me.
+   *
+   * classList 로 붙이는 이름도 글자로 어딘가에 적히므로 같은 방식으로 잡힌다.
+   */
+  const 부르는곳 = `${app}\n${html}`;
+  const 이름들 = [...new Set([...css.matchAll(/\.([a-z][\w-]*)/g)].map((m) => m[1]))];
+  const 안쓰는것 = 이름들.filter((이름) => !new RegExp(`\\b${이름}\\b`).test(부르는곳));
+  assert.deepEqual(안쓰는것, [], "모양새에만 있고 아무 데서도 안 쓰는 이름이 남아 있다");
+
+  /*
+   * dom.js 가 잡아 두는 것도 마찬가지다. 안 쓰는 손잡이는 화면에서 그 자리를 지워도
+   * 아무도 모르게 null 이 되어, 나중에 엉뚱한 곳에서 터진다.
+   */
+  const 손잡이들 = [...app.matchAll(/^  (\w+): document\.querySelector\(/gm)].map((m) => m[1]);
+  const 안쓰는손잡이 = 손잡이들.filter(
+    (이름) => [...app.matchAll(new RegExp(`elements\\.${이름}\\b`, "g"))].length === 0,
+  );
+  assert.deepEqual(안쓰는손잡이, [], "dom.js 가 아무도 안 쓰는 것을 잡고 있다");
+});

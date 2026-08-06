@@ -242,27 +242,26 @@ test("향하는 것은 서버가 정한 state 로만 가른다", () => {
   assert.doesNotMatch(기능, /agreementUserIds\.length ===/, "화면이 합의 수로 상태를 판정한다");
 });
 
-test("나도는 보이는 크기보다 넓게 눌린다", () => {
+test("시트는 한 번에 한 장만 열린다", () => {
   /*
-   * 이 화면에서 가장 자주 누르는 곳이다. 보이는 높이는 38 이라 44 에 모자란다.
-   * 넓히는 만큼을 숫자로 적으면 단추 높이를 바꿀 때 조용히 어긋나므로 한 값에서 낸다.
+   * 닫는 길(closeActiveSheet)은 열린 시트를 하나씩 보고 열려 있으면 다 닫는다.
+   * 두 장이 겹쳐 있으면 뒤로 한 번에 두 겹이 닫힌다 — 지출을 고르다 뒤로 갔을 때
+   * 자세히까지 함께 닫혀 목록으로 튕겼다(계측: 이뤘어요 누른 뒤 열린 시트 두 장).
+   *
+   * 다음 시트를 올리기 전에 지금 것을 닫는다. 닫히는 연출과 겹치지 않게 한 박자 뒤다.
    */
-  const 토큰 = (이름) => Number(css.match(new RegExp(`${이름}: (\\d+)px`))[1]);
-  const 높이 = Number(css.match(/\.wish-agree \{[^}]*--agree-height: (\d+)px/)[1]);
-  assert.match(
-    css,
-    /\.wish-agree::after \{[^}]*inset: calc\(\(var\(--tap-min\) - var\(--agree-height\)\) \/ -2\) 0/,
-    "넓히는 만큼을 44 에서 역산할 것",
+  const 이룸열기 = fn("openAchieveSheet");
+  assert.match(이룸열기, /closeWishDetail\(\);/, "자세히를 안 닫고 다음 시트를 올린다");
+  assert.match(이룸열기, /setTimeout\(\(\) => showSheet\(elements\.wishAchieveSheet\), MENU_HANDOFF_MS\)/);
+  assert.ok(
+    이룸열기.indexOf("closeWishDetail") < 이룸열기.indexOf("showSheet"),
+    "닫기보다 올리기가 먼저다",
   );
-  assert.match(css, /\.wish-agree \{[^}]*min-height: var\(--agree-height\)/);
-  assert.ok(높이 + (토큰("--tap-min") - 높이) >= 44, "넓히고 나서도 44 에 못 미친다");
 
-  // 카드 안 "이뤘어요" 는 넓힐 자리가 있어 그냥 44 로 세운다.
-  /*
-   * "이뤘어요" 는 이제 카드 안의 .wish-agree.is-quiet 다. 보이는 높이 38 에 ::after 로
-   * 44 를 채우는 방식은 "나도" 와 같다.
-   */
-  assert.match(css, /\.wish-agree\.is-quiet \{[^}]*background: var\(--paper-deep\)/);
+  // 메뉴에서 넘기는 둘도 같은 줄을 쓴다.
+  for (const 이름 of ["editFromMenu", "dropFromMenu"]) {
+    assert.match(fn(이름), /closeWishMenu\(\);[\s\S]*?MENU_HANDOFF_MS/, `${이름} 이 겹쳐 띄운다`);
+  }
 });
 
 test("위시 화면과 시트는 있는 부품을 다시 쓴다", () => {

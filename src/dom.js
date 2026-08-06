@@ -23,7 +23,6 @@ export const elements = {
   retryLoad: document.querySelector("#retry-load"),
   appShell: document.querySelector("#app-shell"),
   floatingAdd: document.querySelector(".floating-add"),
-  overview: document.querySelector(".overview"),
   authGate: document.querySelector("#auth-gate"),
   loginForm: document.querySelector("#login-form"),
   loginEmail: document.querySelector("#login-email"),
