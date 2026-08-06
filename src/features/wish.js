@@ -71,10 +71,17 @@ function waitingFor(wish) {
   return names.length ? `${names.join(" · ")} 기다리는 중` : "곧 향합니다";
 }
 
+/** 진척을 세는 데 필요한 것. 한 번 모아 카드마다 넘긴다 — 줄마다 다시 읽지 않는다. */
+function progressContext() {
+  return { expenses: getExpenses(), members: getMembers() };
+}
+
 function paintPursuing(wishes) {
   const pursuing = wishes.find((wish) => wish.state === "pursuing");
   elements.wishPursuing.hidden = !pursuing;
-  elements.wishPursuing.replaceChildren(...(pursuing ? [createPursuingCard(pursuing)] : []));
+  elements.wishPursuing.replaceChildren(
+    ...(pursuing ? [createPursuingCard(pursuing, progressContext())] : []),
+  );
 }
 
 function paintProposed(wishes) {
@@ -89,9 +96,10 @@ function paintProposed(wishes) {
     return;
   }
 
+  const context = progressContext();
   elements.wishList.replaceChildren(
     ...proposed.map((wish) =>
-      createWishRow(wish, { canAgree: !iAgreed(wish), waiting: waitingFor(wish) }),
+      createWishRow(wish, { canAgree: !iAgreed(wish), waiting: waitingFor(wish), context }),
     ),
   );
 }

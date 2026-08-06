@@ -214,6 +214,47 @@
 }
 
 /*
+ * 얼마나 다가갔나.
+ *
+ * 분석 화면의 분류 막대와 같은 4px 두께를 쓴다. 같은 뜻의 그림이 화면마다 두께가
+ * 다르면 서로 다른 것으로 읽힌다.
+ */
+.wish-progress {
+  display: grid;
+  /* 위 8. 한마디·값과 붙지 않게 한 박자 떨어뜨린다. */
+  margin-top: var(--space-1);
+  gap: var(--space-1);
+}
+
+.wish-progress-bar {
+  overflow: hidden;
+  height: var(--bar-thin);
+  border-radius: var(--radius-pill);
+  background: var(--paper-deep);
+}
+
+.wish-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  transition: width var(--motion-slow) ease;
+}
+
+.wish-progress-text {
+  color: var(--ink-soft);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-small);
+}
+
+/* 모은 돈만 진하다. 옆의 % 와 안내는 물러나 있어야 숫자가 먼저 읽힌다. */
+.wish-progress-text b {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+/*
  * 왜 갖고 싶은지 적어 둔 한마디. 두 줄까지 보이고 그 뒤는 자른다 —
  * 길이가 칸마다 다르면 격자의 아래 선이 들쭉날쭉해진다.
  */

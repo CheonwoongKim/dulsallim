@@ -12,6 +12,7 @@ const SOURCE_FILES = [
   "dom.js",
   "render.js",
   "store.js",
+  "wish-progress.js",
   "members.js",
   "data/rows.js",
   "data/remote.js",

@@ -452,3 +452,25 @@ test("고치기는 담기 시트를 다시 쓰고, 말과 값만 갈아 끼운�
     assert.match(sql, /image_url = case when url is not distinct from v_url then image_url else null end/);
   }
 });
+
+test("진척 막대는 값을 적은 위시에만 서고, 분석 화면과 같은 두께다", () => {
+  const 그리기 = fn("progressMarkup");
+  assert.match(그리기, /if \(!target\) return "";/, "나눌 것이 없으면 그리지 않는다");
+  assert.match(그리기, /width: \$\{percent\}%/);
+  // 모은 돈은 넘겨도 그대로 알려 주고 막대만 가득에서 멈춘다 — 자르는 것은 계산 쪽이 한다.
+  assert.match(그리기, /formatMoney\(saved\)/);
+  assert.match(그리기, /missingGoal \? " · 월 지출 목표를 정하면 더 정확해요" : ""/);
+
+  // 담아 둔 것과 향하는 것 둘 다 같은 막대를 쓴다.
+  assert.equal((app.match(/\$\{progressMarkup\(wish, context\)\}/g) || []).length, 2);
+
+  /*
+   * 같은 뜻의 그림이 화면마다 두께가 다르면 서로 다른 것으로 읽힌다.
+   * 분석 화면 분류 막대와 같은 --bar-thin 을 쓴다.
+   */
+  assert.match(css, /\.wish-progress-bar \{[\s\S]*?height: var\(--bar-thin\)/);
+  assert.match(css, /\.analysis-bar \{[\s\S]*?height: var\(--bar-thin\)/);
+
+  // 줄마다 다시 읽지 않는다. 지출 전부를 훑는 계산이라 한 번 모아 넘긴다.
+  assert.match(fn("progressContext"), /expenses: getExpenses\(\), members: getMembers\(\)/);
+});

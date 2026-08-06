@@ -1,5 +1,6 @@
 import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
 import { getMemberColor, getMemberName } from "../members.js";
+import { wishProgress } from "../wish-progress.js";
 import { escapeHtml, safeHref } from "./escape.js";
 
 /**
@@ -66,6 +67,27 @@ function shotMarkup(wish, 모양) {
   }</span>`;
 }
 
+/**
+ * 얼마나 다가갔나. 값을 안 적은 위시에는 안 그린다 — 나눌 것이 없다.
+ *
+ * 아낀 돈은 목표를 넘겨도 그대로 알려 주고(모은 건 모은 것이다) 막대만 가득에서 멈춘다.
+ * 목표를 안 정한 사람이 끼어 있으면 그 몫이 통째로 빠지므로 그 까닭을 함께 적는다.
+ */
+function progressMarkup(wish, context) {
+  const { saved, target, ratio, missingGoal } = wishProgress(wish, context);
+  if (!target) return "";
+
+  const percent = Math.round(ratio * 100);
+  return `
+    <div class="wish-progress">
+      <div class="wish-progress-bar"><i style="width: ${percent}%"></i></div>
+      <span class="wish-progress-text">
+        <b>${formatMoney(saved)}원</b> 모음 · ${percent}%${missingGoal ? " · 월 지출 목표를 정하면 더 정확해요" : ""}
+      </span>
+    </div>
+  `;
+}
+
 /** 있을 때만 자리를 갖는다. 없다고 빈 줄을 남기면 카드 높이가 들쭉날쭉해진다. */
 function noteMarkup(wish) {
   const note = String(wish.note ?? "").trim();
@@ -90,7 +112,7 @@ export function formatAchievedOn(dateKey) {
 }
 
 /** 맨 위에 따로 서는 한 장. 집마다 하나뿐이라 목록이 아니라 카드다. */
-export function createPursuingCard(wish) {
+export function createPursuingCard(wish, context = {}) {
   const card = document.createElement("article");
   card.className = "wish-card";
   card.innerHTML = `
@@ -100,6 +122,7 @@ export function createPursuingCard(wish) {
       <strong class="wish-card-name">${escapeHtml(wish.name)}</strong>
       <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>
       ${noteMarkup(wish)}
+      ${progressMarkup(wish, context)}
       <div class="wish-card-actions">
         ${linkMarkup(wish)}
         <button class="ghost-button" type="button" data-achieve-wish="${escapeHtml(wish.id)}">이뤘어요</button>
@@ -119,7 +142,7 @@ export function createPursuingCard(wish) {
  *
  * @param {{canAgree: boolean, waiting: string}} view 내가 누를 수 있는지와, 못 누를 때 대신 할 말
  */
-export function createWishRow(wish, { canAgree, waiting }) {
+export function createWishRow(wish, { canAgree, waiting, context = {} }) {
   const card = document.createElement("article");
   card.className = "wish-item";
   card.innerHTML = `
@@ -133,6 +156,7 @@ export function createWishRow(wish, { canAgree, waiting }) {
       </div>
       <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>
       ${noteMarkup(wish)}
+      ${progressMarkup(wish, context)}
       ${linkMarkup(wish)}
     </div>
     ${
