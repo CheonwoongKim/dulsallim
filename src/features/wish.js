@@ -34,6 +34,12 @@ import { getProfile } from "./auth.js";
 /** 이룬 것으로 이을 지출을 고를 때, 목록에 올릴 최대 줄 수. 그보다 옛것은 시트에서 찾을 일이 없다. */
 const CHOICE_LIMIT = 40;
 
+/** 화면 한 번 열 때 그림을 채워 볼 최대 개수. 한꺼번에 몰아 묻지 않는다. */
+const BACKFILL_LIMIT = 5;
+
+/** 이번에 켜져 있는 동안 그림을 찾아 본 위시. 못 찾은 것을 열 때마다 다시 묻지 않는다. */
+const triedImage = new Set();
+
 /** 이룸 시트가 어느 위시를 위해 열렸나. 닫으면 비운다. */
 let achievingWishId = null;
 
@@ -97,6 +103,27 @@ export function paintWishPage() {
 export function openWishPage() {
   paintWishPage();
   showPage(elements.wishPage);
+  void 빠진그림채우기();
+}
+
+/**
+ * 담을 때 못 붙은 그림을 화면 열 때 채운다.
+ *
+ * 그림 찾기가 생기기 전에 담은 것, 그때 상대 서버가 안 받아 준 것이 여기 걸린다.
+ * 하나씩 간다 — 한꺼번에 물으면 같은 서버에 몰린다. 한 번 찾아 본 것은 다시 묻지 않는다.
+ */
+async function 빠진그림채우기() {
+  const 빠진것 = getWishes()
+    .filter((wish) => wish.url && !wish.imageUrl && !triedImage.has(wish.id))
+    .slice(0, BACKFILL_LIMIT);
+  if (!빠진것.length) return;
+
+  빠진것.forEach((wish) => triedImage.add(wish.id));
+  for (const wish of 빠진것) {
+    const image = await attachWishImage(wish.id, wish.url);
+    // 그 사이에 다른 화면으로 갔을 수 있다. 열려 있을 때만 다시 그린다.
+    if (image && !elements.wishPage.hidden) paintWishPage();
+  }
 }
 
 /* ── 담기 ─────────────────────────────────────────────────── */

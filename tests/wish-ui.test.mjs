@@ -309,3 +309,33 @@ test("그림 찾기는 담기를 붙잡지 않고, 못 찾아도 조용하다", 
   // 서버에 못 적었으면 화면에도 얹지 않는다. 다음에 열면 없는 것이 맞다.
   assert.match(붙이기, /catch \{[\s\S]*?return null;/);
 });
+
+test("담을 때 못 붙은 그림은 화면 열 때 채운다", () => {
+  // 기능이 생기기 전에 담은 것, 그때 상대가 안 받아 준 것이 여기 걸린다.
+  assert.match(fn("openWishPage"), /void 빠진그림채우기\(\)/);
+
+  const 채우기 = fn("빠진그림채우기");
+  assert.match(채우기, /wish\.url && !wish\.imageUrl/, "주소가 없거나 이미 있는 것에 또 묻는다");
+  assert.match(채우기, /!triedImage\.has\(wish\.id\)/, "못 찾은 것을 열 때마다 다시 묻는다");
+  assert.match(채우기, /\.slice\(0, BACKFILL_LIMIT\)/, "한 번에 몇 개까지인지 정해 두지 않았다");
+  assert.match(app, /const BACKFILL_LIMIT = 5;/);
+
+  // 하나씩 간다. Promise.all 로 몰면 같은 서버에 한꺼번에 들어간다.
+  assert.match(채우기, /for \(const wish of 빠진것\) \{[\s\S]*?await attachWishImage/);
+  assert.doesNotMatch(채우기, /Promise\.all/);
+});
+
+test("남의 사이트에는 사람이 쓰는 이름표로 묻는다", async () => {
+  const 함수 = await readFile(
+    new URL("../supabase/functions/link-preview/index.ts", import.meta.url),
+    "utf8",
+  );
+  /*
+   * 정직하게 봇이라고 밝히면 한국 쇼핑몰이 거절한다 — 네이버 브랜드스토어 429, 쿠팡 403.
+   * 실제로 재 보고 바꿨다. 되돌리면 그림이 조용히 안 붙는다.
+   */
+  const 이름표 = 함수.match(/"User-Agent":\s*\n?\s*"([^"]*)"/)[1];
+  assert.doesNotMatch(이름표, /bot/i, "봇이라고 밝히면 네이버가 429 를 준다");
+  assert.match(이름표, /^Mozilla\/5\.0 \(iPhone/);
+  assert.match(함수, /"Accept-Language": "ko-KR/);
+});

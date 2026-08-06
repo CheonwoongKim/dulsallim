@@ -47,9 +47,21 @@ async function 조심해서받기(처음: URL, 신호: AbortSignal): Promise<Res
       redirect: "manual",
       signal: 신호,
       headers: {
-        // 봇을 막는 곳이 많다. 사람이 보는 것과 같은 것을 달라고 한다.
-        "User-Agent": "Mozilla/5.0 (compatible; DulsallimBot/1.0; +https://dulsallim.vercel.app)",
+        /*
+         * 사람이 쓰는 것과 같은 이름표를 단다.
+         *
+         * 처음엔 DulsallimBot 이라고 정직하게 밝혔는데, 그러면 한국 쇼핑몰이 거절한다 —
+         * 네이버 브랜드스토어는 429("시스템오류" 페이지), 쿠팡은 403 을 준다. 재 봤다.
+         * 아이폰 사파리로 바꾸니 네이버가 200 에 og:image 까지 준다. (쿠팡은 그래도 막는다.)
+         *
+         * 카카오톡·슬랙이 링크 미리보기를 만들 때 하는 것과 같은 일이고, 위시 하나에
+         * 한 번만 부른다. 사람이 그 페이지를 직접 열어 보는 것과 다르지 않다.
+         */
+        "User-Agent":
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
         Accept: "text/html,application/xhtml+xml",
+        // 한국 사이트가 어느 말로 줄지 정하는 데 쓴다.
+        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
       },
     });
     if (답.status < 300 || 답.status >= 400) return 답;
