@@ -56,15 +56,18 @@
 
 /*
  * 아래 화살표. 글자 밑변에 맞춘다 — 가운데에 맞추면 28px 제목 옆에서 위로 떠 보인다.
- * 색은 글자보다 흐리게. 제목의 일부가 아니라 "누를 것" 이라는 표시다.
+ *
+ * 아이콘 단추가 아니라 제목에 딸린 표식이라 크기를 글자 쪽에서 가져온다(16). 20 이던
+ * 때는 옆의 28px 제목과 겨루어 두 덩이처럼 보였다. 색도 제목과 같은 --ink 로 둔다 —
+ * 흐리게 하면 제목에서 떨어져 나와 어디에 딸린 것인지 흐려진다.
  */
 .ledger-caret {
-  width: 20px;
-  height: 20px;
+  width: var(--space-4);
+  height: var(--space-4);
   margin-bottom: var(--space-1);
   flex: 0 0 auto;
   fill: none;
-  stroke: var(--ink-soft);
+  stroke: var(--ink);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
