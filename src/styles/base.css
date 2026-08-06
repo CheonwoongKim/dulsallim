@@ -217,7 +217,7 @@
 }
 
 /*
- * JS 가 값을 넣는 네 가지에는 타입을 밝혀 둔다.
+ * JS 가 값을 넣는 여섯 가지에는 타입을 밝혀 둔다.
  *
  * 이름만 있는 커스텀 속성은 아무 글자나 들어가고, 이상한 값이 들어오면 그 값을 쓰는
  * 선언이 통째로 무효가 된다(시트가 화면 밖으로 나가는 식이다). 타입을 밝히면 이상한 값은
@@ -230,6 +230,12 @@
  * --drag-y 는 transform 안에서 움직이는 값이라 타입이 있어야 사이값이 만들어진다.
  */
 @property --header-h {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --scroll-lock-y {
   syntax: "<length>";
   inherits: true;
   initial-value: 0px;
@@ -342,4 +348,3 @@ select:focus-visible {
 svg {
   display: block;
 }
-

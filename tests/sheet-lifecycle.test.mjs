@@ -12,6 +12,9 @@ function createClassList() {
 
 function createStyle() {
   return {
+    setProperty(name, value) {
+      this[name] = value;
+    },
     removeProperty(name) {
       delete this[name];
     },
@@ -19,7 +22,7 @@ function createStyle() {
 }
 
 function installPageFixture() {
-  const root = { classList: createClassList() };
+  const root = { classList: createClassList(), style: createStyle() };
   const body = { classList: createClassList(), style: createStyle() };
   const scrollCalls = [];
 
@@ -39,11 +42,13 @@ test("같은 소유자가 스크롤을 두 번 잠가도 한 번의 해제로 �
 
   scrollLock.lockPageScroll(sheet);
   scrollLock.lockPageScroll(sheet);
+  assert.equal(root.style["--scroll-lock-y"], "240px");
   scrollLock.unlockPageScroll(sheet);
 
   assert.equal(root.classList.contains("sheet-open"), false);
   assert.equal(body.classList.contains("sheet-open"), false);
   assert.equal(body.style.position, undefined);
+  assert.equal(root.style["--scroll-lock-y"], undefined);
   assert.deepEqual(scrollCalls, [[0, 240]]);
 });
 
@@ -59,10 +64,12 @@ test("서로 다른 화면이 잠갔다면 마지막 화면이 닫힐 때까지 
 
   assert.equal(root.classList.contains("sheet-open"), true);
   assert.equal(body.style.position, "fixed");
+  assert.equal(root.style["--scroll-lock-y"], "240px");
   assert.deepEqual(scrollCalls, []);
 
   scrollLock.unlockPageScroll(page);
   assert.equal(body.style.position, undefined);
+  assert.equal(root.style["--scroll-lock-y"], undefined);
   assert.deepEqual(scrollCalls, [[0, 240]]);
 });
 

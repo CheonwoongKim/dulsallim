@@ -21,6 +21,11 @@ export function lockPageScroll(owner = defaultOwner) {
   if (alreadyLocked) return;
 
   lockedScrollY = window.scrollY;
+  /*
+   * body 를 위로 당기면 보통 내용은 제자리에 남지만 sticky 머리는 붙을 스크롤을 잃고
+   * body 와 함께 올라간다. 머리만 같은 거리만큼 되돌릴 수 있게 실제 잠금 위치를 건넨다.
+   */
+  document.documentElement.style.setProperty("--scroll-lock-y", `${lockedScrollY}px`);
   document.documentElement.classList.add("sheet-open");
   document.body.classList.add("sheet-open");
   document.body.style.position = "fixed";
@@ -43,4 +48,5 @@ export function unlockPageScroll(owner = defaultOwner) {
   document.body.style.removeProperty("left");
   document.body.style.removeProperty("width");
   window.scrollTo(0, lockedScrollY);
+  document.documentElement.style.removeProperty("--scroll-lock-y");
 }

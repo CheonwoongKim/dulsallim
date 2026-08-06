@@ -12,6 +12,15 @@
 }
 
 /*
+ * 전체 화면·시트가 열리면 iOS 스크롤을 막으려고 body 를 fixed 로 바꾸고 원래 스크롤만큼
+ * 위로 당긴다. 일반 내용은 그래서 같은 자리에 남지만 sticky 머리는 기준 스크롤이 0 이 되어
+ * body 와 함께 올라간다. 덮는 화면이 닫히며 홈이 드러날 때 튀지 않도록 그 거리만 되돌린다.
+ */
+body.sheet-open .app-header {
+  transform: translateY(var(--scroll-lock-y, 0px));
+}
+
+/*
  * 머리는 불투명하다. 그 밑으로 들어가는 줄이 글자 한가운데서 뚝 잘리면 지저분하다.
  * 배경색으로 녹여 보낸다.
  *
@@ -451,4 +460,3 @@ main {
   color: var(--accent-dark);
   font-weight: var(--weight-bold);
 }
-

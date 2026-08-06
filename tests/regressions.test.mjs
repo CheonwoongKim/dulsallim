@@ -1239,6 +1239,19 @@ test("스크롤 잠금은 호출 횟수가 아니라 소유자를 센다", () =>
   assert.match(unlock, /owners\.size > 0/, "아직 다른 소유자가 있으면 잠금을 유지해야 한다");
 });
 
+test("전체 화면에서 돌아오는 동안에도 본 화면 머리는 제자리에 남는다", () => {
+  /*
+   * body 를 fixed 로 바꾸면 window.scrollY 는 0 이 되고 sticky 머리는 body 의 top 만큼
+   * 함께 올라간다. 전체 화면이 옆으로 빠질 때 그 머리가 드러난 뒤 마지막 프레임에 돌아오면
+   * 상단바와 달 이동 줄이 한꺼번에 튄다. 잠근 거리를 머리에 반대로 적용해 같은 자리에 둔다.
+   */
+  const lock = fn("lockPageScroll");
+  const unlock = fn("unlockPageScroll");
+  assert.match(lock, /--scroll-lock-y[^\n]*lockedScrollY/);
+  assert.match(unlock, /removeProperty\("--scroll-lock-y"\)/);
+  assert.match(css, /body\.sheet-open \.app-header \{[^}]*transform: translateY\(var\(--scroll-lock-y, 0px\)\)/);
+});
+
 test("대화가 달린 지출을 지우면 대화도 사라진다고 알린다", () => {
   // 대화는 지출과 함께 DB에서 지워지고(on delete cascade) 되돌리기로도 살아나지 않는다.
   const del = fn("deleteExpense");
