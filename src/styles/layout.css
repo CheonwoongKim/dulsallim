@@ -512,13 +512,3 @@ main {
   box-shadow: var(--shadow-raised);
 }
 
-/*
- * 시트 안에 놓는 탭 줄.
- *
- * 붙어 있는 것은 화면에서만 뜻이 있다 — 시트는 제 안에서 스크롤되고 머리 줄도 없다.
- * 그대로 두면 시트 안에서 엉뚱한 자리에 붙고 둘레의 종이색 그림자만 남는다.
- */
-.segmented-control.segment-tabs.is-inline {
-  position: static;
-  box-shadow: none;
-}

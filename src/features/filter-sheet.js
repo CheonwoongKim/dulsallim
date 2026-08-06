@@ -5,36 +5,33 @@ import {
   formatMoney,
   getMonthlyExpenses,
   nextCategoryFilter,
-  nextMemberFilter,
 } from "../expenses.js";
 import { render } from "../render.js";
 import {
   getCategoryFilter,
   getDateFilter,
   getExpenses,
-  getMemberFilter,
   getSelectedMonth,
   setCategoryFilter,
   setDateFilter,
   setMemberFilter,
 } from "../store.js";
-import { paintMemberTabs } from "../ui/member-tabs.js";
 import { escapeHtml } from "../ui/escape.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
 import { closeOpenRow } from "../ui/swipe.js";
 
 /**
- * 지출 내역 거르기 — 사람 · 분류 · 날짜.
+ * 지출 내역 거르기 — 분류 · 날짜.
  *
- * 예전에는 거르는 길이 셋으로 흩어져 있었다. 사람은 요약 카드, 날짜는 캘린더 칸,
- * 분류는 제목 줄의 아이콘. 아이콘 하나가 옆의 보기 토글과 크기도(42 vs 34) 성격도
- * 달라 한 무리처럼 보이지 않았다.
+ * 예전에는 분류만 제목 줄의 아이콘으로 걸렀다. 그 아이콘이 옆의 보기 토글과 크기도
+ * (42 vs 34) 성격도 달라 한 무리처럼 보이지 않았다.
  *
  * 그 아이콘을 걷고 제목 자체를 단추로 만들었다. 제목은 원래부터 걸린 조건을 적는
  * 자리다("지출 내역(5) · 이름"). 거기가 곧 여는 자리이기도 하면 읽는 곳과 바꾸는 곳이
  * 같아진다.
  *
- * 요약 카드와 캘린더 칸은 지름길로 그대로 둔다 — 한 번에 되는 것을 두 번으로 만들 이유가 없다.
+ * 사람은 여기에 두지 않는다. 요약 카드를 누르면 한 번에 되는데 시트에 또 두면 같은 일에
+ * 길이 둘이 된다. 날짜도 캘린더 칸이 있으니 여기서는 걸린 것을 보여 주고 푸는 자리다.
  */
 
 /** 그 달에 실제로 쓴 분류만, 많이 쓴 순으로. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다. */
@@ -86,17 +83,12 @@ function 그리기() {
 
 export function openFilterSheet() {
   그리기();
-  사람그리기();
   날짜그리기();
   showSheet(elements.filterSheet);
 }
 
 export function closeFilterSheet() {
   hideSheet(elements.filterSheet);
-}
-
-function 사람그리기() {
-  paintMemberTabs(elements.filterMembers, getMemberFilter());
 }
 
 /**
@@ -108,14 +100,6 @@ function 날짜그리기() {
   const 걸린날 = getDateFilter();
   elements.filterDateRow.hidden = !걸린날;
   if (걸린날) elements.filterDateLabel.textContent = formatDayLabel(걸린날);
-}
-
-/** 사람은 요약 카드와 같은 규칙을 쓴다 — 같은 사람을 다시 누르면 풀린다. */
-export function pickFilterMember(member) {
-  setMemberFilter(nextMemberFilter(getMemberFilter(), member || null));
-  closeOpenRow();
-  render();
-  사람그리기();
 }
 
 export function clearDateFilter() {

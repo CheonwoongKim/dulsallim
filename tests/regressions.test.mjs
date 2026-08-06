@@ -437,14 +437,14 @@ test("제목 줄에는 이제 제목과 보기 방식뿐이다", () => {
   assert.match(css, /\.ledger-heading \{[^}]*align-items: flex-end/);
 });
 
-test("거르는 길 셋이 한 시트에 모였다", () => {
+test("거르기 시트는 분류와 날짜만 맡는다", () => {
   /*
-   * 사람은 요약 카드, 날짜는 캘린더 칸, 분류는 아이콘 — 셋으로 흩어져 있었다.
-   * 한 곳에 모으면 "지금 무엇으로 걸렀나" 를 한눈에 보고 끈다.
-   * 요약 카드와 캘린더 칸은 지름길로 그대로 둔다.
+   * 사람은 여기에 두지 않는다. 요약 카드를 누르면 한 번에 되는데 시트에 또 두면
+   * 같은 일에 길이 둘이 된다 — 어느 쪽으로 바꿨는지 헷갈리고, 한쪽만 고쳐지는 버그도 생긴다.
    */
   assert.match(html, /<dialog class="sheet month-sheet" id="filter-sheet"/);
-  assert.match(html, /id="filter-members"/);
+  assert.doesNotMatch(html, /id="filter-members"/, "사람 칸이 남아 있다");
+  assert.doesNotMatch(app, /pickFilterMember/, "사람을 고르는 길이 시트에 남아 있다");
   assert.match(html, /id="category-list"/);
   assert.match(html, /id="filter-date-row" hidden/);
   assert.match(html, /id="clear-filters">모두 지우기/);
@@ -457,11 +457,11 @@ test("거르는 길 셋이 한 시트에 모였다", () => {
   const 고르기 = fn("pickCategory");
   assert.match(고르기, /closeFilterSheet\(\)/);
   assert.doesNotMatch(고르기, /hidePage/, "화면을 떠나지 않는다");
-  // 사람은 요약 카드와 같은 규칙 — 같은 사람을 다시 누르면 풀린다.
-  assert.match(fn("pickFilterMember"), /nextMemberFilter\(getMemberFilter\(\), member \|\| null\)/);
   // 날짜는 캘린더에서만 고른다. 여기서는 걸린 것을 보여 주고 푸는 자리다.
   assert.match(fn("날짜그리기"), /elements\.filterDateRow\.hidden = !걸린날/);
   assert.match(fn("clearDateFilter"), /setDateFilter\(null\)/);
+  // 모두 지우기는 사람까지 푼다 — 시트에서 못 걸 뿐, 걸려 있으면 여기서 풀린다.
+  assert.match(fn("clearAllFilters"), /setMemberFilter\(null\)/);
 
   // 그 달에 쓴 분류만, 많이 쓴 순. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다.
   assert.match(fn("이번달분류"), /sort\(\(a, b\) => b\.total - a\.total/);

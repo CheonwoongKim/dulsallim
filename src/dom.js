@@ -157,7 +157,6 @@ export const elements = {
   filterSheet: document.querySelector("#filter-sheet"),
   categoryList: document.querySelector("#category-list"),
   closeFilterSheet: document.querySelector("#close-filter-sheet"),
-  filterMembers: document.querySelector("#filter-members"),
   filterDateRow: document.querySelector("#filter-date-row"),
   filterDateLabel: document.querySelector("#filter-date-label"),
   clearDateFilter: document.querySelector("#clear-date-filter"),
