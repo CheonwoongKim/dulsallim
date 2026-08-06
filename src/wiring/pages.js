@@ -17,7 +17,7 @@ import {
   syncNagHint,
   toggleNagEnabled,
 } from "../features/nag.js";
-import { closeNotes, handleNoteSubmit } from "../features/notes.js";
+import { closeNotes, handleNoteSubmit, syncNoteSend } from "../features/notes.js";
 import {
   handleCustomColorInput,
   handleGoalInput,
@@ -163,6 +163,7 @@ elements.resetConfirm.addEventListener("input", syncResetButton);
 /* ── 대화 ─────────────────────────────────────────────────── */
 
 elements.noteForm.addEventListener("submit", handleNoteSubmit);
+elements.noteInput.addEventListener("input", syncNoteSend);
 closeOnPress(elements.closeNotes, closeNotes);
 
 /* ── 위시리스트 ───────────────────────────────────────────── */

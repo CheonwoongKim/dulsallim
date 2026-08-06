@@ -2737,13 +2737,39 @@ test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
    * 따로 적던 때 혼자 46px 에 알약(999)이 됐다.
    */
   assert.match(css, /\.field-group select,\n\.note-form input,/, "대화 입력이 공용 상자에서 빠져 있다");
-  assert.doesNotMatch(규칙(".note-form input"), /height|border-radius|padding/, "상자를 두 번 적고 있다");
+  // padding-right 는 상자가 아니라 칸 안 단추가 앉을 자리다. 그것만 빼고 본다.
+  assert.doesNotMatch(
+    규칙(".note-form input").replace(/padding-right:[^;]*;/, ""),
+    /height|border-radius|padding/,
+    "상자를 두 번 적고 있다",
+  );
 
-  // 보내기는 적는 칸과 같은 높이라야 둘이 한 줄로 읽힌다(계측: 둘 다 밑변 y836).
-  assert.match(규칙(".note-send"), /var\(--field-height\)/);
-  for (const 줄 of 규칙(".note-send").split("\n").filter((l) => /^\s*(width|height):/.test(l))) {
+  /*
+   * 보내기는 칸 안에 앉는다. 옆에 세워 두던 때는 빈 칸에서도 누를 수 없는 단추가
+   * 50px 을 지키고 있었다. 크기는 머리 줄 아이콘 단추와 같은 --control-sm 이다.
+   */
+  const 보내기 = 규칙(".note-send");
+  assert.match(보내기, /position: absolute/);
+  assert.match(보내기, /width: var\(--control-sm\)/);
+  for (const 줄 of 보내기.split("\n").filter((l) => /^\s*(width|height):/.test(l))) {
     assert.doesNotMatch(줄, /\d+px/, `보내기에 날 숫자가 남아 있다: ${줄.trim()}`);
   }
+
+  /*
+   * 적을 것이 없으면 물러난다. display 를 껐다 켜면 나타나는 순간이 툭 끊기므로
+   * 자리는 늘 잡아 두고 보이는 것만 바꾼다 — 안 보이는 동안에는 손도 안 닿아야 한다.
+   */
+  assert.match(보내기, /opacity: 0/);
+  assert.match(보내기, /pointer-events: none/);
+  assert.match(css, /\.note-send\.is-ready \{[\s\S]*?pointer-events: auto/);
+  assert.match(fn("syncNoteSend"), /classList\.toggle\("is-ready", 적었나\)/);
+  // 안 보이는 단추가 탭 순서에 남아 있으면 커서가 빈 곳에 멈춘다.
+  assert.match(fn("syncNoteSend"), /elements\.noteSend\.disabled = !적었나/);
+  // 적을 때마다, 그리고 보낸 뒤에도 다시 맞춘다.
+  assert.match(app, /elements\.noteInput\.addEventListener\("input", syncNoteSend\)/);
+  assert.match(fn("handleNoteSubmit"), /finally \{[\s\S]*?syncNoteSend\(\)/);
+  // 흐리게만 두던 옛 규칙이 남아 있으면 못 누르는 단추가 칸 안에 비쳐 보인다(계측: 0.45).
+  assert.doesNotMatch(규칙(".note-send:disabled"), /opacity/);
   // 그림은 다른 아이콘과 같은 값에서 온다.
   assert.equal(
     규칙(".note-send svg").match(/width: (\d+px)/)[1],

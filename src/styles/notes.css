@@ -72,10 +72,17 @@
 }
 
 /* 입력줄은 바닥에 붙어 키보드 위에 남는다 */
+/*
+ * 적는 칸이 줄을 다 쓰고, 보내기는 그 안에 겹쳐 선다.
+ *
+ * 옆에 세워 두던 때는 빈 칸에서도 누를 수 없는 단추가 50px 을 지키고 있었다.
+ * 안에 넣으면 적을 것이 있을 때만 나타나게 할 수 있고, 나타나고 사라져도 칸 너비가
+ * 흔들리지 않는다.
+ */
 .note-form {
-  display: flex;
+  position: relative;
+  display: grid;
   padding: var(--space-2) var(--space-6) max(var(--space-4), env(safe-area-inset-bottom));
-  gap: var(--space-2);
   flex: 0 0 auto;
   align-items: center;
   border-top: 1px solid var(--line);
@@ -92,21 +99,47 @@
  * 보내기가 동그란 것은 그대로 둔다. 머리 줄 아이콘 단추도 --radius-round 라 앱과 맞다.
  */
 .note-form input {
+  /*
+   * 오른쪽은 단추가 앉을 자리만큼 비운다 — 글자가 단추 밑으로 들어가지 않게.
+   * 단추 42 + 칸 안쪽 여백 2 = 44 를 쓰므로 48 이면 4px 이 남는다.
+   */
+  padding-right: var(--space-12);
   /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
   font-size: var(--text-16);
   transition: border-color var(--motion) ease, box-shadow var(--motion) ease;
 }
-/* 적는 칸과 같은 크기라야 둘이 한 줄로 읽힌다. */
+/*
+ * 칸 안 오른쪽에 앉는다. 적은 것이 없으면 물러나 있다.
+ *
+ * display 를 껐다 켜면 나타나는 순간이 툭 끊긴다. 자리는 늘 잡아 두고 보이는 것만
+ * 바꾼다 — 안 보이는 동안에는 손도 안 닿게 한다(pointer-events).
+ */
 .note-send {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--space-6) + var(--space-05));
   display: grid;
-  width: var(--field-height);
-  height: var(--field-height);
-  flex: 0 0 auto;
+  width: var(--control-sm);
+  height: var(--control-sm);
   border: 0;
   border-radius: var(--radius-round);
   background: var(--ink);
   cursor: pointer;
+  opacity: 0;
   place-items: center;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.8);
+  transition: opacity var(--motion) ease, transform var(--motion) ease;
+}
+
+.note-send.is-ready {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
+}
+
+.note-send:active {
+  background: var(--ink-soft);
 }
 
 /* 다른 아이콘과 같은 20px · 굵기 1.8. 19 와 2 는 이 파일에만 있던 값이었다. */
@@ -120,9 +153,12 @@
   stroke-width: 1.8;
 }
 
+/*
+ * 못 누르는 동안은 아예 안 보인다. 예전에는 0.45 로 흐리게만 두었는데, 이제 적을 것이
+ * 없으면 물러나는 것이 규칙이라 두 값이 겨루면 흐린 단추가 칸 안에 남는다(계측: 0.45).
+ */
 .note-send:disabled {
   cursor: default;
-  opacity: 0.45;
 }
 
 /* 목록 행에 붙는 대화 표시 */
