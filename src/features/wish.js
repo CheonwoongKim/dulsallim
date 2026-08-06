@@ -281,8 +281,15 @@ export async function handleWishSubmit(event) {
   /*
    * 그림은 남의 사이트를 읽어 와야 해서 몇 초가 걸린다. 담기를 붙잡아 두지 않고 뒤따라 붙인다.
    * 고칠 때는 링크가 그대로면 서버가 그림도 그대로 두므로, 비어 있을 때만 찾는다.
+   *
+   * 붙고 나면 다시 그린다. 목록은 담자마자 한 번 그려졌으니, 그때 없던 그림은 여기서
+   * 다시 그리지 않으면 화면을 나갔다 들어와야 보인다 — 빠진그림채우기 도 같은 줄을 쓴다.
    */
-  if (href && !saved.imageUrl) void 그림얹기(saved.id, href);
+  if (href && !saved.imageUrl) {
+    void attachWishImage(saved.id, href).then((image) => {
+      if (image && !elements.wishPage.hidden) paintWishPage();
+    });
+  }
 }
 
 /* ── 자세히 ───────────────────────────────────────────────── */

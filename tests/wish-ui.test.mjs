@@ -161,7 +161,7 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
    */
   assert.match(app, /const href = input\.url \? safeHref\(input\.url\) : null;/);
   assert.match(app, /\n\s+url: href,/, "거르지 않은 값이 서버로 간다");
-  assert.match(app, /그림얹기\(saved\.id, href\)/, "그림도 같은 값으로 찾아야 한다");
+  assert.match(app, /attachWishImage\(saved\.id, href\)/, "그림도 같은 값으로 찾아야 한다");
   // 고칠 때 링크가 그대로면 서버가 그림도 그대로 둔다. 비어 있을 때만 다시 찾는다.
   assert.match(app, /if \(href && !saved\.imageUrl\)/);
 });
@@ -308,14 +308,33 @@ test("그림 찾기는 담기를 붙잡지 않고, 못 찾아도 조용하다", 
   const 담기 = fn("handleWishSubmit");
   // 담기가 먼저 끝나야 한다. 남의 사이트를 읽는 데 몇 초가 걸린다.
   assert.ok(
-    담기.indexOf("showToast(\"위시를 담았어요\")") < 담기.indexOf("그림얹기"),
+    담기.indexOf("showToast(\"위시를 담았어요\")") < 담기.indexOf("attachWishImage"),
     "그림을 기다리느라 담기가 늦어진다",
   );
-  assert.match(담기, /void 그림얹기\(/, "기다리면 시트가 그만큼 늦게 닫힌다");
+  assert.match(담기, /void attachWishImage\(/, "기다리면 시트가 그만큼 늦게 닫힌다");
+  /*
+   * 붙고 나면 다시 그린다. 목록은 담자마자 한 번 그려졌으니, 그때 없던 그림은 여기서
+   * 다시 그리지 않으면 화면을 나갔다 들어와야 보인다 — 링크 읽기를 2.5초 늦춰 재 봤다.
+   */
+  assert.match(담기, /\.then\(\(image\) => \{\s*if \(image && !elements\.wishPage\.hidden\) paintWishPage\(\);/);
+
+  /*
+   * 이름은 실제로 있는 것이라야 한다. 한동안 이 자리가 그림얹기() 를 불렀는데 그런 함수는
+   * 어디에도 없었다 — 링크를 넣어 담을 때마다 ReferenceError 가 나고 그림이 안 붙었다.
+   * fn() 은 못 찾으면 빈 글자를 돌려주므로, 이름만 견주던 검사는 그것을 통과시켰다.
+   */
+  const 부르는이름 = [...담기.matchAll(/void (\w+)\(/g)].map((m) => m[1]);
+  assert.ok(부르는이름.length > 0, "담기에서 뒤따라 부르는 것을 못 찾았다");
+  for (const 이름 of 부르는이름) {
+    assert.ok(
+      new RegExp(`(function|const|let) ${이름}\\b`).test(app) || new RegExp(`^\\s+${이름},$`, "m").test(app),
+      `${이름} 은 어디에도 없는 이름이다`,
+    );
+  }
 
   const 붙이기 = fn("attachWishImage");
   assert.match(붙이기, /if \(!image\) return null/, "못 찾은 것을 잘못으로 다루면 안 된다");
-  assert.doesNotMatch(fn("그림얹기"), /showToast/, "그림 없는 링크는 흔하다 — 말 걸 일이 아니다");
+  assert.doesNotMatch(붙이기, /showToast/, "그림 없는 링크는 흔하다 — 말 걸 일이 아니다");
 
   // 서버에 못 적었으면 화면에도 얹지 않는다. 다음에 열면 없는 것이 맞다.
   assert.match(붙이기, /catch \{[\s\S]*?return null;/);
