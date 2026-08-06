@@ -155,7 +155,6 @@ function paintLedgerHeading(visible, memberFilter, dateFilter, categoryFilter) {
     dateFilter ? formatDayLabel(dateFilter) : null,
   ].filter(Boolean);
   elements.ledgerFilter.textContent = labels.length ? ` · ${labels.join(" · ")}` : "";
-  elements.ledgerFilter.setAttribute("aria-label", `${labels.join(", ")} 조건 지우기`);
   elements.ledgerFilter.hidden = !labels.length;
   repaintLedgerTitle();
 }

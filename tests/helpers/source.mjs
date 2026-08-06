@@ -47,7 +47,7 @@ const SOURCE_FILES = [
   "features/nag.js",
   "features/profile.js",
   "features/settings.js",
-  "features/category-sheet.js",
+  "features/filter-sheet.js",
   "features/push.js",
   "features/expense-actions.js",
   "features/fixed-sheet.js",

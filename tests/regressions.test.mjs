@@ -415,38 +415,58 @@ test("고정비가 자동으로 채워질 때는 알리지 않는다", async () 
   assert.match(sql, /revoke all on app_secrets from anon, authenticated/);
 });
 
-test("거르기와 보기 방식은 오른쪽에 나란히 선다", () => {
+test("제목 줄에는 이제 제목과 보기 방식뿐이다", () => {
   /*
-   * 제목 줄은 space-between 이라 아이는 셋이 되면 균등하게 벌어진다.
-   * 그러면 필터 버튼만 제목과 토글 한가운데에 떠서 무엇에 딸린 것인지 알 수 없다
-   * (계측: 양옆이 63px·62px 로 똑같았다).
+   * 예전에는 42×42 거르기 아이콘이 제목과 토글(34) 사이에 따로 섰다. 크기도 성격도 달라
+   * 한 무리로 보이지 않았고, space-between 이 셋을 균등하게 벌려 그 아이콘만 한가운데
+   * 떠 있었다(계측: 양옆 63px·62px).
    *
-   * 남는 자리를 왼쪽 여백이 다 가져가면 둘이 오른쪽에 나란히 선다.
-   * 토글과 딱 붙으면 한 덩어리로 보이므로 6px 만 띄운다.
+   * 거르기를 제목 자체로 옮기고 아이콘을 걷었다. 이제 줄에는 글자 하나와 컨트롤 하나뿐이라
+   * 양쪽 끝으로 갈리는 것이 그대로 뜻이 된다.
    */
-  assert.match(css, /#open-category-sheet \{[^}]*margin-left: auto/);
-  assert.match(css, /#open-category-sheet \{[^}]*margin-right: var\(--space-\d+\)/);
+  assert.doesNotMatch(html, /id="open-category-sheet"/, "걷어낸 아이콘이 남아 있다");
+  assert.doesNotMatch(css, /#open-category-sheet/, "쓰지 않는 규칙이 남아 있다");
   assert.match(css, /\.section-heading \{[^}]*justify-content: space-between/);
+
+  /*
+   * 줄 높이는 그 아이콘이 잡고 있었다(42 + 위 8 + 아래 12 = 62). 걷어내면 8px 줄고
+   * 지출 목록이 그만큼 올라와 393 에서 4줄이라는 약속이 깨진다. 제목 단추가 그 높이를 물려받는다.
+   */
+  assert.match(css, /\.ledger-heading \{[^}]*min-height: var\(--control-sm\)/);
+  // 글자는 밑변에 맞춘다. 가운데에 맞추면 보이는 자리가 내려간다.
+  assert.match(css, /\.ledger-heading \{[^}]*align-items: flex-end/);
 });
 
-test("분류로 거르는 자리는 목록 옆에 있다", () => {
+test("거르는 길 셋이 한 시트에 모였다", () => {
   /*
-   * 처음에는 분석 화면에서 분류를 누르게 했다. 그런데 누르면 보던 화면에서 튕겨 나와
-   * 홈으로 끌려갔고, 무엇이 바뀌었는지 되짚어야 했다. 누를 수 있다는 표시도 없었다.
-   * 분석은 이해하는 곳, 목록은 찾는 곳이다 — 거르는 일은 거르는 자리에서 한다.
-   *
-   * 사람은 요약 카드, 날짜는 캘린더가 이미 홈에 있다. 분류도 같은 자리에 둔다.
+   * 사람은 요약 카드, 날짜는 캘린더 칸, 분류는 아이콘 — 셋으로 흩어져 있었다.
+   * 한 곳에 모으면 "지금 무엇으로 걸렀나" 를 한눈에 보고 끈다.
+   * 요약 카드와 캘린더 칸은 지름길로 그대로 둔다.
    */
-  assert.match(html, /<button class="icon-button" type="button" id="open-category-sheet"/);
-  assert.match(html, /<dialog class="sheet month-sheet" id="category-sheet"/);
+  assert.match(html, /<dialog class="sheet month-sheet" id="filter-sheet"/);
+  assert.match(html, /id="filter-members"/);
+  assert.match(html, /id="category-list"/);
+  assert.match(html, /id="filter-date-row" hidden/);
+  assert.match(html, /id="clear-filters">모두 지우기/);
+
+  // 시트를 여는 것은 제목이다.
+  assert.match(html, /<button class="ledger-heading" type="button" id="open-filter-sheet"/);
+  assert.match(app, /elements\.openFilterSheet\.addEventListener\("click", openFilterSheet\)/);
+
   // 고르면 시트만 닫는다. 보던 화면은 그대로 둔다.
   const 고르기 = fn("pickCategory");
-  assert.match(고르기, /closeCategorySheet\(\)/);
+  assert.match(고르기, /closeFilterSheet\(\)/);
   assert.doesNotMatch(고르기, /hidePage/, "화면을 떠나지 않는다");
+  // 사람은 요약 카드와 같은 규칙 — 같은 사람을 다시 누르면 풀린다.
+  assert.match(fn("pickFilterMember"), /nextMemberFilter\(getMemberFilter\(\), member \|\| null\)/);
+  // 날짜는 캘린더에서만 고른다. 여기서는 걸린 것을 보여 주고 푸는 자리다.
+  assert.match(fn("날짜그리기"), /elements\.filterDateRow\.hidden = !걸린날/);
+  assert.match(fn("clearDateFilter"), /setDateFilter\(null\)/);
+
   // 그 달에 쓴 분류만, 많이 쓴 순. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다.
   assert.match(fn("이번달분류"), /sort\(\(a, b\) => b\.total - a\.total/);
-  // 푸는 길이 시트 안에도 있어야 한다.
   assert.match(fn("그리기"), /data-category=""[\s\S]{0,80}전체/);
+
   /*
    * 캘린더 숫자에는 분류를 걸지 않는다. 걸면 그 분류가 없는 날이 통째로 비어
    * 달력이 "그날은 안 썼다" 로 읽힌다.
@@ -463,20 +483,23 @@ test("분석 화면은 보는 곳으로 되돌렸다", () => {
   assert.doesNotMatch(app, /function toggleCategoryFilter/);
 });
 
-test("걸린 조건은 제목에 뜨고 눌러서 풀 수 있다", () => {
+test("걸린 조건은 제목에 뜨고 시트에서 푼다", () => {
   /*
-   * 사람은 요약 카드를, 날짜는 달력을 다시 누르면 풀린다 — 화면에 보이는 자리가 있다.
-   * 분류만 그런 자리가 없어 분석 화면으로 되돌아가야 했다. 제목에 이미 적혀 있으니
-   * 거기가 푸는 자리이기도 하게 둔다.
+   * 제목이 원래부터 걸린 조건을 적는 자리다("지출 내역(5) · 천웅"). 예전에는 그 딱지가
+   * 곧 푸는 단추였는데, 제목 전체가 시트를 여는 단추가 되면서 그 길이 사라졌다.
+   * 푸는 자리는 시트 안으로 옮겼다 — 한 번 더 눌러야 하지만 무엇이 걸렸는지 보고 푼다.
    */
-  assert.match(html, /<button class="ledger-filter" type="button" id="ledger-filter" hidden><\/button>/);
-  assert.match(app, /elements\.ledgerFilter\.addEventListener\("click", clearFilters\)/);
-  const 지우기 = fn("clearFilters");
+  assert.match(html, /<span class="ledger-filter" id="ledger-filter" hidden><\/span>/);
+  assert.doesNotMatch(app, /elements\.ledgerFilter\.addEventListener/, "딱지가 아직 단추 노릇을 한다");
+  // 단추가 아니게 됐으니 읽어 주는 이름도 걷는다 — 누를 수 없는 것을 누르라고 말하면 안 된다.
+  assert.doesNotMatch(fn("paintLedgerHeading"), /setAttribute\("aria-label"/);
+
+  const 지우기 = fn("clearAllFilters");
   for (const 끄기 of [/setMemberFilter\(null\)/, /setCategoryFilter\(null\)/, /setDateFilter\(null\)/]) {
     assert.match(지우기, 끄기);
   }
-  // 무엇이 걸렸는지 보조기술도 알아야 한다.
-  assert.match(fn("paintLedgerHeading"), /setAttribute\("aria-label", `\$\{labels\.join\(", "\)\} 조건 지우기`\)/);
+  // 풀고 나면 시트에 더 볼 것이 없다.
+  assert.match(지우기, /closeFilterSheet\(\)/);
 });
 
 test("아이콘 버튼은 보이는 크기보다 넓게 눌린다", () => {

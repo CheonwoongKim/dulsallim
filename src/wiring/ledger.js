@@ -1,7 +1,13 @@
-import { closeCategorySheet, openCategorySheet, pickCategory } from "../features/category-sheet.js";
+import {
+  clearAllFilters,
+  clearDateFilter,
+  closeFilterSheet,
+  openFilterSheet,
+  pickCategory,
+  pickFilterMember,
+} from "../features/filter-sheet.js";
 import { elements } from "../dom.js";
 import {
-  clearFilters,
   copyExpense,
   deleteExpense,
   toggleDateFilter,
@@ -40,9 +46,14 @@ import {
 elements.memberSlots.forEach(({ row }) => {
   row.addEventListener("click", () => toggleMemberFilter(row.dataset.member));
 });
-elements.ledgerFilter.addEventListener("click", clearFilters);
-elements.openCategorySheet.addEventListener("click", openCategorySheet);
-closeOnPress(elements.closeCategorySheet, closeCategorySheet);
+elements.openFilterSheet.addEventListener("click", openFilterSheet);
+closeOnPress(elements.closeFilterSheet, closeFilterSheet);
+elements.filterMembers.addEventListener("click", (event) => {
+  const 사람 = event.target.closest("[data-member]");
+  if (사람) pickFilterMember(사람.dataset.member);
+});
+elements.clearDateFilter.addEventListener("click", clearDateFilter);
+elements.clearFilters.addEventListener("click", clearAllFilters);
 elements.categoryList.addEventListener("click", (event) => {
   const 줄 = event.target.closest("[data-category]");
   if (줄) pickCategory(줄.dataset.category);

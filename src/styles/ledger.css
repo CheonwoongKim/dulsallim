@@ -22,51 +22,52 @@
 }
 
 /*
- * 거르기와 보기 방식은 함께 쓰는 조작이라 오른쪽에 붙여 둔다.
+ * 제목이 곧 거르기 단추다.
  *
- * space-between 이 셋을 균등하게 벌리면 이 버튼만 제목과 토글 한가운데에 떠서
- * 무엇에 딸린 것인지 알 수 없다(계측: 양옆 63px·62px).
- * 남는 자리를 왼쪽 여백이 다 가져가면 둘이 나란히 선다.
+ * 예전에는 옆에 42×42 아이콘이 따로 서 있었는데, 보기 토글(34)과 크기도 성격도 달라
+ * 한 무리로 보이지 않았다. 제목은 원래부터 걸린 조건을 적는 자리다("지출 내역(5) · 이름").
+ * 읽는 곳과 바꾸는 곳을 같게 했다.
+ *
+ * 높이를 42(--control-sm)로 잡는 것은 그 아이콘이 잡고 있던 줄 높이를 그대로 물려받기
+ * 위해서다. 줄 높이가 8px 줄면 지출 목록이 그만큼 올라와 393 에서 4줄이라는 약속이 깨진다.
+ * 글자는 밑변에 맞춰 두므로 보이는 자리는 예전 그대로고, 위에 남는 13px 은 손닿는 자리가 된다.
  */
-#open-category-sheet {
-  margin-left: auto;
-  /* 토글과 딱 붙으면 한 덩어리로 보여 무엇이 무엇인지 헷갈린다. */
-  margin-right: var(--space-1);
-
+.ledger-heading {
+  display: flex;
+  min-height: var(--control-sm);
+  padding: 0;
+  border: 0;
+  gap: var(--space-1);
+  align-items: flex-end;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
   /*
-   * 이 단추만 4px 내려 세운다. 그래야 그림이 알약 속 그림과 나란히 온다.
-   *
-   * 제목 줄이 상자 밑변끼리 맞추는데(align-items: flex-end) 이 상자(42)의 한가운데는
-   * 밑변에서 21px 위, 알약(34) 속 단추(30)의 한가운데는 2 + 15 = 17px 위다.
-   * 둘 다 17px 그림을 제 상자 한가운데 세우므로 그림이 4px 어긋난다
-   * (계측 393·430: 그림 중심 457.5 대 461.5).
-   *
-   * 상자는 그대로 두고 안에서 그림만 밀어내는 길(padding-top)로 갔다가 되돌아왔다.
-   * 브라우저가 button 에 얹는 기본 여백이 위아래로 다르고(WebKit 은 2/3) 엔진마다
-   * 달라서, 위를 8px 비워도 그림은 3px 만 내려왔다(계측). 상자째 옮기면 상자 안의 셈은
-   * 건드리지 않으므로 어느 엔진에서든 정확히 4px 이다.
-   *
-   * 내린 만큼 아래에서 당겨 바깥 높이를 42 로 되돌린다. 그래야 이 단추가 잡고 있는
-   * 줄 높이가 그대로라 제목과 알약이 따라 움직이지 않는다.
-   * 상자(42×42)도 ::after 로 넓힌 누를 자리(44×44)도 크기는 그대로다.
+   * font 속기는 자간을 물려주지 않는다. 안 적으면 제목이 8px 넓어져 오른쪽 토글 쪽으로
+   * 밀린다(계측: 129 → 137). 제목과 같은 값을 못 박는다.
    */
-  margin-top: var(--space-1);
-  margin-bottom: calc(var(--space-1) * -1);
+  letter-spacing: var(--tracking-title);
+}
+
+.ledger-heading:active {
+  opacity: 0.55;
 }
 
 /*
- * 이 단추만 그림을 토글과 같은 17px 로 줄인다.
- *
- * 머리 줄 아이콘은 배경 있는 동그라미 안에 들어 그 동그라미가 크기를 말해 주는데,
- * 이 단추는 배경이 투명해 20px 그림 자체가 크기로 읽힌다. 바로 옆 알약 속 17px 둘과
- * 나란히 서니 18% 커 보였다(계측: 20 대 17).
- *
- * 공용 `.icon-button svg` 를 줄이면 머리 줄 아이콘 셋이 함께 줄어든다. 여기만 건다.
- * 상자(42×42)와 ::after 로 넓힌 누를 자리(44×44)는 그대로다 — 그림만 줄인다.
+ * 아래 화살표. 글자 밑변에 맞춘다 — 가운데에 맞추면 28px 제목 옆에서 위로 떠 보인다.
+ * 색은 글자보다 흐리게. 제목의 일부가 아니라 "누를 것" 이라는 표시다.
  */
-#open-category-sheet svg {
-  width: 17px;
-  height: 17px;
+.ledger-caret {
+  width: 20px;
+  height: 20px;
+  margin-bottom: var(--space-1);
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .section-heading h2,
@@ -92,17 +93,9 @@
 }
 
 /* 제목에 붙은 조건. 글자처럼 보이되 눌러서 풀 수 있다. */
+/* 걸린 조건. 누르는 것은 제목 전체라 이 딱지는 글자 노릇만 한다. */
 .ledger-filter {
-  padding: 0;
-  border: 0;
   color: var(--ink-soft);
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-}
-
-.ledger-filter:active {
-  opacity: 0.55;
 }
 
 .expense-list {

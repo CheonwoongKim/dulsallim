@@ -1,4 +1,4 @@
-import { closeCategorySheet } from "../features/category-sheet.js";
+import { closeFilterSheet } from "../features/filter-sheet.js";
 import { elements } from "../dom.js";
 import { undoDelete } from "../features/expense-actions.js";
 import { closeForm } from "../features/expense-form.js";
@@ -29,7 +29,7 @@ import { closeOpenRow } from "../ui/swipe.js";
 function closeActiveSheet() {
   if (!elements.sheet.hidden) closeForm();
   if (!elements.monthSheet.hidden) closeMonthSheet();
-  if (!elements.categorySheet.hidden) closeCategorySheet();
+  if (!elements.filterSheet.hidden) closeFilterSheet();
   if (!elements.fixedSheet.hidden) closeFixedSheet();
   if (!elements.notesSheet.hidden) closeNotes();
   if (!elements.nagSheet.hidden) closeNagSheet();

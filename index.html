@@ -135,10 +135,12 @@
 
         <section class="ledger" aria-labelledby="ledger-title">
           <div class="section-heading">
-            <h2 id="ledger-title">지출 내역<span class="record-count" id="record-count">(0)</span><button class="ledger-filter" type="button" id="ledger-filter" hidden></button></h2>
-            <button class="icon-button" type="button" id="open-category-sheet" aria-haspopup="dialog" aria-label="분류로 거르기">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-            </button>
+            <h2 id="ledger-title">
+              <button class="ledger-heading" type="button" id="open-filter-sheet" aria-haspopup="dialog">
+                지출 내역<span class="record-count" id="record-count">(0)</span><span class="ledger-filter" id="ledger-filter" hidden></span>
+                <svg class="ledger-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </h2>
             <div class="view-toggle" role="group" aria-label="보기 방식">
               <button type="button" data-view="list" aria-pressed="true" aria-label="목록으로 보기">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>
@@ -441,19 +443,36 @@
       </form>
     </dialog>
 
-    <dialog class="sheet month-sheet" id="category-sheet" aria-labelledby="category-sheet-title" hidden>
+    <dialog class="sheet month-sheet" id="filter-sheet" aria-labelledby="filter-sheet-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">
         <div>
-          <p class="eyebrow">분류로 거르기</p>
-          <h2 id="category-sheet-title">무엇을 볼까요?</h2>
+          <p class="eyebrow">지출 내역 거르기</p>
+          <h2 id="filter-sheet-title">무엇을 볼까요?</h2>
         </div>
-        <button class="icon-button close-button" type="button" id="close-category-sheet" aria-label="닫기">
+        <button class="icon-button close-button" type="button" id="close-filter-sheet" aria-label="닫기">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
       </div>
 
-      <div class="sheet-scroll category-list" id="category-list" role="group" aria-labelledby="category-sheet-title"></div>
+      <div class="sheet-scroll filter-body">
+        <p class="eyebrow">누구</p>
+        <div class="segmented-control segment-tabs is-inline" id="filter-members" role="group" aria-label="누구 지출을 볼지"></div>
+
+        <p class="eyebrow">분류</p>
+        <div class="category-list" id="category-list" role="group" aria-label="분류로 거르기"></div>
+
+        <!-- 날짜는 캘린더에서만 고른다. 여기서는 걸린 것을 보여 주고 푸는 자리다. -->
+        <div id="filter-date-row" hidden>
+          <p class="eyebrow">날짜</p>
+          <button class="menu-row" type="button" id="clear-date-filter">
+            <span><strong id="filter-date-label"></strong><small>이 날짜만 보고 있어요</small></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+
+        <button class="ghost-button filter-clear" type="button" id="clear-filters">모두 지우기</button>
+      </div>
     </dialog>
 
     <dialog class="sheet month-sheet" id="month-sheet" aria-labelledby="month-sheet-title" hidden>
