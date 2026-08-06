@@ -5,14 +5,18 @@ import {
   filterByMember,
   formatMonth,
   formatMoney,
+  formatShortDate,
   getMonthlyExpenses,
   isValidMonthKey,
   shiftMonthKey,
 } from "../expenses.js";
-import { getMembers } from "../members.js";
+import { getMemberName, getMembers } from "../members.js";
 import { getExpenses, getMemberFilter, getSelectedMonth, setSelectedMonth } from "../store.js";
 import { escapeHtml } from "../ui/escape.js";
 import { showPage } from "../ui/page.js";
+
+/** 지금 펴 놓은 분류. 한 번에 하나만 편다 — 여럿이 열리면 화면이 통째로 길어진다. */
+let openedCategory = null;
 
 /**
  * 무엇과 견줄지. null이면 이 달 구성만 본다.
@@ -83,14 +87,59 @@ function paintShares(categories, total) {
   return categories
     .map(
       (category) => `
-      <div class="analysis-row">
+      <button class="analysis-row" type="button" data-category="${escapeHtml(category.key)}"
+        aria-expanded="${category.key === openedCategory}">
         <span class="analysis-name">${escapeHtml(category.label)}</span>
         <span class="analysis-bar"><i style="width:${(category.total / total) * 100}%;background:${category.color}"></i></span>
         <span class="analysis-amount">${formatMoney(category.total)}원</span>
         <span class="analysis-percent">${category.percent}%</span>
-      </div>`,
+      </button>${펴진것(category.key)}`,
     )
     .join("");
+}
+
+/**
+ * 눌러서 펴 놓은 분류의 지출 목록.
+ *
+ * 예전에는 분석에서 분류를 누르면 본 화면으로 튕겨 나갔다 — 무엇이 바뀌었는지 되짚어야
+ * 했고, 보던 자리를 잃었다. 그래서 한동안 분석에서 아예 못 누르게 두었는데, 그러면
+ * "이 분류에 뭘 썼지" 를 볼 길이 없다. 그 자리에서 펴면 둘 다 없다.
+ */
+function 펴진것(key) {
+  if (key !== openedCategory) return "";
+
+  const 줄들 = 그달의그분류(key);
+  if (!줄들.length) return `<p class="analysis-detail">이 분류에는 기록이 없어요.</p>`;
+
+  return `
+    <div class="analysis-detail">
+      ${줄들
+        .map(
+          (expense) => `
+        <p class="analysis-detail-row">
+          <time>${escapeHtml(formatShortDate(expense.date))}</time>
+          <span>${escapeHtml(expense.item)}</span>
+          <small>${escapeHtml(getMemberName(expense.member))}</small>
+          <b>${formatMoney(expense.amount)}원</b>
+        </p>`,
+        )
+        .join("")}
+    </div>`;
+}
+
+/** 보고 있는 달·사람·분류에 맞는 지출. 위의 숫자와 같은 범위를 본다. */
+function 그달의그분류(key) {
+  const mine = filterByMember(getExpenses(), getMemberFilter());
+  const compared = compareMonth(mine, getSelectedMonth());
+  return untilDay(getMonthlyExpenses(mine, getSelectedMonth()), compared.maxDay)
+    .filter((expense) => expense.category === key)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+}
+
+/** 같은 것을 다시 누르면 접힌다. 비교를 켜 두면 펴지 않는다 — 그때는 줄이 두 달을 말한다. */
+export function toggleCategoryDetail(key) {
+  openedCategory = openedCategory === key ? null : key;
+  paintAnalysis();
 }
 
 /**
@@ -143,6 +192,8 @@ function paintComparePicker(compared, active) {
 /** 같은 것을 다시 누르면 꺼진다. */
 export function toggleCompare(mode) {
   compareWith = compareWith === mode ? null : mode;
+  // 비교를 켜면 줄이 두 달을 말한다. 그때 펴 둔 목록은 어느 달 것인지 흐려지므로 접는다.
+  if (compareWith) openedCategory = null;
 }
 
 export function openAnalysisPage() {

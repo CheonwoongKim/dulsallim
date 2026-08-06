@@ -490,11 +490,25 @@ test("거르기 시트는 분류만 맡는다", () => {
   assert.doesNotMatch(그리기목록, /renderCalendar\([^)]*categoryFilter/);
 });
 
-test("분석 화면은 보는 곳으로 되돌렸다", () => {
-  // 한 가지 일에 길이 둘이면, 그것도 하나는 순간이동이면 더 헷갈린다.
-  assert.match(fn("paintShares"), /<div class="analysis-row">/);
-  assert.doesNotMatch(fn("paintShares"), /data-category/);
+test("분석에서 분류를 눌러도 화면을 떠나지 않는다", () => {
+  /*
+   * 처음에는 분석에서 분류를 누르면 본 화면으로 튕겨 나갔다 — 무엇이 바뀌었는지 되짚어야
+   * 했고 보던 자리를 잃었다. 그래서 한동안 아예 못 누르게 두었는데, 그러면 "이 분류에
+   * 뭘 썼지" 를 볼 길이 없었다. 그 자리에서 펴면 둘 다 없다.
+   */
+  assert.match(fn("paintShares"), /data-category="\$\{escapeHtml\(category\.key\)\}"/);
+  assert.match(fn("paintShares"), /aria-expanded=/);
   assert.doesNotMatch(app, /function toggleCategoryFilter/);
+  const 펴기 = fn("toggleCategoryDetail");
+  assert.doesNotMatch(펴기, /hidePage|setCategoryFilter/, "분류를 눌러 화면을 떠나면 안 된다");
+  // 한 번에 하나만 편다 — 여럿이 열리면 화면이 통째로 길어진다.
+  assert.match(펴기, /openedCategory = openedCategory === key \? null : key/);
+  // 비교를 켜면 줄이 두 달을 말한다. 그때 펴 둔 목록은 어느 달 것인지 흐려지므로 접는다.
+  assert.match(fn("toggleCompare"), /if \(compareWith\) openedCategory = null/);
+  // 펴진 목록은 위 숫자와 같은 범위를 본다 — 달·사람·진행 중인 달의 날짜까지.
+  const 고르기 = fn("그달의그분류");
+  assert.match(고르기, /filterByMember\(getExpenses\(\), getMemberFilter\(\)\)/);
+  assert.match(고르기, /untilDay\(getMonthlyExpenses\(mine, getSelectedMonth\(\)\), compared\.maxDay\)/);
 });
 
 test("걸린 조건은 제목에 뜨고 시트에서 푼다", () => {
@@ -1627,8 +1641,12 @@ test("분석 페이지도 다른 전체 화면과 같은 처리를 받는다", (
 test("분석 막대는 줄마다 같은 길이를 쓴다", () => {
   // 줄마다 격자를 따로 계산하면 오른쪽 금액의 글자 수만큼 막대가 짧아져 끝이 어긋난다.
   assert.match(css, /#analysis-list \{[^}]*grid-template-columns/, "열 너비는 목록 전체가 함께 정한다");
-  assert.match(css, /\.analysis-row \{[^}]*display: contents/, "줄이 스스로 격자를 만들면 안 된다");
-  assert.doesNotMatch(css, /\.analysis-row \{[^}]*grid-template-columns/);
+  /*
+   * 줄이 단추가 되면서 제 격자를 갖게 됐지만, 열 너비는 여전히 위 격자가 정한다(subgrid).
+   * 줄마다 따로 잡으면 그때부터 막대 끝이 어긋난다 — 계측으로 확인했다(모두 x271).
+   */
+  assert.match(css, /\.analysis-row \{[^}]*grid-template-columns: subgrid/);
+  assert.match(css, /\.analysis-row \{[^}]*grid-column: 1 \/ -1/);
 
   // 금액과 비중이 한 칸에 뭉쳐 있으면 열 너비를 나눌 수 없다.
   assert.match(app, /class="analysis-amount"/);

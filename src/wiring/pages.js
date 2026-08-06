@@ -1,6 +1,11 @@
 import { togglePush } from "../features/push.js";
 import { elements } from "../dom.js";
-import { openAnalysisPage, shiftAnalysisMonth, toggleCompare } from "../features/analysis.js";
+import {
+  openAnalysisPage,
+  shiftAnalysisMonth,
+  toggleCategoryDetail,
+  toggleCompare,
+} from "../features/analysis.js";
 import { toggleMemberFilter } from "../features/expense-actions.js";
 import {
   addNag,
@@ -67,6 +72,14 @@ import { closeOnPress } from "../ui/sheet.js";
 /* ── 마이페이지 · 설정 ────────────────────────────────────── */
 
 elements.openAnalysis.addEventListener("click", openAnalysisPage);
+elements.analysisList.addEventListener("click", (event) => {
+  const 줄 = event.target.closest("[data-category]");
+  if (줄) {
+    toggleCategoryDetail(줄.dataset.category);
+    render();
+  }
+});
+
 elements.analysisPrev.addEventListener("click", () => {
   shiftAnalysisMonth(-1);
   render();

@@ -144,9 +144,84 @@
   align-items: center;
 }
 
-/* 줄은 묶음일 뿐, 칸은 위 격자에 직접 놓인다. */
+/*
+ * 줄은 단추다. 누르면 그 아래로 그 분류의 지출이 펴진다.
+ *
+ * 칸 너비는 위 격자가 정한다(subgrid). 줄마다 따로 잡으면 오른쪽 금액의 글자 수에 따라
+ * 막대가 쓸 수 있는 너비가 달라져 막대 끝이 줄마다 어긋난다 — 그러라고 한 격자로 묶었다.
+ */
 .analysis-row {
-  display: contents;
+  display: grid;
+  padding: 0;
+  border: 0;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  gap: var(--space-2);
+  align-items: center;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  /* font 속기가 자간을 안 물려준다. 줄 안의 글자(13·12)에 맞는 값을 못 박는다. */
+  letter-spacing: var(--tracking-small);
+  text-align: left;
+}
+
+.analysis-row:active {
+  opacity: 0.55;
+}
+
+/*
+ * 펴진 지출들. 줄 바로 아래에 붙어 어느 분류 것인지가 자리로 읽힌다.
+ * 왼쪽에 선을 하나 그어 위 목록과 갈라 준다 — 여백만으로는 같은 층으로 보인다.
+ */
+.analysis-detail {
+  display: grid;
+  margin: calc(var(--space-1) * -1) 0 var(--space-1) var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--line);
+  gap: var(--space-2);
+  grid-column: 1 / -1;
+}
+
+.analysis-detail-row {
+  display: grid;
+  margin: 0;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  grid-template-columns: auto 1fr auto;
+  color: var(--ink-soft);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-small);
+}
+
+.analysis-detail-row time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 항목 이름은 진하게. 이 줄에서 찾는 것이 그것이다. */
+.analysis-detail-row span {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--text-13);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-detail-row small {
+  grid-column: 1 / 3;
+  font-size: var(--text-11);
+}
+
+.analysis-detail-row b {
+  font-size: var(--text-13);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+  grid-row: 1 / 3;
+  grid-column: 3;
+  align-self: center;
+  color: var(--ink);
+  text-align: right;
 }
 
 .analysis-name {
