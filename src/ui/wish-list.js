@@ -1,5 +1,5 @@
 import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
-import { getMemberName } from "../members.js";
+import { getMemberColor, getMemberName } from "../members.js";
 import { escapeHtml, safeHref } from "./escape.js";
 
 /**
@@ -19,11 +19,41 @@ function metaLine(wish) {
     .join(" · ");
 }
 
+/**
+ * 어디로 가는 링크인지 미리 보여 준다.
+ *
+ * "링크 열기" 는 어느 줄에서나 같은 말이라 줄끼리 구별이 안 된다. 도메인을 쓰면
+ * 누르기 전에 어디서 담아 온 것인지 읽힌다. `www.` 는 어느 주소에나 붙는 군더더기라 뗀다.
+ */
+export function domainOf(href) {
+  try {
+    return new URL(href).hostname.replace(/^www\./, "");
+  } catch {
+    // safeHref 를 지나온 값이라 여기 올 일이 없지만, 오면 링크 구실은 하게 둔다.
+    return "링크 열기";
+  }
+}
+
 /** 열 수 없는 주소는 글자로도 내보내지 않는다. 눌러도 아무 일이 없으면 링크가 아니다. */
 function linkMarkup(wish) {
   const href = safeHref(wish.url);
   if (!href) return "";
-  return `<a class="wish-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">링크 열기</a>`;
+  return `<a class="wish-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(domainOf(href))}</a>`;
+}
+
+/**
+ * 줄 왼쪽에 서는 타일. 이름 첫 글자를 담은 사람 색으로 쥔다.
+ *
+ * 위시는 "갖고 싶은 것" 이라 글자만 있으면 지출 목록과 구별이 안 된다. 색 한 칸이
+ * 그 줄을 물건으로 만든다. 색을 따로 만들지 않고 그 사람 아바타 색을 그대로 쓴다 —
+ * 누가 담았는지가 색으로 먼저 읽히고, 새 색 체계를 하나 더 들이지 않는다.
+ *
+ * 나중에 링크에서 그림을 가져오면 이 자리에 그림이 들어가고, 그림이 없거나 깨진
+ * 줄은 이 타일로 돌아온다. 그래서 이건 임시가 아니라 바닥이다.
+ */
+function thumbMarkup(wish) {
+  const letter = [...String(wish.name).trim()][0] ?? "";
+  return `<span class="wish-thumb" style="--wish-tile: ${escapeHtml(getMemberColor(wish.createdBy))}" aria-hidden="true">${escapeHtml(letter)}</span>`;
 }
 
 /** `2026-03-14` → `2026.03.14`. 이룬 것에는 날짜만 남는다. */
@@ -59,6 +89,7 @@ export function createWishRow(wish, { canAgree, waiting }) {
       <button class="swipe-action is-delete" type="button" data-remove-wish="${escapeHtml(wish.id)}" aria-label="${escapeHtml(wish.name)} 지우기">지우기</button>
     </span>
     <div class="wish-surface swipe-surface">
+      ${thumbMarkup(wish)}
       <div class="wish-copy">
         <strong>${escapeHtml(wish.name)}</strong>
         <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>

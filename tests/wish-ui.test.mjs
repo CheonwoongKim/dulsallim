@@ -240,3 +240,31 @@ test("상대가 바꾼 위시도 열어 둔 화면에 그대로 온다", () => {
    */
   assert.match(app, /if \(!elements\.wishPage\.hidden\) paintWishPage\(\);/);
 });
+
+test("줄마다 타일이 서고, 크기·색은 있는 토큰에서 나온다", () => {
+  // 타일은 그리는 쪽에만 있다. 향하는 카드는 흰 판과 20px 이름으로 이미 도드라진다.
+  assert.match(app, /class="wish-thumb" style="--wish-tile: \$\{escapeHtml\(getMemberColor\(wish\.createdBy\)\)\}/);
+  assert.match(app, /aria-hidden="true"/, "타일 글자는 읽어 주지 않는다 — 바로 옆에 이름이 있다");
+
+  const 타일 = css.match(/\.wish-thumb \{[\s\S]*?\n\}/)[0];
+  // 새 숫자를 만들지 않았는지. 56 은 --control-lg, 16 은 --radius-16 이다.
+  assert.match(타일, /width: var\(--control-lg\)/);
+  assert.match(타일, /height: var\(--control-lg\)/);
+  assert.match(타일, /border-radius: var\(--radius-16\)/);
+  assert.doesNotMatch(타일, /\d+px/, "타일 안에 날 숫자가 남아 있다");
+
+  /*
+   * 사람 색이 없거나 이상해도 타일이 투명해지지 않아야 한다. getMemberColor 가
+   * 이미 기본색으로 돌려 주지만, CSS 쪽에도 같은 잣대를 둔다.
+   */
+  assert.match(타일, /var\(--wish-tile, var\(--ink\)\)/);
+});
+
+test("링크는 어디로 가는지 미리 말한다", async () => {
+  const { domainOf } = await import("../src/ui/wish-list.js");
+  assert.equal(domainOf("https://www.coupang.com/vp/products/1"), "coupang.com");
+  assert.equal(domainOf("https://airbnb.co.kr/rooms/2"), "airbnb.co.kr");
+  // 여기 올 일이 없지만(safeHref 를 지나온다) 와도 링크 구실은 해야 한다.
+  assert.equal(domainOf("주소가 아님"), "링크 열기");
+  assert.doesNotMatch(app, /">링크 열기<\/a>/, "모든 줄이 같은 말을 하고 있다");
+});

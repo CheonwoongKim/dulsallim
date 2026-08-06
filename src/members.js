@@ -25,6 +25,11 @@ export function getMemberGoal(id) {
   return members.find((member) => member.id === id)?.goal ?? null;
 }
 
+/** 그 사람의 아바타 색. 명부에 없거나 이상한 값이면 기본색으로 돌아간다. */
+export function getMemberColor(id) {
+  return toDisplayColor(members.find((member) => member.id === id)?.color);
+}
+
 /** 빠르게 고를 수 있는 기본 아바타 색. 이 밖의 6자리 HEX도 직접 선택할 수 있다. */
 export const PALETTE = [
   { value: "#20211e", label: "먹" },
