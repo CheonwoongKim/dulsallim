@@ -102,7 +102,7 @@
 .note-form input {
   /*
    * 오른쪽은 단추가 앉을 자리만큼 비운다 — 글자가 단추 밑으로 들어가지 않게.
-   * 단추 42 + 칸 안쪽 여백 2 = 44 를 쓰므로 48 이면 4px 이 남는다.
+   * 단추 34 + 오른쪽 여백 8 = 42 를 쓰므로 48 이면 6px 이 남는다.
    */
   padding-right: var(--space-12);
   /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
@@ -121,19 +121,40 @@
   grid-area: 1 / 1;
 }
 
-/* 칸 안 오른쪽에 앉는다. */
+/*
+ * 칸 안 오른쪽에 앉는다. 칸이 파 준 우물에 들어앉은 크기다.
+ *
+ * 머리 줄 아이콘 단추와 같은 42 를 쓰던 때는 50 짜리 칸에 4px 만 남아 칸을 거의 채웠다.
+ * 칸 안에 있는 것은 칸보다 한 뼘 작아야 안에 있어 보인다. 위아래·오른쪽으로 8 씩
+ * 물러나게 잡으면 50 − 16 = 34 다. 숫자로 적지 않고 칸 높이에서 빼서 얻는다 —
+ * 칸이 커지면 단추도 따라 커져야 우물이 그대로 남는다.
+ */
 .note-send {
+  --send-size: calc(var(--field-height) - var(--space-2) * 2);
+
+  position: relative;
   display: grid;
-  width: var(--control-sm);
-  height: var(--control-sm);
+  width: var(--send-size);
+  height: var(--send-size);
   justify-self: end;
-  margin-right: var(--space-05);
+  /* 위아래 여백은 가운데 맞춤이 알아서 8 을 만든다. 오른쪽도 같은 8 이라야 우물이 고르다. */
+  margin-right: var(--space-2);
   border: 0;
   border-radius: var(--radius-round);
   background: var(--ink);
   cursor: pointer;
   place-items: center;
   transition: opacity var(--motion) ease;
+}
+
+/*
+ * 보이는 크기는 두고 누를 자리만 44 로 넓힌다 — .icon-button 이 하는 것과 같은 방식.
+ * 넓혀도 칸 안에 머문다(x322~366, 칸 오른쪽 끝 x369).
+ */
+.note-send::after {
+  content: "";
+  position: absolute;
+  inset: calc((var(--tap-min) - var(--send-size)) / -2);
 }
 
 .note-send:active:not(:disabled) {

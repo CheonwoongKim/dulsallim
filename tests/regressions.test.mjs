@@ -2746,13 +2746,31 @@ test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
 
   /*
    * 보내기는 칸 안에 앉는다. 옆에 세워 두던 때는 단추가 줄에서 50px 을 떼어 갔다.
-   * 크기는 머리 줄 아이콘 단추와 같은 --control-sm 이다.
+   *
+   * 크기는 칸이 파 준 우물이 정한다. 머리 줄과 같은 42 를 쓰던 때는 50 짜리 칸에 4px 만
+   * 남아 칸을 거의 채웠다 — 안에 있는 것은 칸보다 한 뼘 작아야 안에 있어 보인다.
+   * 날 숫자로 적지 않고 칸 높이에서 빼서 얻는다. 칸이 커지면 우물이 그대로 남는다.
    */
   const 보내기 = 규칙(".note-send");
-  assert.match(보내기, /width: var\(--control-sm\)/);
-  for (const 줄 of 보내기.split("\n").filter((l) => /^\s*(width|height):/.test(l))) {
+  assert.match(보내기, /--send-size: calc\(var\(--field-height\) - var\(--space-2\) \* 2\)/);
+  assert.match(보내기, /width: var\(--send-size\)/);
+  assert.match(보내기, /height: var\(--send-size\)/);
+  // 위아래 여백은 가운데 맞춤이 만든다. 오른쪽도 같은 값이라야 우물이 고르다.
+  assert.match(보내기, /margin-right: var\(--space-2\)/);
+  for (const 줄 of 보내기.split("\n").filter((l) => /^\s*(width|height|--send-size|margin-right):/.test(l))) {
     assert.doesNotMatch(줄, /\d+px/, `보내기에 날 숫자가 남아 있다: ${줄.trim()}`);
   }
+
+  /*
+   * 34 는 애플이 말하는 44 에 못 미친다. 동그라미를 키우면 칸을 도로 채우므로 누를 자리만
+   * 넓힌다 — .icon-button 이 하는 것과 같은 방식이고, 넓혀도 칸 안에 머문다(계측 x322~366,
+   * 칸 오른쪽 끝 x369).
+   */
+  assert.match(
+    css,
+    /\.note-send::after \{[^}]*inset: calc\(\(var\(--tap-min\) - var\(--send-size\)\) \/ -2\)/,
+    "작아진 단추가 손닿는 자리를 안 넓힌다",
+  );
 
   /*
    * 적는 줄 위에 선을 긋지 않는다. 이 앱은 단락을 여백으로 나눈다 — 흰 바탕만으로도
