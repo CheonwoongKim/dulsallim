@@ -273,63 +273,46 @@ export async function deleteTemplate(id) {
 
 /* ── 위시리스트 쓰기 ──────────────────────────────────────── */
 
-/** 항목과 올린 사람의 첫 합의를 서버 트랜잭션 하나로 만든다. */
-export async function insertWish({ name, url, estimatedPrice, note }) {
+/**
+ * 위시를 바꾸는 RPC 는 넷 다 같은 모양이다 — 부르고, 같은 열을 골라, 한 줄을 받아 옮긴다.
+ *
+ * 열 목록을 함수마다 적던 때는 한 곳만 빠져도 그 자리만 400 이 났다(image_url 을 더하다
+ * create_wish 가 그랬다). 한 곳에서만 적으면 어긋날 자리가 없다.
+ */
+async function 위시바꾸기(하는일, 이름, 인자) {
   const row = unwrap(
-    "위시 저장",
-    await supabase
-      .rpc("create_wish", {
-        p_name: name,
-        p_url: url || null,
-        p_estimated_price: estimatedPrice ?? null,
-        p_note: note || null,
-      })
-      .select(WISH_RESULT_COLUMNS)
-      .single(),
+    하는일,
+    await supabase.rpc(이름, 인자).select(WISH_RESULT_COLUMNS).single(),
   );
   return toWish(row);
+}
+
+/** 담기와 고치기가 같은 칸을 보낸다. 이름이 어긋나면 서버가 조용히 null 로 받는다. */
+const 위시값 = ({ name, url, estimatedPrice, note }) => ({
+  p_name: name,
+  p_url: url || null,
+  p_estimated_price: estimatedPrice ?? null,
+  p_note: note || null,
+});
+
+/** 항목과 올린 사람의 첫 합의를 서버 트랜잭션 하나로 만든다. */
+export async function insertWish(값) {
+  return 위시바꾸기("위시 저장", "create_wish", 위시값(값));
 }
 
 /** 합의 기록과 필요하다면 pursuing 전환까지 서버가 원자적으로 처리한다. */
 export async function agreeWish(id) {
-  const row = unwrap(
-    "위시 합의",
-    await supabase
-      .rpc("agree_wish", { p_wish_id: id })
-      .select(WISH_RESULT_COLUMNS)
-      .single(),
-  );
-  return toWish(row);
+  return 위시바꾸기("위시 합의", "agree_wish", { p_wish_id: id });
 }
 
 /** 지출 날짜 복사와 achieved 전환을 한 요청 안에서 끝낸다. */
 export async function achieveWish(id, expenseId) {
-  const row = unwrap(
-    "위시 이루기",
-    await supabase
-      .rpc("achieve_wish", { p_wish_id: id, p_expense_id: expenseId })
-      .select(WISH_RESULT_COLUMNS)
-      .single(),
-  );
-  return toWish(row);
+  return 위시바꾸기("위시 이루기", "achieve_wish", { p_wish_id: id, p_expense_id: expenseId });
 }
 
 /** 담아 둔 것을 고친다. 링크가 바뀌면 서버가 그림 주소를 비워 다시 찾게 한다. */
-export async function updateWish(id, { name, url, estimatedPrice, note }) {
-  const row = unwrap(
-    "위시 수정",
-    await supabase
-      .rpc("update_wish", {
-        p_wish_id: id,
-        p_name: name,
-        p_url: url || null,
-        p_estimated_price: estimatedPrice ?? null,
-        p_note: note || null,
-      })
-      .select(WISH_RESULT_COLUMNS)
-      .single(),
-  );
-  return toWish(row);
+export async function updateWish(id, 값) {
+  return 위시바꾸기("위시 수정", "update_wish", { p_wish_id: id, ...위시값(값) });
 }
 
 export async function deleteWish(id) {

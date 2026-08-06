@@ -6,6 +6,7 @@ import {
   nextCategoryFilter,
 } from "../expenses.js";
 import { render } from "../render.js";
+import { clearFilters } from "./expense-actions.js";
 import {
   getCategoryFilter,
   getExpenses,
@@ -86,13 +87,14 @@ export function closeFilterSheet() {
   hideSheet(elements.filterSheet);
 }
 
-/** 사람·분류·날짜를 한꺼번에 푼다. 시트는 닫는다 — 풀고 나면 더 볼 것이 없다. */
+/**
+ * 사람·분류·날짜를 한꺼번에 푼다. 시트는 닫는다 — 풀고 나면 더 볼 것이 없다.
+ *
+ * 푸는 일 자체는 제목 줄의 것과 똑같아서 그쪽(clearFilters)을 부른다. 같은 다섯 줄을
+ * 두 곳에 적던 때는 거르는 조건을 하나 더할 때 한쪽만 고칠 수 있었다.
+ */
 export function clearAllFilters() {
-  setMemberFilter(null);
-  setCategoryFilter(null);
-  setDateFilter(null);
-  closeOpenRow();
-  render();
+  clearFilters();
   closeFilterSheet();
 }
 

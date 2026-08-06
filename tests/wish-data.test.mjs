@@ -141,8 +141,25 @@ test("위시 열 목록과 읽기 조합은 remote.js 한 곳에서 관리한다
   assert.match(remote, /export const WISH_COLUMNS\s*=\s*\n?\s*"[^"]*estimated_price[^"]*achieved_at"/);
   assert.match(remote, /export const WISH_AGREEMENT_COLUMNS = "wish_id, user_id, agreed_at"/);
   assert.match(remote, /const WISH_RESULT_COLUMNS = `\$\{WISH_COLUMNS\}, agreement_user_ids`/);
-  // 담기·합의·이룸·고치기 넷이 같은 열 목록을 쓴다.
-  assert.equal((remote.match(/\.select\(WISH_RESULT_COLUMNS\)/g) || []).length, 4);
+  /*
+   * 담기·합의·이룸·고치기 넷이 같은 열 목록을 쓴다. 함수마다 적던 때는 한 곳만 빠져도
+   * 그 자리만 400 이 났다(image_url 을 더하다 create_wish 가 그랬다). 이제 한 곳뿐이다.
+   */
+  assert.equal((remote.match(/\.select\(WISH_RESULT_COLUMNS\)/g) || []).length, 1);
+  for (const [이름, rpc] of [
+    ["insertWish", "create_wish"],
+    ["agreeWish", "agree_wish"],
+    ["achieveWish", "achieve_wish"],
+    ["updateWish", "update_wish"],
+  ]) {
+    assert.match(
+      exportedFunction(remote, 이름),
+      new RegExp(`위시바꾸기\\("[^"]+", "${rpc}"`),
+      `${이름} 이 제 손으로 열 목록을 적고 있다`,
+    );
+  }
+  // 담기와 고치기가 보내는 칸도 한 곳에서 만든다.
+  assert.match(remote, /const 위시값 = \(\{ name, url, estimatedPrice, note \}\) => \(\{/);
   const fetch = exportedFunction(remote, "fetchWishes");
   assert.match(fetch, /select\(WISH_COLUMNS\)/);
   assert.match(fetch, /select\(WISH_AGREEMENT_COLUMNS\)/);

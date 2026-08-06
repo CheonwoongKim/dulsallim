@@ -177,15 +177,20 @@ export function openWishEditSheet(id) {
   elements.wishNote.value = wish.note ?? "";
 }
 
+/** 네 칸의 잘못 표시를 한꺼번에 지운다. 시트를 열 때와 다시 볼 때가 같은 곳을 쓴다. */
+function 잘못표시지우기() {
+  elements.wishNameError.textContent = "";
+  elements.wishUrlError.textContent = "";
+  elements.wishPriceError.textContent = "";
+  elements.wishNoteError.textContent = "";
+}
+
 export function openWishSheet() {
   editingWishId = null;
   elements.wishSheetTitle.textContent = "무엇을 담을까요?";
   elements.wishSubmitLabel.textContent = "담기";
   elements.wishForm.reset();
-  elements.wishNameError.textContent = "";
-  elements.wishUrlError.textContent = "";
-  elements.wishPriceError.textContent = "";
-  elements.wishNoteError.textContent = "";
+  잘못표시지우기();
   showSheet(elements.wishSheet);
   // 시트가 다 올라온 뒤에 손이 가야 한다. 올라오는 중에 키보드가 뜨면 두 움직임이 겹친다.
   setTimeout(() => elements.wishName.focus(), 60);
@@ -206,11 +211,7 @@ export function handleWishPriceInput(event) {
 /** @returns {HTMLElement|null} 처음 잘못된 칸. 없으면 null */
 function validateWishInput({ name, url, price, note }) {
   let firstInvalidField = null;
-
-  elements.wishNameError.textContent = "";
-  elements.wishUrlError.textContent = "";
-  elements.wishPriceError.textContent = "";
-  elements.wishNoteError.textContent = "";
+  잘못표시지우기();
 
   if (!name) {
     elements.wishNameError.textContent = "무엇을 담을지 적어 주세요.";

@@ -470,10 +470,15 @@ test("거르기 시트는 분류만 맡는다", () => {
   assert.match(고르기, /closeFilterSheet\(\)/);
   assert.doesNotMatch(고르기, /hidePage/, "화면을 떠나지 않는다");
 
-  // 다만 모두 지우기는 셋을 다 푼다 — 여기서 못 걸 뿐, 걸려 있으면 여기서 풀린다.
-  const 지우기 = fn("clearAllFilters");
+  /*
+   * 다만 모두 지우기는 셋을 다 푼다 — 여기서 못 걸 뿐, 걸려 있으면 여기서 풀린다.
+   * 푸는 일은 제목 줄의 것과 똑같아 그쪽을 부른다. 같은 다섯 줄을 두 곳에 적던 때는
+   * 거르는 조건을 하나 더할 때 한쪽만 고칠 수 있었다.
+   */
+  assert.match(fn("clearAllFilters"), /clearFilters\(\)/);
+  const 푸는곳 = fn("clearFilters");
   for (const 끄기 of [/setMemberFilter\(null\)/, /setCategoryFilter\(null\)/, /setDateFilter\(null\)/]) {
-    assert.match(지우기, 끄기);
+    assert.match(푸는곳, 끄기);
   }
 
   // 그 달에 쓴 분류만, 많이 쓴 순. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다.
@@ -530,8 +535,10 @@ test("걸린 조건은 제목에 뜨고 시트에서 푼다", () => {
   assert.doesNotMatch(fn("paintLedgerHeading"), /setAttribute\("aria-label"/);
 
   const 지우기 = fn("clearAllFilters");
+  assert.match(지우기, /clearFilters\(\)/, "푸는 곳이 둘로 갈렸다");
+  const 푸는곳2 = fn("clearFilters");
   for (const 끄기 of [/setMemberFilter\(null\)/, /setCategoryFilter\(null\)/, /setDateFilter\(null\)/]) {
-    assert.match(지우기, 끄기);
+    assert.match(푸는곳2, 끄기);
   }
   // 풀고 나면 시트에 더 볼 것이 없다.
   assert.match(지우기, /closeFilterSheet\(\)/);
