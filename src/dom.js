@@ -35,8 +35,6 @@ export const elements = {
   signOut: document.querySelector("#sign-out"),
   openProfile: document.querySelector("#open-profile"),
   openSettings: document.querySelector("#open-settings"),
-  settingsAvatar: document.querySelector("#settings-avatar"),
-  settingsName: document.querySelector("#settings-name"),
   pages: [
     document.querySelector("#profile-page"),
     document.querySelector("#settings-page"),

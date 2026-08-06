@@ -27,43 +27,29 @@ const 설정본문 = html.slice(
   html.indexOf("<dialog class=\"sheet\" id=\"entry-sheet\""),
 );
 
-test("머리 줄 아이콘은 사람에서 즐겨찾기 표시로 바뀌었다", () => {
-  // 이름은 두 곳이 같아야 한다 — 읽어 주는 이름과 화면 제목.
-  assert.match(html, /id="open-wish" aria-label="위시리스트"/);
-  assert.match(html, /<h2 id="wish-page-title">위시리스트<\/h2>/);
-  assert.doesNotMatch(html, /id="open-profile" aria-label="마이페이지"/, "사람 아이콘이 남아 있다");
-
-  const 표 = html.match(/id="open-wish"[\s\S]*?<\/button>/)[0];
-  assert.match(표, /viewBox="0 0 24 24"/, "다른 아이콘과 같은 24 상자여야 한다");
-  assert.doesNotMatch(표, /fill="/, "선으로만 그린다 — 칠은 .icon-button svg 가 none 으로 정한다");
-  assert.doesNotMatch(표, /stroke="/, "색도 .icon-button svg 의 currentColor 를 따른다");
-
+test("머리 줄은 마이페이지로 되돌아갔고 위시는 설정 안에 있다", () => {
   /*
-   * 표가 상자 안에서 놀아야 한다. 24 를 넘으면 잘리고, 너무 작으면 옆 아이콘보다 작아 보인다.
-   * 다른 아이콘은 3~4px 안쪽에서 논다(분석 4~20, 설정 3~21).
+   * 한동안 위시를 머리 줄에 뒀다가 되돌렸다. 아직 다듬는 중인 것이 하루에도 몇 번 누르는
+   * 자리를 차지할 이유가 없다. 마이페이지가 그 자리로 돌아오고 위시는 설정 안으로 들어갔다.
    */
-  const 좌표 = [...표.match(/ d="([^"]+)"/)[1].matchAll(/(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/g)]
-    .map(([, x, y]) => [Number(x), Number(y)]);
-  // 위 두 귀 · 오른쪽 아래 · 가운데 홈 · 왼쪽 아래.
-  assert.equal(좌표.length, 5, "책갈피는 꼭짓점이 다섯이다");
-  // 아래가 파여 있어야 네모가 아니라 즐겨찾기 표시로 읽힌다.
-  assert.equal(좌표[3][0], 12, "홈은 한가운데다");
-  assert.ok(좌표[3][1] < Math.max(...좌표.map(([, y]) => y)), "아래가 안 파였다 — 그냥 네모다");
-  const 가로 = 좌표.map(([x]) => x);
-  const 세로 = 좌표.map(([, y]) => y);
-  const 안에 = (값들) => Math.min(...값들) >= 2 && Math.max(...값들) <= 22;
-  assert.ok(안에(가로), `가로 ${Math.min(...가로)}~${Math.max(...가로)} — 24 상자 안에서 놀아야 한다`);
-  assert.ok(안에(세로), `세로 ${Math.min(...세로)}~${Math.max(...세로)} — 24 상자 안에서 놀아야 한다`);
+  assert.match(html, /id="open-profile" aria-label="마이페이지"/);
+  assert.doesNotMatch(html, /id="open-wish" aria-label="위시리스트"/, "위시가 아직 머리 줄에 있다");
+  // 이름은 두 곳이 같아야 한다 — 설정의 줄과 화면 제목.
+  assert.match(설정본문, /<strong>위시리스트<em class="beta">베타<\/em><\/strong>/);
+  assert.match(html, /<h2 id="wish-page-title">위시리스트<\/h2>/);
+
+  const 사람 = html.match(/id="open-profile" aria-label="마이페이지"[\s\S]*?<\/button>/)[0];
+  assert.match(사람, /viewBox="0 0 24 24"/, "다른 아이콘과 같은 24 상자여야 한다");
+  assert.doesNotMatch(사람, /fill="/, "선으로만 그린다 — 칠은 .icon-button svg 가 none 으로 정한다");
+  assert.doesNotMatch(사람, /stroke="/, "색도 .icon-button svg 의 currentColor 를 따른다");
 });
 
 test("홈 화면의 세로 자리는 한 픽셀도 쓰지 않는다", () => {
   /*
    * 지출 목록이 393×852 에서 4줄, 430×932 에서 6줄 보이는 것이 이 화면의 약속이다.
-   * 홈에 무엇이든 한 줄 얹으면 그만큼 목록이 밀린다. 머리 줄 아이콘 하나를 갈아 끼운 것뿐이어야 한다.
+   * 홈에 무엇이든 한 줄 얹으면 그만큼 목록이 밀린다. 위시는 홈에 흔적이 없어야 한다.
    */
-  const 흔적 = [...홈.matchAll(/wish/gi)];
-  assert.equal(흔적.length, 1, `홈에 위시가 ${흔적.length}군데 있다 — 머리 줄 아이콘 하나뿐이어야 한다`);
-  assert.match(홈, /id="open-wish"/);
+  assert.equal([...홈.matchAll(/wish/gi)].length, 0, "홈에 위시가 끼어 있다");
 
   // 위시 화면은 가계부를 덮는 .page 다. 홈 안에 끼어 있으면 문서 길이가 늘어난다.
   assert.match(html, /<section class="page" id="wish-page"/);
@@ -73,30 +59,31 @@ test("홈 화면의 세로 자리는 한 픽셀도 쓰지 않는다", () => {
   );
 });
 
-test("마이페이지는 설정 맨 위에서 열리고 로그아웃은 설정 맨 아래에 있다", () => {
-  /*
-   * 로그아웃은 예전에 머리 줄 아이콘 한 번이면 닿았다. 마이페이지 안에 두면 세 단계가 된다 —
-   * 설정 → 마이페이지 → 로그아웃. 설정에 직접 두어 두 번이면 닿게 한다.
-   */
-  const 줄들 = [...설정본문.matchAll(/id="(open-profile|open-fixed-sheet|open-nag|push-row|open-reset-sheet|sign-out)"/g)]
+test("설정에서 위시가 열리고 로그아웃은 설정 맨 아래에 있다", () => {
+  const 줄들 = [...설정본문.matchAll(/id="(open-fixed-sheet|open-wish|open-nag|push-row|open-reset-sheet|sign-out)"/g)]
     .map((m) => m[1]);
-  assert.equal(줄들[0], "open-profile", "마이페이지가 설정 맨 위가 아니다");
+  // 위시는 아직 베타라 자주 쓰는 고정비보다 아래에 둔다.
+  assert.ok(줄들.indexOf("open-wish") > 줄들.indexOf("open-fixed-sheet"), "위시가 고정비보다 위에 있다");
   assert.equal(줄들.at(-1), "sign-out", "로그아웃이 설정 맨 아래가 아니다");
-
-  // 아바타와 이름이 보여야 "내 것" 으로 읽힌다. 글자만 있으면 다른 메뉴와 구분되지 않는다.
-  assert.match(설정본문, /id="settings-avatar"/);
-  assert.match(설정본문, /id="settings-name"/);
-  assert.match(app, /settingsAvatar\.style\.background = toDisplayColor\(profile\.avatar_color\)/,
-    "아바타 색은 서버 값이라 toDisplayColor 를 지나야 한다");
+  // 마이페이지가 머리 줄로 돌아갔으니 설정 안에 또 있으면 입구가 둘이 된다.
+  assert.doesNotMatch(설정본문, /id="open-profile"/, "마이페이지 입구가 둘이다");
+  assert.doesNotMatch(설정본문, /id="settings-avatar"/);
 
   const 마이페이지 = html.slice(
     html.indexOf('<section class="page" id="profile-page"'),
     html.indexOf('<section class="page" id="wish-page"'),
   );
   assert.doesNotMatch(마이페이지, /id="sign-out"/, "로그아웃이 마이페이지에 남아 있다");
-  // 화면 자체는 그대로 둔다. 여는 자리만 바뀐 것이다.
   assert.match(마이페이지, /id="profile-form"/);
   assert.match(app, /elements\.openProfile\.addEventListener\("click", openProfilePage\)/);
+  assert.match(app, /elements\.openWish\.addEventListener\("click", openWishPage\)/);
+
+  /*
+   * 베타 표는 이름 옆에 붙는다. 줄 하나를 더 쓰지 않고 "새것" 이라는 것만 알린다 —
+   * 경고가 아니므로 붉은 계열을 그대로 쓰지 않고 옅게 푼다.
+   */
+  assert.match(css, /\.beta \{[\s\S]*?color-mix\(in srgb, var\(--accent\) 14%, var\(--white\)\)/);
+  assert.match(css, /\.beta \{[\s\S]*?font-size: var\(--text-11\)/);
 });
 
 test("링크로 쓸 수 있는 주소만 통과한다", async () => {

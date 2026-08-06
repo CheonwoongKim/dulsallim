@@ -64,8 +64,8 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>
           </button>
           <!-- 별 꼭짓점은 12,12.3 을 중심으로 반지름 9.3 에서 계산했다. 다른 아이콘처럼 3~4px 안쪽에서 논다. -->
-          <button class="icon-button" type="button" id="open-wish" aria-label="위시리스트">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3 18 3 18 21 12 16.8 6 21Z"/></svg>
+          <button class="icon-button" type="button" id="open-profile" aria-label="마이페이지">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
           </button>
           <button class="icon-button" type="button" id="open-settings" aria-label="설정">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
@@ -331,22 +331,18 @@
       </header>
 
       <div class="page-body">
-        <!-- 글자만 있으면 "내 것" 이라는 게 안 읽힌다. 아바타와 이름을 그대로 보여 준다. -->
-        <button class="menu-row" type="button" id="open-profile">
-          <span class="menu-me">
-            <span class="avatar" id="settings-avatar"></span>
-            <span>
-              <strong id="settings-name"></strong>
-              <small>이름 · 아바타 색 · 월 지출 목표</small>
-            </span>
-          </span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
-
         <button class="menu-row" type="button" id="open-fixed-sheet" aria-haspopup="dialog">
           <span>
             <strong>고정비</strong>
             <small>매월 반복되는 지출을 등록해 둡니다</small>
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+
+        <button class="menu-row" type="button" id="open-wish">
+          <span>
+            <strong>위시리스트<em class="beta">베타</em></strong>
+            <small>사고 싶은 것을 담아 두고 함께 모아 갑니다</small>
           </span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>

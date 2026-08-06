@@ -400,3 +400,22 @@
 .page-action {
   margin-left: auto;
 }
+
+/*
+ * 아직 다듬는 중이라는 표.
+ *
+ * 이름 옆에 붙는다. 줄 하나를 더 쓰지 않고, 색도 강조색을 옅게 풀어 "새것" 이라는
+ * 것만 알린다 — 경고가 아니다.
+ */
+.beta {
+  margin-left: var(--space-2);
+  padding: var(--space-05) var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--accent-dark);
+  background: color-mix(in srgb, var(--accent) 14%, var(--white));
+  font-size: var(--text-11);
+  font-style: normal;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-small);
+  vertical-align: middle;
+}
