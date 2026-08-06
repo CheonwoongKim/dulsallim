@@ -9,6 +9,8 @@ create table if not exists wish_items (
   household_id    uuid not null references households(id) on delete cascade,
   name            text not null check (char_length(trim(name)) > 0),
   url             text check (url is null or char_length(trim(url)) > 0),
+  -- 왜 갖고 싶은지 한 줄. 값이나 링크보다 이것이 나중에 더 오래 남는다.
+  note            text check (note is null or char_length(trim(note)) between 1 and 100),
   estimated_price integer check (estimated_price is null or estimated_price > 0),
   -- 링크에서 찾아낸 대표 그림. 그림 자체는 갖지 않고 주소만 적어 둔다.
   image_url       text check (image_url is null or image_url ~ '^https?://'),
@@ -81,6 +83,7 @@ returns table (
   household_id uuid,
   name text,
   url text,
+  note text,
   estimated_price integer,
   image_url text,
   created_by uuid,
@@ -98,7 +101,7 @@ security definer
 set search_path = public
 as $$
   select
-    w.id, w.household_id, w.name, w.url, w.estimated_price, w.image_url,
+    w.id, w.household_id, w.name, w.url, w.note, w.estimated_price, w.image_url,
     w.created_by, w.created_at, w.state, w.pursuing_at,
     w.expense_id, w.achieved_on, w.achieved_at,
     array(
@@ -113,16 +116,19 @@ $$;
 
 -- 올린다는 것 자체가 첫 찬성이다. 항목과 첫 합의가 한 트랜잭션으로 함께 생긴다.
 drop function if exists create_wish(text, text, integer);
+drop function if exists create_wish(text, text, integer, text);
 create or replace function create_wish(
   p_name text,
   p_url text default null,
-  p_estimated_price integer default null
+  p_estimated_price integer default null,
+  p_note text default null
 )
 returns table (
   id uuid,
   household_id uuid,
   name text,
   url text,
+  note text,
   estimated_price integer,
   image_url text,
   created_by uuid,
@@ -149,8 +155,9 @@ begin
   -- 같은 집의 합의·이룸 전환과 줄을 세운다. 한 사람 가구도 유니크 제약과 안전하게 맞물린다.
   perform pg_advisory_xact_lock(hashtextextended(v_household::text, 0));
 
-  insert into wish_items (household_id, name, url, estimated_price, created_by)
-  values (v_household, trim(p_name), nullif(trim(p_url), ''), p_estimated_price, auth.uid())
+  insert into wish_items (household_id, name, url, note, estimated_price, created_by)
+  values (v_household, trim(p_name), nullif(trim(p_url), ''), nullif(trim(p_note), ''),
+          p_estimated_price, auth.uid())
   returning wish_items.id into v_wish_id;
 
   insert into wish_agreements (wish_id, user_id)
@@ -174,6 +181,7 @@ returns table (
   household_id uuid,
   name text,
   url text,
+  note text,
   estimated_price integer,
   image_url text,
   created_by uuid,
@@ -236,6 +244,7 @@ returns table (
   household_id uuid,
   name text,
   url text,
+  note text,
   estimated_price integer,
   image_url text,
   created_by uuid,
@@ -352,13 +361,13 @@ end;
 $$;
 
 revoke execute on function wish_snapshot(uuid)               from public, authenticated, anon;
-revoke execute on function create_wish(text, text, integer)  from public, anon;
+revoke execute on function create_wish(text, text, integer, text) from public, anon;
 revoke execute on function agree_wish(uuid)                  from public, anon;
 revoke execute on function achieve_wish(uuid, uuid)          from public, anon;
 revoke execute on function delete_wish(uuid)                 from public, anon;
 revoke execute on function set_wish_image(uuid, text)         from public, anon;
 
-grant execute on function create_wish(text, text, integer) to authenticated;
+grant execute on function create_wish(text, text, integer, text) to authenticated;
 grant execute on function agree_wish(uuid)                 to authenticated;
 grant execute on function achieve_wish(uuid, uuid)         to authenticated;
 grant execute on function delete_wish(uuid)                to authenticated;

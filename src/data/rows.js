@@ -90,6 +90,7 @@ export function toWish(row, agreementUserIds = row.agreement_user_ids || []) {
     householdId: row.household_id,
     name: row.name,
     url: row.url,
+    note: row.note ?? null,
     estimatedPrice: row.estimated_price,
     imageUrl: row.image_url ?? null,
     createdBy: row.created_by,

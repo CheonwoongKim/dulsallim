@@ -4,6 +4,9 @@ import test from "node:test";
 
 import { css, fn, html, source as app } from "./helpers/source.mjs";
 
+const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
+const migration = await readFile(new URL("../supabase/migration-wish.sql", import.meta.url), "utf8");
+
 /**
  * 위시리스트 화면이 지켜야 하는 것들.
  *
@@ -158,12 +161,24 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
   assert.match(app, /그림얹기\(created\.id, href\)/, "그림도 같은 값으로 찾아야 한다");
 });
 
-test("위시 목록도 다른 목록과 같은 스와이프 구현을 쓴다", () => {
-  // 선택자가 갈라지면 한쪽만 고쳐지는 버그가 생긴다.
-  assert.ok(app.includes("wish-item swipe-row"), "위시 행이 스와이프 대상이어야 한다");
-  assert.match(app, /elements\.wishList\.addEventListener\("pointerdown", startSwipe\)/);
-  // 밀어 낸 뒤 뒤가 비치지 않도록 이 목록도 제 배경을 쥔다(본문은 종이색).
-  assert.match(css, /\.wish-surface \{[^}]*background: var\(--paper\)/);
+test("담아 둔 것은 두 칸 격자이고, 이 목록만 스와이프를 쓰지 않는다", () => {
+  /*
+   * 두 칸이 나란히 서면 가로로 밀 자리가 없다. 밀면 옆 칸까지 함께 끌려 무엇을
+   * 지우는지 흐려진다. 그래서 지우기는 그림 위 × 다.
+   */
+  assert.doesNotMatch(app, /wish-item swipe-row/, "격자 칸에는 밀 자리가 없다");
+  assert.doesNotMatch(app, /elements\.wishList\.addEventListener\("pointerdown"/);
+  assert.match(app, /class="wish-drop" type="button" data-remove-wish=/);
+
+  const 격자 = css.match(/\.wish-list \{[\s\S]*?\n\}/)[0];
+  assert.match(격자, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+
+  /*
+   * 같은 줄의 두 칸은 격자가 높이를 맞춰 주는데, 그냥 두면 글이 짧은 칸의 "나도" 가
+   * 카드 한가운데 떠서 두 단추가 어긋난다 — 실제로 44px 차이가 났다.
+   * 가운데(글)만 늘어나고 단추는 바닥에 붙는다.
+   */
+  assert.match(css, /\.wish-item \{[\s\S]*?grid-template-rows: auto 1fr auto/);
 });
 
 test("화면은 store 만 부른다 — 서버 질의를 새로 짜지 않았다", async () => {
@@ -248,23 +263,25 @@ test("상대가 바꾼 위시도 열어 둔 화면에 그대로 온다", () => {
   assert.match(app, /if \(!elements\.wishPage\.hidden\) paintWishPage\(\);/);
 });
 
-test("줄마다 타일이 서고, 크기·색은 있는 토큰에서 나온다", () => {
-  // 타일은 그리는 쪽에만 있다. 향하는 카드는 흰 판과 20px 이름으로 이미 도드라진다.
-  assert.match(app, /class="wish-thumb" style="--wish-tile: \$\{escapeHtml\(getMemberColor\(wish\.createdBy\)\)\}/);
-  assert.match(app, /aria-hidden="true"/, "타일 글자는 읽어 주지 않는다 — 바로 옆에 이름이 있다");
+test("그림 자리는 너비에 비례하고, 색은 담은 사람에게서 온다", () => {
+  assert.match(app, /class="wish-shot is-\$\{모양\}" style="--wish-tile: \$\{escapeHtml\(getMemberColor\(wish\.createdBy\)\)\}/);
+  assert.match(app, /aria-hidden="true"/, "그림 자리 글자는 읽어 주지 않는다 — 바로 옆에 이름이 있다");
+  // 담아 둔 것은 정사각, 향하는 것은 가로로 넓은 띠.
+  assert.match(app, /shotMarkup\(wish, "square"\)/);
+  assert.match(app, /shotMarkup\(wish, "wide"\)/);
 
-  const 타일 = css.match(/\.wish-thumb \{[\s\S]*?\n\}/)[0];
-  // 새 숫자를 만들지 않았는지. 56 은 --control-lg, 16 은 --radius-16 이다.
-  assert.match(타일, /width: var\(--control-lg\)/);
-  assert.match(타일, /height: var\(--control-lg\)/);
-  assert.match(타일, /border-radius: var\(--radius-16\)/);
-  assert.doesNotMatch(타일, /\d+px/, "타일 안에 날 숫자가 남아 있다");
-
+  const 자리 = css.match(/\.wish-shot \{[\s\S]*?\n\}/)[0];
   /*
-   * 사람 색이 없거나 이상해도 타일이 투명해지지 않아야 한다. getMemberColor 가
-   * 이미 기본색으로 돌려 주지만, CSS 쪽에도 같은 잣대를 둔다.
+   * 높이를 px 로 박지 않는다. 393 과 430 에서 칸 너비가 다른데 높이만 고정하면
+   * 한쪽에서 그림이 납작해진다.
    */
-  assert.match(타일, /var\(--wish-tile, var\(--ink\)\)/);
+  assert.doesNotMatch(자리, /height:/, "높이를 박으면 폭에 따라 그림이 찌그러진다");
+  assert.match(css, /\.wish-shot\.is-square \{[\s\S]*?aspect-ratio: 1/);
+  assert.match(css, /\.wish-shot\.is-wide \{[\s\S]*?aspect-ratio: 16 \/ 9/);
+
+  // 사람 색이 없거나 이상해도 자리가 투명해지지 않아야 한다.
+  assert.match(자리, /var\(--wish-tile, var\(--ink\)\)/);
+  assert.doesNotMatch(자리, /\d+px/, "그림 자리에 날 숫자가 남아 있다");
 });
 
 test("링크는 어디로 가는지 미리 말한다", async () => {
@@ -277,7 +294,7 @@ test("링크는 어디로 가는지 미리 말한다", async () => {
 });
 
 test("그림은 첫 글자 위에 덮이고, 안 오면 그 자리가 드러난다", () => {
-  const 그리기 = fn("thumbMarkup");
+  const 그리기 = fn("shotMarkup");
   // 글자를 지우고 그림을 넣는 것이 아니다. 둘 다 두고 그림이 위에 선다.
   assert.match(그리기, /escapeHtml\(letter\)\}\$\{/, "그림이 있으면 글자를 안 그린다");
   assert.match(그리기, /const image = safeHref\(wish\.imageUrl\)/, "그림 주소도 한 겹 더 받는다");
@@ -287,10 +304,10 @@ test("그림은 첫 글자 위에 덮이고, 안 오면 그 자리가 드러난�
   // 남의 서버 그림은 언제든 사라진다. 깨진 그림 표시가 첫 글자를 가리면 안 된다.
   assert.match(app, /image\.addEventListener\("error", \(\) => image\.remove\(\), \{ once: true \}\)/);
 
-  const 그림 = css.match(/\.wish-thumb img \{[\s\S]*?\n\}/)[0];
+  const 그림 = css.match(/\.wish-shot img \{[\s\S]*?\n\}/)[0];
   assert.match(그림, /position: absolute/);
   assert.match(그림, /object-fit: cover/, "늘여 맞추면 물건이 찌그러진다");
-  assert.match(css, /\.wish-thumb \{[\s\S]*?overflow: hidden/, "모서리 밖으로 그림이 삐져나온다");
+  assert.match(css, /\.wish-shot \{[\s\S]*?overflow: hidden/, "모서리 밖으로 그림이 삐져나온다");
 });
 
 test("그림 찾기는 담기를 붙잡지 않고, 못 찾아도 조용하다", () => {
@@ -338,4 +355,29 @@ test("남의 사이트에는 사람이 쓰는 이름표로 묻는다", async () 
   assert.doesNotMatch(이름표, /bot/i, "봇이라고 밝히면 네이버가 429 를 준다");
   assert.match(이름표, /^Mozilla\/5\.0 \(iPhone/);
   assert.match(함수, /"Accept-Language": "ko-KR/);
+});
+
+test("한마디는 담을 때 함께 들어가고, 없으면 자리를 안 만든다", () => {
+  // 시트 칸 · DB check · 화면 검사가 같은 길이를 봐야 한다.
+  assert.match(html, /id="wish-note" name="note" maxlength="100"/);
+  assert.match(app, /const NOTE_LIMIT = 100;/);
+  for (const sql of [schema, migration]) {
+    assert.match(sql, /note\s+text check \(note is null or char_length\(trim\(note\)\) between 1 and 100\)/);
+  }
+
+  /*
+   * maxlength 로도 막히지만 화면에서 다시 센다. 붙여넣기는 그 제한을 넘길 수 있고,
+   * DB check 에 걸리면 "위시 저장에 실패했어요" 만 남아 무엇이 문제인지 모른다.
+   */
+  assert.match(fn("validateWishInput"), /note\.length > NOTE_LIMIT/);
+  assert.match(app, /note: input\.note \|\| null/, "적은 것이 서버로 안 간다");
+
+  // 없으면 빈 줄을 남기지 않는다. 남기면 격자의 카드 높이가 들쭉날쭉해진다.
+  assert.match(fn("noteMarkup"), /return note \? .*wish-note.* : ""/);
+
+  // 담아 둔 칸과 향하는 카드가 같은 것을 쓴다.
+  assert.equal((app.match(/\$\{noteMarkup\(wish\)\}/g) || []).length, 2);
+
+  // 길이가 칸마다 다르면 격자 아래 선이 어긋난다. 두 줄에서 자른다.
+  assert.match(css, /\.wish-note \{[\s\S]*?-webkit-line-clamp: 2/);
 });

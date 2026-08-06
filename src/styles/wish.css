@@ -19,11 +19,20 @@
 
 .wish-card {
   display: grid;
-  padding: var(--space-4);
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-16);
-  gap: var(--space-1);
   background: var(--white);
+}
+
+/*
+ * 그림은 판 끝까지 닿는다. 안쪽 여백은 글에만 준다 — 그림에 여백을 두르면
+ * 카드 안에 액자가 하나 더 생겨 무엇이 주인공인지 흐려진다.
+ */
+.wish-card-body {
+  display: grid;
+  padding: var(--space-4);
+  gap: var(--space-1);
 }
 
 .wish-card .eyebrow {
@@ -59,56 +68,79 @@
 
 /* ── 담아 둔 것 ───────────────────────────────────────────── */
 
+/*
+ * 두 칸 격자.
+ *
+ * 위시리스트는 훑는 곳이 아니라 들여다보는 곳이다. 한 줄에 하나씩 놓으면 글이 먼저
+ * 읽히고 그림은 곁들이가 되는데, 두 칸으로 놓으면 그림이 먼저 보이고 한 화면에 여섯이
+ * 들어온다. 칸 너비는 화면이 정한다 — 393 에서 176, 430 에서 195.
+ */
 .wish-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-3);
 }
 
-.wish-item + .wish-item {
-  border-top: 1px solid var(--line-row);
-}
-
-/* 밀어 낸 뒤에도 뒤가 비치지 않도록 배경을 쥔다. 이 화면은 종이색이다. */
-.wish-surface {
-  display: flex;
-  padding: var(--space-3) 0;
-  gap: var(--space-3);
-  align-items: center;
-  justify-content: space-between;
-  background: var(--paper);
+/* 빈 자리 안내는 두 칸을 다 쓴다. 한 칸에 갇히면 줄이 잘게 끊긴다. */
+.wish-list .wish-empty {
+  grid-column: 1 / -1;
 }
 
 /*
- * 이름 첫 글자를 쥔 타일. 크기는 --control-lg(56) 를 그대로 쓴다 — 큰 단추·고르는 줄과
- * 같은 크기라 화면 안에서 새 숫자가 되지 않는다.
+ * 그림 · 글 · 단추 세 층.
  *
- * 색은 담은 사람 아바타 색이 style 로 --wish-tile 에 실려 온다. 그 색을 종이에 12% 만
- * 풀어 바탕으로 깔고, 글자는 원색으로 둔다. 원색을 바탕에 통째로 쓰면 줄마다 색판이
- * 서서 목록이 아니라 광고가 된다.
+ * 가운데만 늘어난다. 옆 칸과 높이는 격자가 맞춰 주는데(같은 줄은 같은 높이),
+ * 그냥 두면 글이 짧은 칸의 "나도" 가 카드 한가운데 떠서 두 단추가 어긋난다 —
+ * 실제로 44px 차이가 났다. 남는 자리를 글 칸이 먹고 단추는 바닥에 붙는다.
  */
-.wish-thumb {
+.wish-item {
   display: grid;
   position: relative;
   overflow: hidden;
-  width: var(--control-lg);
-  height: var(--control-lg);
+  border: 1px solid var(--line);
   border-radius: var(--radius-16);
-  flex: 0 0 auto;
-  place-items: center;
-  color: var(--wish-tile, var(--ink));
-  background: color-mix(in srgb, var(--wish-tile, var(--ink)) 12%, var(--white));
-  font-size: var(--text-20);
-  font-weight: var(--weight-black);
-  letter-spacing: var(--tracking-heading);
+  grid-template-rows: auto 1fr auto;
+  background: var(--white);
 }
 
 /*
- * 링크에서 찾아낸 그림이 첫 글자를 덮는다. 글자는 지우지 않고 밑에 깔아 둔다 —
- * 그림이 안 오거나 나중에 사라지면 그 자리가 그대로 드러나야 한다.
+ * 그림 자리. 카드 안에서는 정사각, 향하는 것에서는 가로로 넓은 띠다.
+ *
+ * 높이를 px 로 박지 않고 너비에 비례시킨다 — 393 과 430 에서 칸 너비가 다른데
+ * 높이만 고정하면 한쪽에서 그림이 납작해진다.
+ *
+ * 색은 담은 사람 아바타 색이 style 로 --wish-tile 에 실려 온다. 그 색을 종이에 12% 만
+ * 풀어 바탕으로 깔고, 글자는 원색으로 둔다. 원색을 통째로 쓰면 칸마다 색판이 선다.
+ */
+.wish-shot {
+  display: grid;
+  position: relative;
+  overflow: hidden;
+  place-items: center;
+  color: var(--wish-tile, var(--ink));
+  background: color-mix(in srgb, var(--wish-tile, var(--ink)) 12%, var(--white));
+  font-size: var(--text-34);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-title);
+}
+
+.wish-shot.is-square {
+  aspect-ratio: 1;
+}
+
+/* 16:9. 이 카드는 화면을 크게 차지하므로 정사각이면 글이 접히는 곳까지 밀린다. */
+.wish-shot.is-wide {
+  aspect-ratio: 16 / 9;
+}
+
+/*
+ * 그림이 첫 글자를 덮는다. 글자는 지우지 않고 밑에 깔아 둔다 — 남의 서버 그림이라
+ * 언제든 사라지는데, 그때 이 자리가 그대로 드러나야 한다.
  *
  * cover 로 채운다. 상품 사진은 가로로 길고 여행지 사진은 세로로 긴데, 늘여 맞추면
  * 물건이 찌그러진다. 잘라 내는 편이 무엇인지 알아보기 쉽다.
  */
-.wish-thumb img {
+.wish-shot img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -119,9 +151,9 @@
 .wish-copy {
   display: grid;
   min-width: 0;
-  /* 타일과 "나도" 사이에 남는 자리를 글이 전부 가져간다. 안 그러면 셋이 고르게 벌어진다. */
-  flex: 1 1 auto;
+  padding: var(--space-3);
   gap: var(--space-1);
+  align-content: start;
 }
 
 .wish-copy strong {
@@ -130,6 +162,59 @@
   letter-spacing: var(--tracking-body);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/*
+ * 왜 갖고 싶은지 적어 둔 한마디. 두 줄까지 보이고 그 뒤는 자른다 —
+ * 길이가 칸마다 다르면 격자의 아래 선이 들쭉날쭉해진다.
+ */
+.wish-note {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--text-12);
+  line-height: var(--leading-text);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/*
+ * 그림 위 오른쪽 모서리의 × . 밀어서 지우던 자리를 대신한다.
+ *
+ * 보이는 크기는 28 로 두고 손이 닿는 자리는 44 에서 역산해 넓힌다. 그림 말고는
+ * 그 모서리에 눌릴 것이 없어서 넓혀도 다른 것을 가리지 않는다.
+ */
+.wish-drop {
+  --drop-size: 28px;
+
+  display: grid;
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: var(--drop-size);
+  height: var(--drop-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-round);
+  place-items: center;
+  color: var(--white);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  cursor: pointer;
+}
+
+.wish-drop::after {
+  content: "";
+  position: absolute;
+  inset: calc((var(--tap-min) - var(--drop-size)) / -2);
+}
+
+.wish-drop svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
 }
 
 .wish-meta {
@@ -148,20 +233,21 @@
 }
 
 /*
- * "나도" 는 이 화면에서 가장 자주 누르는 곳이다. 보이는 높이는 38 로 두고
- * 손이 닿는 자리는 44 에서 역산해 넓힌다 — 아이콘 단추와 같은 방식이다.
+ * "나도" 는 이 화면에서 가장 자주 누르는 곳이다. 카드 맨 아래에 가로로 꽉 차게 둔다 —
+ * 칸이 좁아 옆에 세우면 이름이 밀리고, 무엇에 대한 "나도" 인지도 흐려진다.
+ *
+ * 보이는 높이는 38 로 두고, 손이 닿는 자리는 ::after 로 44 까지 넓힌다.
  */
 .wish-agree {
   /* 보이는 높이를 한 곳에서 정한다. 아래 ::after 가 이 값에서 모자란 만큼을 낸다. */
   --agree-height: 38px;
 
   position: relative;
-  min-width: 60px;
   min-height: var(--agree-height);
-  padding: 0 var(--space-4);
+  margin: 0 var(--space-3) var(--space-3);
+  padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--radius-pill);
-  flex: 0 0 auto;
+  border-radius: var(--radius-12);
   color: var(--white);
   background: var(--ink);
   cursor: pointer;
@@ -171,8 +257,8 @@
 }
 
 /*
- * 옆으로는 넓히지 않는다. 왼쪽에 위시 이름이 바로 붙어 있어, 가로로 늘리면
- * 이름을 누르려던 손이 "나도" 에 잡힌다. 세로로만 44 를 채운다.
+ * 위아래로만 넓힌다. 옆으로 넓히면 옆 칸의 "나도" 와 손닿는 자리가 겹친다 —
+ * 격자 사이 틈이 12 뿐이라 양쪽에서 3씩만 나와도 붙는다.
  */
 .wish-agree::after {
   content: "";
@@ -184,12 +270,15 @@
   background: var(--ink-soft);
 }
 
+/* 내가 이미 누른 것. 단추 자리를 그대로 물려받아 카드 아래 선이 어긋나지 않는다. */
 .wish-waiting {
-  flex: 0 0 auto;
+  display: grid;
+  min-height: var(--space-10);
+  margin: 0 var(--space-3) var(--space-3);
+  place-items: center;
   color: var(--ink-soft);
   font-size: var(--text-12);
   letter-spacing: var(--tracking-small);
-  text-align: right;
 }
 
 /* ── 이룬 것 ──────────────────────────────────────────────── */

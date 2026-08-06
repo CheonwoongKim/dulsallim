@@ -53,16 +53,6 @@ import {
 import { render } from "../render.js";
 import { hidePage } from "../ui/page.js";
 import { closeOnPress } from "../ui/sheet.js";
-import {
-  cancelSwipe,
-  closeOpenRow,
-  didJustSwipe,
-  endSwipe,
-  hasOpenRow,
-  moveSwipe,
-  setRowOpen,
-  startSwipe,
-} from "../ui/swipe.js";
 
 /**
  * 전체 화면과 시트의 배선 — 분석·마이페이지·설정·잔소리·초기화·추이·대화.
@@ -175,30 +165,20 @@ elements.wishPursuing.addEventListener("click", (event) => {
   if (button) openAchieveSheet(button.dataset.achieveWish);
 });
 
-// 목록은 지출·고정비와 같은 스와이프 행이다. 왼쪽으로 밀면 지우기가 드러난다.
+/*
+ * 격자에서는 밀지 않는다. 지우기는 그림 위 × 이고 두 단추 모두 그냥 눌린다.
+ *
+ * 두 칸이 나란히 서면 가로로 밀 자리가 없고, 밀면 옆 칸까지 함께 끌려 무엇을
+ * 지우는지 흐려진다. 그래서 이 목록만 스와이프를 쓰지 않는다.
+ */
 elements.wishList.addEventListener("click", (event) => {
   const remove = event.target.closest("[data-remove-wish]");
   if (remove) {
     dropWish(remove.dataset.removeWish);
     return;
   }
-  // 스와이프 끝에도 click 이 따라온다. "나도" 보다 먼저 걸러야 밀다가 눌리지 않는다.
-  if (didJustSwipe()) return;
-  if (hasOpenRow()) {
-    closeOpenRow();
-    return;
-  }
   const agree = event.target.closest("[data-agree-wish]");
   if (agree) agreeOnWish(agree.dataset.agreeWish);
-});
-elements.wishList.addEventListener("pointerdown", startSwipe);
-elements.wishList.addEventListener("pointermove", moveSwipe);
-elements.wishList.addEventListener("pointerup", endSwipe);
-elements.wishList.addEventListener("pointercancel", cancelSwipe);
-// 키보드로 지우기 버튼에 닿으면 그 행을 열어 보이게 한다. 다른 목록과 같은 규칙이다.
-elements.wishList.addEventListener("focusin", (event) => {
-  const item = event.target.closest(".swipe-row");
-  if (item && event.target.closest(".swipe-actions")) setRowOpen(item, true);
 });
 
 closeOnPress(elements.closeWishAchieveSheet, closeAchieveSheet);

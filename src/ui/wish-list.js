@@ -47,21 +47,29 @@ function linkMarkup(wish) {
 }
 
 /**
- * 줄 왼쪽에 서는 타일. 이름 첫 글자를 담은 사람 색으로 쥔다.
+ * 카드 위쪽의 그림 자리.
  *
- * 위시는 "갖고 싶은 것" 이라 글자만 있으면 지출 목록과 구별이 안 된다. 색 한 칸이
- * 그 줄을 물건으로 만든다. 색을 따로 만들지 않고 그 사람 아바타 색을 그대로 쓴다 —
- * 누가 담았는지가 색으로 먼저 읽히고, 새 색 체계를 하나 더 들이지 않는다.
+ * 위시는 "갖고 싶은 것" 이라 글자만 있으면 지출 목록과 구별이 안 된다. 그림이 먼저
+ * 보여야 이 화면을 들여다보게 된다. 그림이 없으면 이름 첫 글자를 담은 사람 아바타
+ * 색으로 쥔다 — 새 색 체계를 들이지 않고, 누가 담았는지가 색으로 먼저 읽힌다.
  *
- * 나중에 링크에서 그림을 가져오면 이 자리에 그림이 들어가고, 그림이 없거나 깨진
- * 줄은 이 타일로 돌아온다. 그래서 이건 임시가 아니라 바닥이다.
+ * 글자는 그림이 있어도 지우지 않고 밑에 깔아 둔다. 남의 서버 그림이라 언제든
+ * 사라지는데, 그때 이 자리가 그대로 드러나야 한다.
+ *
+ * @param {string} 모양 정사각(카드)인지 가로로 넓은 띠(향하는 것)인지
  */
-function thumbMarkup(wish) {
+function shotMarkup(wish, 모양) {
   const letter = [...String(wish.name).trim()][0] ?? "";
   const image = safeHref(wish.imageUrl);
-  return `<span class="wish-thumb" style="--wish-tile: ${escapeHtml(getMemberColor(wish.createdBy))}" aria-hidden="true">${escapeHtml(letter)}${
+  return `<span class="wish-shot is-${모양}" style="--wish-tile: ${escapeHtml(getMemberColor(wish.createdBy))}" aria-hidden="true">${escapeHtml(letter)}${
     image ? `<img src="${escapeHtml(image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ""
   }</span>`;
+}
+
+/** 있을 때만 자리를 갖는다. 없다고 빈 줄을 남기면 카드 높이가 들쭉날쭉해진다. */
+function noteMarkup(wish) {
+  const note = String(wish.note ?? "").trim();
+  return note ? `<span class="wish-note">${escapeHtml(note)}</span>` : "";
 }
 
 /**
@@ -71,7 +79,7 @@ function thumbMarkup(wish) {
  * 그려 넣어 첫 글자보다 못한 자리가 된다. 지우면 밑에 깔린 글자가 그대로 드러난다.
  */
 function 그림이깨지면걷어내기(row) {
-  const image = row.querySelector(".wish-thumb img");
+  const image = row.querySelector(".wish-shot img");
   if (image) image.addEventListener("error", () => image.remove(), { once: true });
   return row;
 }
@@ -86,43 +94,50 @@ export function createPursuingCard(wish) {
   const card = document.createElement("article");
   card.className = "wish-card";
   card.innerHTML = `
-    <p class="eyebrow">지금 향하는 것</p>
-    <strong class="wish-card-name">${escapeHtml(wish.name)}</strong>
-    <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>
-    <div class="wish-card-actions">
-      ${linkMarkup(wish)}
-      <button class="ghost-button" type="button" data-achieve-wish="${escapeHtml(wish.id)}">이뤘어요</button>
+    ${shotMarkup(wish, "wide")}
+    <div class="wish-card-body">
+      <p class="eyebrow">지금 향하는 것</p>
+      <strong class="wish-card-name">${escapeHtml(wish.name)}</strong>
+      <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>
+      ${noteMarkup(wish)}
+      <div class="wish-card-actions">
+        ${linkMarkup(wish)}
+        <button class="ghost-button" type="button" data-achieve-wish="${escapeHtml(wish.id)}">이뤘어요</button>
+      </div>
     </div>
   `;
-  return card;
+  return 그림이깨지면걷어내기(card);
 }
 
 /**
- * 아직 향하지 않는 줄. 지출·고정비 목록과 같은 스와이프 행이다.
+ * 담아 둔 것 한 칸. 두 칸 격자에 놓인다.
+ *
+ * 밀어서 지우던 것을 그림 위 × 로 바꿨다 — 격자에서는 가로로 밀 자리가 없고,
+ * 옆 칸을 함께 끌고 가 무엇을 지우는지도 흐려진다.
+ *
  * @param {{canAgree: boolean, waiting: string}} view 내가 누를 수 있는지와, 못 누를 때 대신 할 말
  */
 export function createWishRow(wish, { canAgree, waiting }) {
-  const row = document.createElement("article");
-  row.className = "wish-item swipe-row";
-  row.innerHTML = `
-    <span class="swipe-actions">
-      <button class="swipe-action is-delete" type="button" data-remove-wish="${escapeHtml(wish.id)}" aria-label="${escapeHtml(wish.name)} 지우기">지우기</button>
-    </span>
-    <div class="wish-surface swipe-surface">
-      ${thumbMarkup(wish)}
-      <div class="wish-copy">
-        <strong>${escapeHtml(wish.name)}</strong>
-        <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>
-        ${linkMarkup(wish)}
-      </div>
-      ${
-        canAgree
-          ? `<button class="wish-agree" type="button" data-agree-wish="${escapeHtml(wish.id)}" aria-label="${escapeHtml(wish.name)} 나도 좋아요">나도</button>`
-          : `<span class="wish-waiting">${escapeHtml(waiting)}</span>`
-      }
+  const card = document.createElement("article");
+  card.className = "wish-item";
+  card.innerHTML = `
+    ${shotMarkup(wish, "square")}
+    <button class="wish-drop" type="button" data-remove-wish="${escapeHtml(wish.id)}" aria-label="${escapeHtml(wish.name)} 지우기">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="wish-copy">
+      <strong>${escapeHtml(wish.name)}</strong>
+      <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>
+      ${noteMarkup(wish)}
+      ${linkMarkup(wish)}
     </div>
+    ${
+      canAgree
+        ? `<button class="wish-agree" type="button" data-agree-wish="${escapeHtml(wish.id)}" aria-label="${escapeHtml(wish.name)} 나도 좋아요">나도</button>`
+        : `<span class="wish-waiting">${escapeHtml(waiting)}</span>`
+    }
   `;
-  return 그림이깨지면걷어내기(row);
+  return 그림이깨지면걷어내기(card);
 }
 
 export function createAchievedRow(wish) {

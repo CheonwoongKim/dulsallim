@@ -89,6 +89,8 @@ export const elements = {
   wishUrlError: document.querySelector("#wish-url-error"),
   wishPrice: document.querySelector("#wish-price"),
   wishPriceError: document.querySelector("#wish-price-error"),
+  wishNote: document.querySelector("#wish-note"),
+  wishNoteError: document.querySelector("#wish-note-error"),
   wishSubmit: document.querySelector("#wish-submit"),
   wishAchieveSheet: document.querySelector("#wish-achieve-sheet"),
   closeWishAchieveSheet: document.querySelector("#close-wish-achieve-sheet"),

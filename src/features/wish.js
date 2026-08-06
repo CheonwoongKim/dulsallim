@@ -13,7 +13,6 @@ import {
 import { safeHref } from "../ui/escape.js";
 import { showPage } from "../ui/page.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
-import { closeOpenRow, resetSwipeState } from "../ui/swipe.js";
 import { showToast } from "../ui/toast.js";
 import {
   createAchievedRow,
@@ -33,6 +32,9 @@ import { getProfile } from "./auth.js";
 
 /** 이룬 것으로 이을 지출을 고를 때, 목록에 올릴 최대 줄 수. 그보다 옛것은 시트에서 찾을 일이 없다. */
 const CHOICE_LIMIT = 40;
+
+/** 한마디에 적을 수 있는 길이. DB 의 check 와 시트 칸의 maxlength 가 같은 값을 쓴다. */
+const NOTE_LIMIT = 100;
 
 /** 화면 한 번 열 때 그림을 채워 볼 최대 개수. 한꺼번에 몰아 묻지 않는다. */
 const BACKFILL_LIMIT = 5;
@@ -74,8 +76,6 @@ function paintProposed(wishes) {
     return;
   }
 
-  // 다시 그리면 열려 있던 행의 DOM 이 사라진다. 참조를 먼저 버려야 다음 스와이프가 엉키지 않는다.
-  resetSwipeState();
   elements.wishList.replaceChildren(
     ...proposed.map((wish) =>
       createWishRow(wish, { canAgree: !iAgreed(wish), waiting: waitingFor(wish) }),
@@ -133,6 +133,7 @@ export function openWishSheet() {
   elements.wishNameError.textContent = "";
   elements.wishUrlError.textContent = "";
   elements.wishPriceError.textContent = "";
+  elements.wishNoteError.textContent = "";
   showSheet(elements.wishSheet);
   // 시트가 다 올라온 뒤에 손이 가야 한다. 올라오는 중에 키보드가 뜨면 두 움직임이 겹친다.
   setTimeout(() => elements.wishName.focus(), 60);
@@ -149,12 +150,13 @@ export function handleWishPriceInput(event) {
 }
 
 /** @returns {HTMLElement|null} 처음 잘못된 칸. 없으면 null */
-function validateWishInput({ name, url, price }) {
+function validateWishInput({ name, url, price, note }) {
   let firstInvalidField = null;
 
   elements.wishNameError.textContent = "";
   elements.wishUrlError.textContent = "";
   elements.wishPriceError.textContent = "";
+  elements.wishNoteError.textContent = "";
 
   if (!name) {
     elements.wishNameError.textContent = "무엇을 담을지 적어 주세요.";
@@ -169,6 +171,14 @@ function validateWishInput({ name, url, price }) {
     elements.wishPriceError.textContent = "1원 이상의 금액을 넣거나 비워 주세요.";
     firstInvalidField = firstInvalidField || elements.wishPrice;
   }
+  /*
+   * 칸의 maxlength 로도 막히지만 여기서 다시 센다. 붙여넣기는 그 제한을 넘길 수 있고,
+   * DB 의 check 에 걸리면 "위시 저장에 실패했어요" 라는 말만 남아 무엇이 문제인지 모른다.
+   */
+  if (note.length > NOTE_LIMIT) {
+    elements.wishNoteError.textContent = `${NOTE_LIMIT}자까지 적을 수 있어요.`;
+    firstInvalidField = firstInvalidField || elements.wishNote;
+  }
   return firstInvalidField;
 }
 
@@ -179,6 +189,7 @@ export async function handleWishSubmit(event) {
     name: String(data.get("name") || "").trim(),
     url: String(data.get("url") || "").trim(),
     price: readAmount(data.get("price")),
+    note: String(data.get("note") || "").trim(),
   };
 
   const firstInvalidField = validateWishInput(input);
@@ -197,6 +208,7 @@ export async function handleWishSubmit(event) {
       name: input.name,
       url: href,
       estimatedPrice: input.price || null,
+      note: input.note || null,
     });
   } catch (error) {
     showToast(error.message);
@@ -250,7 +262,6 @@ export async function dropWish(id) {
     showToast(error.message);
     return;
   }
-  closeOpenRow();
   paintWishPage();
   showToast("위시를 지웠어요");
 }

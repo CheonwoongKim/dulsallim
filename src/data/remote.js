@@ -40,7 +40,7 @@ export const MY_PROFILE_COLUMNS = "id, display_name, avatar_color, monthly_goal,
 
 /** 위시 읽기와 RPC 응답이 같은 모양을 쓰도록 열 목록을 한 곳에 둔다. */
 export const WISH_COLUMNS =
-  "id, household_id, name, url, estimated_price, image_url, created_by, created_at, state, pursuing_at, expense_id, achieved_on, achieved_at";
+  "id, household_id, name, url, note, estimated_price, image_url, created_by, created_at, state, pursuing_at, expense_id, achieved_on, achieved_at";
 export const WISH_AGREEMENT_COLUMNS = "wish_id, user_id, agreed_at";
 const WISH_RESULT_COLUMNS = `${WISH_COLUMNS}, agreement_user_ids`;
 
@@ -274,7 +274,7 @@ export async function deleteTemplate(id) {
 /* ── 위시리스트 쓰기 ──────────────────────────────────────── */
 
 /** 항목과 올린 사람의 첫 합의를 서버 트랜잭션 하나로 만든다. */
-export async function insertWish({ name, url, estimatedPrice }) {
+export async function insertWish({ name, url, estimatedPrice, note }) {
   const row = unwrap(
     "위시 저장",
     await supabase
@@ -282,6 +282,7 @@ export async function insertWish({ name, url, estimatedPrice }) {
         p_name: name,
         p_url: url || null,
         p_estimated_price: estimatedPrice ?? null,
+        p_note: note || null,
       })
       .select(WISH_RESULT_COLUMNS)
       .single(),
