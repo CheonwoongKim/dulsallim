@@ -58,15 +58,12 @@ function 그리기() {
     return;
   }
 
-  // 맨 위에 "전체"를 둔다. 고른 것을 푸는 길이 이 시트 안에도 있어야 한다.
-  const 전체 = `
-    <button class="category-row" type="button" data-category="" aria-pressed="${!걸린것}">
-      <span class="category-name">전체</span>
-      <span class="category-amount">${formatMoney(분류들.reduce((합, c) => 합 + c.total, 0))}원</span>
-    </button>`;
-
+  /*
+   * "전체" 줄은 두지 않는다. 고른 분류를 다시 누르면 그 자리에서 풀리므로(nextCategoryFilter)
+   * 푸는 길이 이미 있고, 아래 "모두 지우기" 가 사람·날짜까지 한꺼번에 푼다.
+   * 그 줄이 보여 주던 달 전체 금액도 홈의 큰 숫자가 이미 말한다.
+   */
   elements.categoryList.innerHTML =
-    전체 +
     분류들
       .map(
         (분류) => `

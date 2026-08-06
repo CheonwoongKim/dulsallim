@@ -471,7 +471,15 @@ test("거르기 시트는 분류만 맡는다", () => {
 
   // 그 달에 쓴 분류만, 많이 쓴 순. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다.
   assert.match(fn("이번달분류"), /sort\(\(a, b\) => b\.total - a\.total/);
-  assert.match(fn("그리기"), /data-category=""[\s\S]{0,80}전체/);
+  /*
+   * "전체" 줄은 두지 않는다. 고른 분류를 다시 누르면 그 자리에서 풀리고
+   * (nextCategoryFilter 가 같은 값이면 null 을 돌려준다), 아래 "모두 지우기" 가
+   * 사람·날짜까지 한꺼번에 푼다. 달 전체 금액도 홈의 큰 숫자가 이미 말한다.
+   */
+  assert.doesNotMatch(fn("그리기"), /data-category=""/, "전체 줄이 남아 있다");
+  assert.match(app, /current === category \? null : category \|\| null/, "다시 눌러도 안 풀리면 푸는 길이 없다");
+  // 첫 줄에도 색 점이 있다 — 점 없는 "전체" 를 위해 첫 칸을 건너뛰던 규칙은 걷었다.
+  assert.doesNotMatch(css, /\.category-row:first-child \.category-name/);
 
   /*
    * 캘린더 숫자에는 분류를 걸지 않는다. 걸면 그 분류가 없는 날이 통째로 비어
