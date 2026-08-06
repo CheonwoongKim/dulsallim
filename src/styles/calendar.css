@@ -19,7 +19,14 @@
   height: var(--pill-height);
   border: 0;
   border-radius: var(--radius-pill);
-  color: var(--ink-soft);
+  /*
+   * 안 고른 쪽은 연하게. 고른 쪽은 흰 알약에 --ink 라 둘의 차이가 크게 벌어진다.
+   *
+   * 다만 컨트롤은 바탕과 3:1 이 바닥이다(WCAG 1.4.11). --line-strong 까지 내리면
+   * 1.64:1 이라 보이지 않고, 80% 는 딱 3.00 이라 아슬아슬하다. 85% 에서 3.30:1 이다
+   * (--ink-soft 그대로면 4.32:1).
+   */
+  color: color-mix(in srgb, var(--ink-soft) 85%, var(--paper-deep));
   background: transparent;
   cursor: pointer;
   place-items: center;

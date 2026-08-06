@@ -2577,3 +2577,33 @@ test("목록·캘린더 아이콘도 다른 아이콘과 같은 20px 이다", ()
   assert.equal(그림크기(".view-toggle svg"), 그림크기(".icon-button svg"));
   assert.equal(그림크기(".view-toggle svg"), "20px");
 });
+
+test("안 고른 보기 아이콘은 연하되 바탕과 3:1 은 지킨다", () => {
+  /*
+   * 연하게 하려다 --line-strong 까지 내리면 1.64:1 이라 눌러야 할 것이 안 보인다.
+   * 컨트롤은 바탕과 3:1 이 바닥이다(WCAG 1.4.11). 숫자를 눈으로 고르지 않고 여기서 센다.
+   */
+  const 토큰 = (이름) => css.match(new RegExp(`${이름}: (#[0-9a-f]{6})`))[1];
+  const 섞은비율 = Number(
+    css.match(/\.view-toggle button \{[\s\S]*?color-mix\(in srgb, var\(--ink-soft\) (\d+)%/)[1],
+  );
+
+  const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const 밝기 = (색) =>
+    색
+      .map((v) => v / 255)
+      .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+      .reduce((합, v, i) => 합 + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const 대비 = (a, b) => {
+    const [밝, 어] = [밝기(a), 밝기(b)].sort((x, y) => y - x);
+    return (밝 + 0.05) / (어 + 0.05);
+  };
+
+  const 잉크 = rgb(토큰("--ink-soft"));
+  const 바탕 = rgb(토큰("--paper-deep"));
+  const 섞임 = 잉크.map((v, i) => (v * 섞은비율 + 바탕[i] * (100 - 섞은비율)) / 100);
+
+  assert.ok(대비(섞임, 바탕) >= 3, `안 고른 아이콘이 ${대비(섞임, 바탕).toFixed(2)}:1 — 3:1 에 못 미친다`);
+  // 그리고 실제로 연해야 한다. 그대로면 바꾼 뜻이 없다.
+  assert.ok(대비(섞임, 바탕) < 대비(잉크, 바탕), "--ink-soft 와 다를 것이 없다");
+});
