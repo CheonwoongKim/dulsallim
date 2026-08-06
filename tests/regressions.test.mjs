@@ -2691,3 +2691,31 @@ test("시트 바닥의 큰 동작은 모양이 하나다", () => {
   assert.doesNotMatch(시트들, /ghost-button wide/, "시트 바닥에 작은 알약을 늘려 쓰고 있다");
   assert.match(html, /class="ghost-button wide danger-text" type="button" id="sign-out"/);
 });
+
+test("여럿 중 하나 고르는 부품은 같은 모서리 계단을 쓴다", () => {
+  /*
+   * 결제자 고르기 · 분석 사람 탭 · 목록/캘린더 셋이 같은 일을 하는데 이것만 알약
+   * 계단에 있었다(바깥 999 · 여백 2 · 안쪽 999). 앞 둘은 16 / 4 / 12 다.
+   *
+   * DESIGN.md §4: 안쪽 모서리 = 바깥 모서리 − 안쪽 여백. 16 − 4 = 12 라야 두 곡선이
+   * 같은 중심을 돈다.
+   */
+  // 줄 첫머리로 못 박는다. 그냥 찾으면 `.member-picker .segmented-control` 의 꼬리가 잡힌다.
+  const 규칙 = (선택자) => {
+    const 시작 = css.indexOf(`\n${선택자} {`);
+    assert.ok(시작 >= 0, `${선택자} 규칙이 없다`);
+    return css.slice(시작, css.indexOf("\n}", 시작 + 1));
+  };
+  for (const 바깥 of [".segmented-control", ".view-toggle"]) {
+    assert.match(규칙(바깥), /border-radius: var\(--radius-16\)/, `${바깥} 이 다른 계단에 있다`);
+    assert.match(규칙(바깥), /padding: var\(--space-1\)/);
+  }
+  assert.match(규칙(".view-toggle button"), /border-radius: var\(--radius-12\)/);
+
+  /*
+   * 그렇다고 .segmented-control 을 그대로 쓰지는 않는다. 그쪽 단추는 42 라 알약이 50 이
+   * 되고, 제목 줄이 62 에서 70 으로 늘어 지출 목록이 8px 밀린다 — 393 에서 4줄이라는
+   * 약속이 깨진다. 여기는 그림만 있어 30 으로 충분하다.
+   */
+  assert.match(규칙(".view-toggle button"), /--pill-height: 30px/);
+});

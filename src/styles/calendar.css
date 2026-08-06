@@ -1,10 +1,20 @@
-/* 목록 / 캘린더 전환 */
+/*
+ * 목록 / 캘린더 전환.
+ *
+ * 여럿 중 하나를 고르는 부품은 이 앱에 셋인데(결제자·분석 사람 탭·이것) 이것만 알약
+ * 계단에 있었다 — 바깥 999 / 여백 2 / 안쪽 999. 앞 둘은 16 / 4 / 12 로 규칙을 따른다
+ * (안쪽 모서리 = 바깥 모서리 − 안쪽 여백).
+ *
+ * 같은 계단으로 옮기되 .segmented-control 을 그대로 쓰지는 않는다. 그쪽 단추는 42 라
+ * 알약이 50 이 되고, 그러면 제목 줄이 62 에서 70 으로 늘어 지출 목록이 8px 밀린다
+ * (393 에서 4줄이라는 약속이 깨진다). 여기는 글자 없이 그림만 있어 30 으로 충분하다.
+ */
 .view-toggle {
   display: flex;
   flex: 0 0 auto;
-  padding: var(--space-05);
-  border-radius: var(--radius-pill);
-  gap: var(--space-05);
+  padding: var(--space-1);
+  border-radius: var(--radius-16);
+  gap: var(--space-1);
   background: var(--paper-deep);
 }
 
@@ -18,7 +28,8 @@
   width: 38px;
   height: var(--pill-height);
   border: 0;
-  border-radius: var(--radius-pill);
+  /* 바깥 16 에서 안쪽 여백 4 를 뺀 값. 두 곡선이 같은 중심을 돈다. */
+  border-radius: var(--radius-12);
   /*
    * 안 고른 쪽은 연하게. 고른 쪽은 흰 알약에 --ink 라 둘의 차이가 크게 벌어진다.
    *
