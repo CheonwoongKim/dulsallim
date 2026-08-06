@@ -442,7 +442,7 @@ test("거르기 시트는 분류와 날짜만 맡는다", () => {
    * 사람은 여기에 두지 않는다. 요약 카드를 누르면 한 번에 되는데 시트에 또 두면
    * 같은 일에 길이 둘이 된다 — 어느 쪽으로 바꿨는지 헷갈리고, 한쪽만 고쳐지는 버그도 생긴다.
    */
-  assert.match(html, /<dialog class="sheet month-sheet" id="filter-sheet"/);
+  assert.match(html, /<dialog class="sheet" id="filter-sheet"/);
   assert.doesNotMatch(html, /id="filter-members"/, "사람 칸이 남아 있다");
   assert.doesNotMatch(app, /pickFilterMember/, "사람을 고르는 길이 시트에 남아 있다");
   assert.match(html, /id="category-list"/);
@@ -2606,4 +2606,18 @@ test("안 고른 보기 아이콘은 연하되 바탕과 3:1 은 지킨다", () 
   assert.ok(대비(섞임, 바탕) >= 3, `안 고른 아이콘이 ${대비(섞임, 바탕).toFixed(2)}:1 — 3:1 에 못 미친다`);
   // 그리고 실제로 연해야 한다. 그대로면 바꾼 뜻이 없다.
   assert.ok(대비(섞임, 바탕) < 대비(잉크, 바탕), "--ink-soft 와 다를 것이 없다");
+});
+
+test("거르기 시트는 분류가 많아도 화면 높이를 다 쓴다", () => {
+  /*
+   * 월 선택 시트를 흉내 내며 .month-sheet 를 함께 달았는데, 그 딱지는 "내용이 짧아
+   * 더 낮게 뜬다" 는 뜻으로 640 에 묶어 둔 것이었다. 분류 수만큼 길어지는 이 시트에는
+   * 안 맞아, 화면이 큰 폰에서 위쪽이 292px 비는데도 안에서 218px 이 넘쳤다.
+   *
+   * 분류는 최대 열 가지라 아무리 길어도 그 위로는 안 자란다 — 천장을 풀어도 걱정이 없다.
+   */
+  assert.doesNotMatch(html, /class="sheet month-sheet" id="filter-sheet"/, "짧은 시트 딱지가 남아 있다");
+  assert.match(css, /#filter-sheet \{[\s\S]*?max-height: min\(92svh, var\(--viewport-h, 100svh\)\)/);
+  // 월 선택 시트는 그대로 낮게 둔다 — 거기는 실제로 내용이 짧다.
+  assert.match(css, /\.month-sheet \{[\s\S]*?max-height: min\(92svh, 640px\)/);
 });
