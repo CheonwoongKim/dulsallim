@@ -526,13 +526,15 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended(v_household::text, 0));
 
+  -- 아직 안 이룬 것이면 된다. 혼자 바라는 것(proposed)도 여기에 들어온다 —
+  -- 상대의 "나도" 는 함께 바라는 것으로 올라가는 조건이지, 내가 산 것을 적는 조건이 아니다.
   if not exists (
     select 1 from wish_items w
     where w.id = p_wish_id
       and w.household_id = v_household
-      and w.state = 'pursuing'
+      and w.state <> 'achieved'
   ) then
-    raise exception '지금 향하는 위시를 찾을 수 없습니다';
+    raise exception '아직 안 이룬 위시를 찾을 수 없습니다';
   end if;
 
   select e.spent_on into v_spent_on

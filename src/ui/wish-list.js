@@ -1,6 +1,5 @@
 import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
 import { getMemberColor, getMemberName } from "../members.js";
-import { wishProgress } from "../wish-progress.js";
 import { escapeHtml, safeHref } from "./escape.js";
 
 /**
@@ -39,28 +38,6 @@ function 그림이깨지면걷어내기(요소) {
   return 요소;
 }
 
-/**
- * 얼마나 다가갔나. 값을 안 적었거나 이미 이룬 것에는 안 그린다.
- *
- * 아낀 돈은 목표를 넘겨도 그대로 알려 주고(모은 건 모은 것이다) 막대만 가득에서 멈춘다.
- * 목표를 안 정한 사람이 끼어 있으면 그 몫이 통째로 빠지므로 그 까닭을 함께 적는다.
- */
-function progressMarkup(wish, context) {
-  if (wish.state === "achieved") return "";
-  const { saved, target, ratio, missingGoal } = wishProgress(wish, context);
-  if (!target) return "";
-
-  const percent = Math.round(ratio * 100);
-  return `
-    <div class="wish-progress">
-      <div class="wish-progress-bar"><i style="width: ${percent}%"></i></div>
-      <span class="wish-progress-text">
-        <b>${formatMoney(saved)}원</b> 모음 · ${percent}%${missingGoal ? " · 월 지출 목표를 정하면 더 정확해요" : ""}
-      </span>
-    </div>
-  `;
-}
-
 /** `2026-03-14` → `2026.03.14`. */
 export function formatAchievedOn(dateKey) {
   return String(dateKey ?? "").replaceAll("-", ".");
@@ -84,57 +61,71 @@ export function createWishTile(wish) {
 }
 
 /**
+ * 자주 쓰는 세 가지는 그림으로만 둔다. 큰 단추가 하나뿐이라야 무엇을 하러 연 시트인지가
+ * 흐려지지 않는다 — 글자 단추가 넷이면 다 같은 무게로 읽힌다. 이름은 aria-label 로 낸다.
+ */
+const 도구그림 = {
+  link: `<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>`,
+  edit: `<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm10-13 4 4"/>`,
+  drop: `<path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2m4 0v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7"/>`,
+};
+
+const 도구 = (그림) => `<svg viewBox="0 0 24 24" aria-hidden="true">${그림}</svg>`;
+
+/**
  * 눌렀을 때 뜨는 자세히. 목록이 그림만 남긴 만큼 여기가 다 말해야 한다.
  *
- * @param {{action: string, waiting: string, context: object}} view
+ * @param {{action: string, waiting: string}} view
  *   action 은 "agree" | "achieve" | "none"
  */
-export function createWishDetail(wish, { action = "none", waiting = "", context = {} } = {}) {
+export function createWishDetail(wish, { action = "none", waiting = "" } = {}) {
   const body = document.createElement("div");
   body.className = "wish-detail";
   const href = safeHref(wish.url);
+  const 이룸 = wish.state === "achieved";
 
   body.innerHTML = `
     ${shotMarkup(wish)}
     <p class="wish-detail-price">${wish.estimatedPrice ? `${formatMoney(wish.estimatedPrice)}원` : "값을 안 적었어요"}</p>
     ${wish.note ? `<p class="wish-detail-note">${escapeHtml(wish.note)}</p>` : ""}
-    ${progressMarkup(wish, context)}
-    <p class="wish-detail-by">${escapeHtml(byLine(wish))}</p>
+    <p class="wish-detail-by">${escapeHtml(byLine(wish, waiting))}</p>
     ${
-      href
-        ? `<a class="submit-button quiet wish-detail-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">링크 열기</a>`
+      이룸
+        ? ""
+        : `<button class="submit-button" type="button" data-achieve-wish="${escapeHtml(wish.id)}">이뤘어요</button>`
+    }
+    ${
+      action === "agree"
+        ? `<button class="submit-button quiet" type="button" data-agree-wish="${escapeHtml(wish.id)}">나도</button>`
         : ""
     }
-    <div class="wish-detail-actions">
-      ${액션(wish, action, waiting)}
+    <div class="wish-detail-tools">
       ${
-        wish.state === "achieved"
+        href
+          ? `<a class="icon-button" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="링크 열기">${도구(도구그림.link)}</a>`
+          : ""
+      }
+      ${
+        이룸
           ? ""
-          : `<button class="ghost-button" type="button" data-edit-wish="${escapeHtml(wish.id)}">고치기</button>
-             <button class="ghost-button danger-text" type="button" data-remove-wish="${escapeHtml(wish.id)}">지우기</button>`
+          : `<button class="icon-button" type="button" data-edit-wish="${escapeHtml(wish.id)}" aria-label="고치기">${도구(도구그림.edit)}</button>
+             <button class="icon-button" type="button" data-remove-wish="${escapeHtml(wish.id)}" aria-label="지우기">${도구(도구그림.drop)}</button>`
       }
     </div>
   `;
   return 그림이깨지면걷어내기(body);
 }
 
-/** 누가 담았고 언제 이뤘는지. */
-function byLine(wish) {
+/**
+ * 누가 담았고, 언제 이뤘고, 누구를 기다리는지. 한 줄로 모은다.
+ *
+ * 기다린다는 말이 큰 단추 자리를 쓰던 때는 그 자리에 아무것도 누를 것이 없었다.
+ * 이제 이룸이 그 자리를 쓰므로 기다림은 담은 사람 옆에 곁들인다.
+ */
+function byLine(wish, waiting = "") {
   const 담은사람 = `${getMemberName(wish.createdBy)} 올림`;
-  return wish.state === "achieved"
-    ? `${담은사람} · ${formatAchievedOn(wish.achievedOn)} 이룸`
-    : 담은사람;
-}
-
-/** 자리마다 다른 큰 단추. */
-function 액션(wish, action, waiting) {
-  if (action === "agree") {
-    return `<button class="submit-button" type="button" data-agree-wish="${escapeHtml(wish.id)}">나도</button>`;
-  }
-  if (action === "achieve") {
-    return `<button class="submit-button" type="button" data-achieve-wish="${escapeHtml(wish.id)}">이뤘어요</button>`;
-  }
-  return waiting ? `<p class="wish-waiting">${escapeHtml(waiting)}</p>` : "";
+  if (wish.state === "achieved") return `${담은사람} · ${formatAchievedOn(wish.achievedOn)} 이룸`;
+  return waiting ? `${담은사람} · ${waiting}` : 담은사람;
 }
 
 /** 이룬 것으로 이을 지출 하나. 설정 메뉴와 같은 줄(.menu-row)을 쓴다. */

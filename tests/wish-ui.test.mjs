@@ -115,10 +115,10 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
   // 서버에서 온 글자가 화면에 들어가는 자리는 하나도 빠짐없이 escapeHtml 을 지난다.
   for (const 값 of [
     "wish.id",
-    "byLine(wish)",
+    // 기다리는 사람 이름도 여기로 들어간다 — byLine 이 담은 사람 옆에 붙여 한 줄로 낸다.
+    "byLine(wish, waiting)",
     "wish.note",
     "href",
-    "waiting",
     "expense.item",
     "formatShortDate(expense.date)",
     "getMemberName(expense.member)",
@@ -406,18 +406,41 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
   assert.match(자세히, /\$\{shotMarkup\(wish\)\}/);
   assert.match(자세히, /wish-detail-price/);
   assert.match(자세히, /wish\.note \?/, "한마디는 있을 때만");
-  assert.match(자세히, /\$\{progressMarkup\(wish, context\)\}/);
   assert.match(자세히, /wish-detail-by/);
-  // 링크는 여기서만 밖으로 나간다. 목록 칸에는 주소가 없다.
-  // 시트 바닥의 큰 동작은 모양이 하나다 — 저장 단추와 같은 높이·모서리·글자에 색만 물러난다.
-  assert.match(자세히, /class="submit-button quiet wish-detail-link" href=[\s\S]*?rel="noopener noreferrer"/);
   assert.match(자세히, /const href = safeHref\(wish\.url\);/, "주소는 한 겹 더 받는다");
+
+  /*
+   * 큰 단추는 하나다 — 이뤘어요. 넷이 같은 무게로 늘어서면 이 시트를 무엇을 하러 열었는지가
+   * 흐려진다. 열기·고치기·지우기는 그림으로 내려간다.
+   */
+  assert.match(자세히, /class="submit-button" type="button" data-achieve-wish/);
+  assert.equal((자세히.match(/class="submit-button"/g) || []).length, 1, "큰 단추가 둘 이상이다");
+  // "나도" 는 곁들이는 것이라 색이 물러난다. 상대가 아직 안 누른 것에만 붙는다.
+  assert.match(자세히, /action === "agree"[\s\S]*?class="submit-button quiet" type="button" data-agree-wish/);
+
+  /*
+   * 그림 셋은 머리 줄 아이콘 단추를 그대로 쓴다 — 크기도 손닿는 자리도 거기서 온다.
+   * 그림만 있으므로 이름은 aria-label 로 낸다. 링크는 여기서만 밖으로 나간다.
+   */
+  assert.match(자세히, /class="icon-button" href=[\s\S]*?rel="noopener noreferrer" aria-label="링크 열기"/);
+  for (const [무엇, 이름] of [["edit", "고치기"], ["remove", "지우기"]]) {
+    assert.match(
+      자세히,
+      new RegExp(`class="icon-button" type="button" data-${무엇}-wish=[\\s\\S]*?aria-label="${이름}"`),
+      `${이름} 가 그림 단추가 아니다`,
+    );
+  }
+  for (const 그림 of ["link", "edit", "drop"]) {
+    assert.match(fn("도구그림") || app, new RegExp(`${그림}: \`<path d="`), `${그림} 그림이 없다`);
+  }
+  assert.match(css, /\.wish-detail-tools \{[^}]*justify-content: center/);
 
   // 어느 자리인지 시트가 스스로 말한다. 목록의 이름표는 여기에 없다.
   assert.match(fn("자리이름"), /wish\.state === "pursuing" \? "함께 바라는 것" : "담아 둔 것"/);
 
-  // 이룬 것에는 고치기·지우기를 안 붙인다. 끝난 줄이다.
-  assert.match(자세히, /wish\.state === "achieved"\s*\?\s*""/);
+  // 이룬 것에는 이룸·고치기·지우기를 안 붙인다. 끝난 줄이다.
+  assert.match(자세히, /const 이룸 = wish\.state === "achieved";/);
+  assert.equal((자세히.match(/이룸\s*\?\s*""/g) || []).length, 2, "이룬 것에도 붙는 동작이 있다");
 
   /*
    * 고치기·지우기는 이 시트를 먼저 닫고 다음 것을 올린다. 겹쳐 뜨면 뒤엣것이 먼저 잡힌다.
@@ -460,29 +483,19 @@ test("고치기는 담기 시트를 다시 쓰고, 말과 값만 갈아 끼운�
   }
 });
 
-test("진척 막대는 값을 적은 위시에만 서고, 분석 화면과 같은 두께다", () => {
-  const 그리기 = fn("progressMarkup");
-  assert.match(그리기, /if \(!target\) return "";/, "나눌 것이 없으면 그리지 않는다");
-  assert.match(그리기, /width: \$\{percent\}%/);
-  // 모은 돈은 넘겨도 그대로 알려 주고 막대만 가득에서 멈춘다 — 자르는 것은 계산 쪽이 한다.
-  assert.match(그리기, /formatMoney\(saved\)/);
-  assert.match(그리기, /missingGoal \? " · 월 지출 목표를 정하면 더 정확해요" : ""/);
-
-  // 담아 둔 것과 향하는 것 둘 다 같은 막대를 쓴다.
-  // 세 자리가 같은 카드를 쓰므로 한 곳에서만 그린다.
-  assert.equal((app.match(/\$\{progressMarkup\(wish, context\)\}/g) || []).length, 1);
-  // 이룬 것에는 안 그린다 — 다가갈 것이 남지 않았다.
-  assert.match(그리기, /if \(wish\.state === "achieved"\) return "";/);
-
+test("자세히에는 모은 돈도 퍼센트도 없다", () => {
   /*
-   * 같은 뜻의 그림이 화면마다 두께가 다르면 서로 다른 것으로 읽힌다.
-   * 분석 화면 분류 막대와 같은 --bar-thin 을 쓴다.
+   * 위시는 사고 싶은 것을 적어 두는 자리다. 얼마를 모았는지는 목표에서 지출을 뺀 어림이라
+   * 볼 때마다 달라지는데, 그것이 물건 사진 밑에 붙어 있으니 무엇을 보는 시트인지 흐려졌다.
+   *
+   * 세는 쪽(src/wish-progress.js)은 남겨 둔다. 계산은 그대로 맞고, 나중에 다른 자리에서
+   * 쓸 수 있다. 여기서는 그리지 않는다는 것만 지킨다.
    */
-  assert.match(css, /\.wish-progress-bar \{[\s\S]*?height: var\(--bar-thin\)/);
-  assert.match(css, /\.analysis-bar \{[\s\S]*?height: var\(--bar-thin\)/);
-
-  // 줄마다 다시 읽지 않는다. 지출 전부를 훑는 계산이라 한 번 모아 넘긴다.
-  assert.match(fn("progressContext"), /expenses: getExpenses\(\), members: getMembers\(\)/);
+  const 그리기 = fn("createWishDetail");
+  assert.doesNotMatch(그리기, /progress|percent|모음/, "자세히에 진척이 돌아왔다");
+  // 부르는 곳이 없어야 한다. 세는 쪽은 남아 있으므로 이름만 찾으면 제 정의가 걸린다.
+  assert.doesNotMatch(app, /from "[./]*wish-progress\.js"/, "화면이 다시 진척을 세고 있다");
+  assert.doesNotMatch(css, /\.wish-progress/, "진척 막대 모양새가 남아 있다");
 });
 
 test("탭은 미달성 · 달성 둘이고, 미달성이 기본이다", () => {

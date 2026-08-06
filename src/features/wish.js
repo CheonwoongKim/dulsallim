@@ -63,11 +63,6 @@ export function setWishTab(tab) {
   paintWishPage();
 }
 
-/** 진척을 세는 데 필요한 것. 한 번 모아 카드마다 넘긴다 — 줄마다 다시 읽지 않는다. */
-function progressContext() {
-  return { expenses: getExpenses(), members: getMembers() };
-}
-
 /** 내가 이미 찬성했는지. 올린 것도 첫 찬성으로 세므로 내가 올린 것에는 "나도" 가 안 뜬다. */
 const iAgreed = (wish) => wish.agreementUserIds.includes(getProfile()?.id);
 
@@ -317,7 +312,6 @@ function paintWishDetail() {
     createWishDetail(wish, {
       action: 무엇을할수있나(wish),
       waiting: wish.state === "proposed" ? waitingFor(wish) : "",
-      context: progressContext(),
     }),
   );
 }
@@ -329,7 +323,13 @@ function 자리이름(wish) {
 }
 
 function 무엇을할수있나(wish) {
-  if (wish.state === "pursuing") return "achieve";
+  /*
+   * 이룸은 안 이룬 것이면 언제든 누를 수 있다(서버도 state <> 'achieved' 로 본다).
+   * 상대의 "나도" 는 함께 바라는 것으로 올라가는 조건이지, 내가 산 것을 산 것으로
+   * 적는 조건이 아니다 — 혼자 담아 둔 것을 사고도 이룸으로 넘길 길이 없었다.
+   *
+   * 그래서 여기서 정하는 것은 "나도" 를 곁들일지뿐이다.
+   */
   return wish.state === "proposed" && !iAgreed(wish) ? "agree" : "none";
 }
 
@@ -409,7 +409,8 @@ export async function dropWish() {
  * 서버가 그 지출의 날짜를 위시에 복사해 둔다. 나중에 지출을 지워도 이룬 날짜는 남는다.
  */
 export function openAchieveSheet(id) {
-  const wish = getWishes().find((current) => current.id === id && current.state === "pursuing");
+  // 아직 안 이룬 것이면 된다. 서버도 같은 조건으로 본다(migration-wish-achieve-alone.sql).
+  const wish = getWishes().find((current) => current.id === id && current.state !== "achieved");
   if (!wish) return;
 
   achievingWishId = id;

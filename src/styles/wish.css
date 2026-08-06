@@ -120,47 +120,6 @@
 
 
 /*
- * 얼마나 다가갔나.
- *
- * 분석 화면의 분류 막대와 같은 4px 두께를 쓴다. 같은 뜻의 그림이 화면마다 두께가
- * 다르면 서로 다른 것으로 읽힌다.
- */
-.wish-progress {
-  display: grid;
-  /* 위 8. 한마디·값과 붙지 않게 한 박자 떨어뜨린다. */
-  margin-top: var(--space-1);
-  gap: var(--space-1);
-}
-
-.wish-progress-bar {
-  overflow: hidden;
-  height: var(--bar-thin);
-  border-radius: var(--radius-pill);
-  background: var(--paper-deep);
-}
-
-.wish-progress-bar i {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  transition: width var(--motion-slow) ease;
-}
-
-.wish-progress-text {
-  color: var(--ink-soft);
-  font-size: var(--text-12);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: var(--tracking-small);
-}
-
-/* 모은 돈만 진하다. 옆의 % 와 안내는 물러나 있어야 숫자가 먼저 읽힌다. */
-.wish-progress-text b {
-  color: var(--ink);
-  font-weight: var(--weight-bold);
-}
-
-/*
  * 왜 갖고 싶은지 적어 둔 한마디. 두 줄까지 보이고 그 뒤는 자른다 —
  * 길이가 칸마다 다르면 격자의 아래 선이 들쭉날쭉해진다.
  */
@@ -231,17 +190,6 @@
   background: var(--line);
 }
 
-/* 내가 이미 누른 것. 단추 자리를 그대로 물려받아 카드 아래 선이 어긋나지 않는다. */
-.wish-waiting {
-  display: grid;
-  min-height: var(--space-8);
-  margin-top: var(--space-2);
-  place-items: start;
-  color: var(--ink-soft);
-  font-size: var(--text-12);
-  letter-spacing: var(--tracking-small);
-}
-
 /* ── 이룬 것 ──────────────────────────────────────────────── */
 
 
@@ -285,28 +233,24 @@
 }
 
 /* 링크는 한 줄을 다 쓴다. 시트에서 유일하게 밖으로 나가는 길이라 헷갈리면 안 된다. */
-.wish-detail-link {
-  text-decoration: none;
-}
-
 /*
- * 큰 단추가 위, 고치기·지우기가 아래 한 줄.
- * 자주 누를 것과 아닌 것을 층으로 가른다 — 나란히 두면 지우기가 같은 무게로 보인다.
+ * 열기·고치기·지우기. 그림만 두고 가운데에 모은다.
+ *
+ * 글자 단추 셋을 늘어놓던 때는 큰 단추까지 넷이 같은 무게로 읽혀, 이 시트를 무엇을 하러
+ * 열었는지가 흐려졌다. 크기와 손닿는 자리는 머리 줄 아이콘 단추(.icon-button)가 정한다 —
+ * 여기서 따로 잡지 않는다.
  */
-.wish-detail-actions {
-  display: grid;
-  margin-top: var(--space-2);
-  gap: var(--space-2);
-  grid-template-columns: 1fr 1fr;
+.wish-detail-tools {
+  display: flex;
+  margin-top: var(--space-1);
+  justify-content: center;
+  gap: var(--space-4);
 }
 
-.wish-detail-actions .submit-button {
-  grid-column: 1 / -1;
-}
-
-.wish-detail-actions .wish-waiting {
-  grid-column: 1 / -1;
-  margin: 0;
+/* 링크는 <a> 라 밑줄과 링크색이 따라온다. 나머지 둘과 같아 보여야 한 무리로 읽힌다. */
+.wish-detail-tools a {
+  color: inherit;
+  text-decoration: none;
 }
 
 /* ── 빈 자리와 시트 ───────────────────────────────────────── */

@@ -2704,14 +2704,16 @@ test("시트 바닥의 큰 동작은 모양이 하나다", () => {
   for (const id of ["clear-filters", "cancel-fixed"]) {
     assert.match(html, new RegExp(`class="submit-button quiet"[^>]*id="${id}"`), `${id} 가 다른 부품을 쓴다`);
   }
-  assert.match(app, /class="submit-button quiet wish-detail-link"/);
+  // 위시 자세히의 "나도" 도 같은 부품이다. 링크는 이제 글자 단추가 아니라 그림이다.
+  assert.match(app, /class="submit-button quiet" type="button" data-agree-wish/);
 
   // 조용한 변종은 색만 바꾼다. 크기·모서리·글자를 다시 적으면 그때부터 또 갈린다.
   const 조용 = css.match(/\.submit-button\.quiet \{[\s\S]*?\n\}/)[0];
   assert.doesNotMatch(조용, /min-height|border-radius|font-size|padding/);
 
   /*
-   * .ghost-button 은 카드 안 작은 동작에만 남는다(위시 자세히의 고치기·지우기).
+   * .ghost-button 은 이제 설정 맨 아래 로그아웃 하나만 쓴다 — 위시 자세히의 고치기·지우기가
+   * 그림 단추로 바뀌면서 마지막 카드 안 쓰임이 없어졌다.
    *
    * 설정 맨 아래 로그아웃은 그대로 둔다 — .danger-text 가 테두리와 바탕을 지워
    * 단추가 아니라 글자로 읽히고, 자주 누를 것이 아니라서 그게 맞다.

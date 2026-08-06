@@ -68,6 +68,7 @@
 | 12 | `supabase/migration-wish-note.sql` | 위시에 "왜 갖고 싶은지" 한 줄 |
 | 13 | `supabase/migration-wish-edit.sql` | 담아 둔 위시 고치기 |
 | 14 | `supabase/migration-wish-multi.sql` | 함께 바라는 것을 여럿 두기 |
+| 15 | `supabase/migration-wish-achieve-alone.sql` | 혼자 바라는 것도 이룸으로 넘기기 |
 
 ### 알림을 쓰려면
 
