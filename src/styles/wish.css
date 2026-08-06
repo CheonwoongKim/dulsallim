@@ -87,6 +87,8 @@
  */
 .wish-thumb {
   display: grid;
+  position: relative;
+  overflow: hidden;
   width: var(--control-lg);
   height: var(--control-lg);
   border-radius: var(--radius-16);
@@ -97,6 +99,21 @@
   font-size: var(--text-20);
   font-weight: var(--weight-black);
   letter-spacing: var(--tracking-heading);
+}
+
+/*
+ * 링크에서 찾아낸 그림이 첫 글자를 덮는다. 글자는 지우지 않고 밑에 깔아 둔다 —
+ * 그림이 안 오거나 나중에 사라지면 그 자리가 그대로 드러나야 한다.
+ *
+ * cover 로 채운다. 상품 사진은 가로로 길고 여행지 사진은 세로로 긴데, 늘여 맞추면
+ * 물건이 찌그러진다. 잘라 내는 편이 무엇인지 알아보기 쉽다.
+ */
+.wish-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .wish-copy {

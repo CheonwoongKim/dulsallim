@@ -205,6 +205,28 @@ export async function achieveWish(id, expenseId) {
   return updated;
 }
 
+/**
+ * 링크에서 대표 그림을 찾아 위시에 붙인다. 담기가 끝난 뒤에 따로 부른다.
+ *
+ * 못 찾는 일이 흔하다 — og 태그가 없거나, 봇을 막거나, 시간이 넘는다. 그건 잘못이 아니라
+ * 그냥 그림이 없는 링크다. 그래서 던지지 않고 null 로 알린다.
+ *
+ * @returns {Promise<string|null>} 붙인 그림 주소. 못 붙였으면 null
+ */
+export async function attachWishImage(id, href) {
+  const image = await remote.fetchLinkImage(href);
+  if (!image) return null;
+
+  try {
+    await remote.setWishImage(id, image);
+  } catch {
+    // 서버에 못 적었으면 화면에도 얹지 않는다. 다음에 열면 없는 것이 맞다.
+    return null;
+  }
+  wishes = wishes.map((wish) => (wish.id === id ? { ...wish, imageUrl: image } : wish));
+  return image;
+}
+
 export async function removeWish(id) {
   await remote.deleteWish(id);
   wishes = wishes.filter((wish) => wish.id !== id);

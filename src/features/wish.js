@@ -5,6 +5,7 @@ import {
   achieveWish,
   addWish,
   agreeWish,
+  attachWishImage,
   getExpenses,
   getWishes,
   removeWish,
@@ -159,12 +160,15 @@ export async function handleWishSubmit(event) {
     return;
   }
 
+  // 주소는 통과한 것만, 그것도 정규화된 형태로 보낸다.
+  const href = input.url ? safeHref(input.url) : null;
+
   elements.wishSubmit.disabled = true;
+  let created;
   try {
-    await addWish({
+    created = await addWish({
       name: input.name,
-      // 주소는 통과한 것만, 그것도 정규화된 형태로 보낸다.
-      url: input.url ? safeHref(input.url) : null,
+      url: href,
       estimatedPrice: input.price || null,
     });
   } catch (error) {
@@ -177,6 +181,21 @@ export async function handleWishSubmit(event) {
   closeWishSheet();
   paintWishPage();
   showToast("위시를 담았어요");
+
+  // 그림은 남의 사이트를 읽어 와야 해서 몇 초가 걸린다. 담기를 붙잡아 두지 않고 뒤따라 붙인다.
+  if (href) void 그림얹기(created.id, href);
+}
+
+/**
+ * 링크에서 찾은 대표 그림을 뒤늦게 얹는다.
+ *
+ * 못 찾아도 아무 말도 하지 않는다 — 그림 없는 링크가 흔하고, 그때는 첫 글자 타일이
+ * 그대로 남는다. 담기는 이미 끝났으므로 여기서 실패해도 되돌릴 것이 없다.
+ */
+async function 그림얹기(id, href) {
+  const image = await attachWishImage(id, href);
+  // 그 사이에 다른 화면으로 갔을 수 있다. 열려 있을 때만 다시 그린다.
+  if (image && !elements.wishPage.hidden) paintWishPage();
 }
 
 /* ── 합의 · 지우기 ────────────────────────────────────────── */

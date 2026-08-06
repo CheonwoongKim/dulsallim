@@ -40,7 +40,7 @@ export const MY_PROFILE_COLUMNS = "id, display_name, avatar_color, monthly_goal,
 
 /** 위시 읽기와 RPC 응답이 같은 모양을 쓰도록 열 목록을 한 곳에 둔다. */
 export const WISH_COLUMNS =
-  "id, household_id, name, url, estimated_price, created_by, created_at, state, pursuing_at, expense_id, achieved_on, achieved_at";
+  "id, household_id, name, url, estimated_price, image_url, created_by, created_at, state, pursuing_at, expense_id, achieved_on, achieved_at";
 export const WISH_AGREEMENT_COLUMNS = "wish_id, user_id, agreed_at";
 const WISH_RESULT_COLUMNS = `${WISH_COLUMNS}, agreement_user_ids`;
 
@@ -315,6 +315,31 @@ export async function achieveWish(id, expenseId) {
 
 export async function deleteWish(id) {
   unwrap("위시 삭제", await supabase.rpc("delete_wish", { p_wish_id: id }));
+}
+
+/**
+ * 링크의 대표 그림 주소를 서버에게 물어본다.
+ *
+ * 못 찾아도 그것은 실패가 아니다 — 그림 없는 링크가 흔하다. 그래서 던지지 않고
+ * null 을 돌려준다. 부르는 쪽이 이것 때문에 담기를 되돌리는 일이 없어야 한다.
+ */
+export async function fetchLinkImage(url) {
+  try {
+    const { data, error } = await supabase.functions.invoke("link-preview", { body: { url } });
+    if (error) return null;
+    const image = data?.image;
+    return typeof image === "string" && /^https?:\/\//.test(image) ? image : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 담긴 뒤에 그림 주소만 따로 붙인다. */
+export async function setWishImage(id, imageUrl) {
+  unwrap(
+    "위시 그림 붙이기",
+    await supabase.rpc("set_wish_image", { p_wish_id: id, p_image_url: imageUrl }),
+  );
 }
 
 /* ── 고정비 반영 ──────────────────────────────────────────── */

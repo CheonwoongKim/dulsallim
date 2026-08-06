@@ -139,6 +139,8 @@ create table if not exists wish_items (
   name            text not null check (char_length(trim(name)) > 0),
   url             text check (url is null or char_length(trim(url)) > 0),
   estimated_price integer check (estimated_price is null or estimated_price > 0),
+  -- 링크에서 찾아낸 대표 그림. 그림 자체는 갖지 않고 주소만 적어 둔다.
+  image_url       text check (image_url is null or image_url ~ '^https?://'),
   created_by      uuid not null references profiles(id),
   created_at      timestamptz not null default now(),
   state           text not null default 'proposed'
@@ -327,6 +329,8 @@ revoke all on households, profiles, fixed_costs, expenses, fixed_cost_applicatio
 -- 절반만 적용된 상태가 남는데, 여기 모아 두면 전부 되거나 전부 안 된다.
 
 -- 위시 쓰기 함수가 돌려줄 공통 모양. 직접 부르면 RLS 를 우회하므로 공개하지 않는다.
+-- 반환 모양이 바뀌면 or replace 로는 못 바꾼다. 다시 돌려도 되도록 먼저 지운다.
+drop function if exists wish_snapshot(uuid);
 create or replace function wish_snapshot(p_wish_id uuid)
 returns table (
   id uuid,
@@ -334,6 +338,7 @@ returns table (
   name text,
   url text,
   estimated_price integer,
+  image_url text,
   created_by uuid,
   created_at timestamptz,
   state text,
@@ -349,7 +354,7 @@ security definer
 set search_path = public
 as $$
   select
-    w.id, w.household_id, w.name, w.url, w.estimated_price,
+    w.id, w.household_id, w.name, w.url, w.estimated_price, w.image_url,
     w.created_by, w.created_at, w.state, w.pursuing_at,
     w.expense_id, w.achieved_on, w.achieved_at,
     array(
@@ -363,6 +368,8 @@ as $$
 $$;
 
 -- 올린다는 것 자체가 첫 찬성이다. 항목과 첫 합의가 한 트랜잭션으로 함께 생긴다.
+-- 반환 모양이 바뀌면 or replace 로는 못 바꾼다. 다시 돌려도 되도록 먼저 지운다.
+drop function if exists create_wish(text, text, integer);
 create or replace function create_wish(
   p_name text,
   p_url text default null,
@@ -374,6 +381,7 @@ returns table (
   name text,
   url text,
   estimated_price integer,
+  image_url text,
   created_by uuid,
   created_at timestamptz,
   state text,
@@ -416,6 +424,8 @@ end;
 $$;
 
 -- 현재 가구 구성원 모두가 누르면 향하는 것으로 바꾼다.
+-- 반환 모양이 바뀌면 or replace 로는 못 바꾼다. 다시 돌려도 되도록 먼저 지운다.
+drop function if exists agree_wish(uuid);
 create or replace function agree_wish(p_wish_id uuid)
 returns table (
   id uuid,
@@ -423,6 +433,7 @@ returns table (
   name text,
   url text,
   estimated_price integer,
+  image_url text,
   created_by uuid,
   created_at timestamptz,
   state text,
@@ -476,6 +487,8 @@ end;
 $$;
 
 -- 산 지출의 날짜를 복사해 둔다. 나중에 그 지출을 지워도 이룬 날짜는 사라지지 않는다.
+-- 반환 모양이 바뀌면 or replace 로는 못 바꾼다. 다시 돌려도 되도록 먼저 지운다.
+drop function if exists achieve_wish(uuid, uuid);
 create or replace function achieve_wish(p_wish_id uuid, p_expense_id uuid)
 returns table (
   id uuid,
@@ -483,6 +496,7 @@ returns table (
   name text,
   url text,
   estimated_price integer,
+  image_url text,
   created_by uuid,
   created_at timestamptz,
   state text,
@@ -553,6 +567,28 @@ begin
   if not found then
     raise exception '위시를 찾을 수 없습니다';
   end if;
+end;
+$$;
+
+-- 담은 뒤에 대표 그림 주소만 따로 붙인다. 담기는 바로 끝나야 하고 남의 사이트를
+-- 읽는 일은 몇 초가 걸리므로, 두 일을 한 요청에 묶지 않는다.
+create or replace function set_wish_image(p_wish_id uuid, p_image_url text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_household uuid := current_household_id();
+begin
+  if v_household is null then
+    raise exception '가구를 찾을 수 없습니다';
+  end if;
+
+  update wish_items
+     set image_url = nullif(trim(p_image_url), '')
+   where id = p_wish_id
+     and household_id = v_household;
 end;
 $$;
 
@@ -709,6 +745,7 @@ revoke execute on function create_wish(text, text, integer)   from public, anon;
 revoke execute on function agree_wish(uuid)                   from public, anon;
 revoke execute on function achieve_wish(uuid, uuid)           from public, anon;
 revoke execute on function delete_wish(uuid)                  from public, anon;
+revoke execute on function set_wish_image(uuid, text)          from public, anon;
 
 grant execute on function reset_household()                    to authenticated;
 grant execute on function apply_fixed_cost(uuid, date, date)   to authenticated;
@@ -717,6 +754,7 @@ grant execute on function create_wish(text, text, integer)     to authenticated;
 grant execute on function agree_wish(uuid)                     to authenticated;
 grant execute on function achieve_wish(uuid, uuid)             to authenticated;
 grant execute on function delete_wish(uuid)                    to authenticated;
+grant execute on function set_wish_image(uuid, text)            to authenticated;
 
 -- ── 실시간 ──────────────────────────────────────────────────────
 -- 상대가 남긴 메시지와 지출이 새로고침 없이 바로 뜨게 한다.

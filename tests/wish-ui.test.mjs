@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { css, html, source as app } from "./helpers/source.mjs";
+import { css, fn, html, source as app } from "./helpers/source.mjs";
 
 /**
  * 위시리스트 화면이 지켜야 하는 것들.
@@ -147,8 +147,15 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
   assert.match(그리기, /if \(!href\) return "";/, "열 수 없는 주소는 글자로도 내보내지 않는다");
   assert.match(그리기, /rel="noopener noreferrer"/);
 
-  // 담을 때도 통과한 것만 보낸다. 화면에서만 거르면 나중에 다른 화면이 그 값을 믿는다.
-  assert.match(app, /url: input\.url \? safeHref\(input\.url\) : null/);
+  /*
+   * 담을 때도 통과한 것만 보낸다. 화면에서만 거르면 나중에 다른 화면이 그 값을 믿는다.
+   *
+   * 그 주소는 담긴 뒤 그림을 찾는 데도 다시 쓰인다. 두 곳이 같은 값을 봐야 하므로
+   * 한 번만 걸러 이름을 붙여 둔다 — 서버로 가는 것과 그림을 찾는 것이 갈리면 안 된다.
+   */
+  assert.match(app, /const href = input\.url \? safeHref\(input\.url\) : null;/);
+  assert.match(app, /\n\s+url: href,/, "거르지 않은 값이 서버로 간다");
+  assert.match(app, /그림얹기\(created\.id, href\)/, "그림도 같은 값으로 찾아야 한다");
 });
 
 test("위시 목록도 다른 목록과 같은 스와이프 구현을 쓴다", () => {
@@ -267,4 +274,38 @@ test("링크는 어디로 가는지 미리 말한다", async () => {
   // 여기 올 일이 없지만(safeHref 를 지나온다) 와도 링크 구실은 해야 한다.
   assert.equal(domainOf("주소가 아님"), "링크 열기");
   assert.doesNotMatch(app, /">링크 열기<\/a>/, "모든 줄이 같은 말을 하고 있다");
+});
+
+test("그림은 첫 글자 위에 덮이고, 안 오면 그 자리가 드러난다", () => {
+  const 그리기 = fn("thumbMarkup");
+  // 글자를 지우고 그림을 넣는 것이 아니다. 둘 다 두고 그림이 위에 선다.
+  assert.match(그리기, /escapeHtml\(letter\)\}\$\{/, "그림이 있으면 글자를 안 그린다");
+  assert.match(그리기, /const image = safeHref\(wish\.imageUrl\)/, "그림 주소도 한 겹 더 받는다");
+  assert.match(그리기, /referrerpolicy="no-referrer"/, "어디서 왔는지까지 남의 서버에 알릴 일이 없다");
+  assert.match(그리기, /loading="lazy"/);
+
+  // 남의 서버 그림은 언제든 사라진다. 깨진 그림 표시가 첫 글자를 가리면 안 된다.
+  assert.match(app, /image\.addEventListener\("error", \(\) => image\.remove\(\), \{ once: true \}\)/);
+
+  const 그림 = css.match(/\.wish-thumb img \{[\s\S]*?\n\}/)[0];
+  assert.match(그림, /position: absolute/);
+  assert.match(그림, /object-fit: cover/, "늘여 맞추면 물건이 찌그러진다");
+  assert.match(css, /\.wish-thumb \{[\s\S]*?overflow: hidden/, "모서리 밖으로 그림이 삐져나온다");
+});
+
+test("그림 찾기는 담기를 붙잡지 않고, 못 찾아도 조용하다", () => {
+  const 담기 = fn("handleWishSubmit");
+  // 담기가 먼저 끝나야 한다. 남의 사이트를 읽는 데 몇 초가 걸린다.
+  assert.ok(
+    담기.indexOf("showToast(\"위시를 담았어요\")") < 담기.indexOf("그림얹기"),
+    "그림을 기다리느라 담기가 늦어진다",
+  );
+  assert.match(담기, /void 그림얹기\(/, "기다리면 시트가 그만큼 늦게 닫힌다");
+
+  const 붙이기 = fn("attachWishImage");
+  assert.match(붙이기, /if \(!image\) return null/, "못 찾은 것을 잘못으로 다루면 안 된다");
+  assert.doesNotMatch(fn("그림얹기"), /showToast/, "그림 없는 링크는 흔하다 — 말 걸 일이 아니다");
+
+  // 서버에 못 적었으면 화면에도 얹지 않는다. 다음에 열면 없는 것이 맞다.
+  assert.match(붙이기, /catch \{[\s\S]*?return null;/);
 });

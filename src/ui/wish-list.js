@@ -53,7 +53,22 @@ function linkMarkup(wish) {
  */
 function thumbMarkup(wish) {
   const letter = [...String(wish.name).trim()][0] ?? "";
-  return `<span class="wish-thumb" style="--wish-tile: ${escapeHtml(getMemberColor(wish.createdBy))}" aria-hidden="true">${escapeHtml(letter)}</span>`;
+  const image = safeHref(wish.imageUrl);
+  return `<span class="wish-thumb" style="--wish-tile: ${escapeHtml(getMemberColor(wish.createdBy))}" aria-hidden="true">${escapeHtml(letter)}${
+    image ? `<img src="${escapeHtml(image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ""
+  }</span>`;
+}
+
+/**
+ * 그림이 안 오면 조용히 걷어 낸다.
+ *
+ * 남의 서버에 있는 그림이라 언제든 사라진다. 그대로 두면 브라우저가 깨진 그림 표시를
+ * 그려 넣어 첫 글자보다 못한 자리가 된다. 지우면 밑에 깔린 글자가 그대로 드러난다.
+ */
+function 그림이깨지면걷어내기(row) {
+  const image = row.querySelector(".wish-thumb img");
+  if (image) image.addEventListener("error", () => image.remove(), { once: true });
+  return row;
 }
 
 /** `2026-03-14` → `2026.03.14`. 이룬 것에는 날짜만 남는다. */
@@ -102,7 +117,7 @@ export function createWishRow(wish, { canAgree, waiting }) {
       }
     </div>
   `;
-  return row;
+  return 그림이깨지면걷어내기(row);
 }
 
 export function createAchievedRow(wish) {
