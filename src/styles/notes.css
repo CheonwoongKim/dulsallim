@@ -85,7 +85,10 @@
   padding: var(--space-2) var(--space-6) max(var(--space-4), env(safe-area-inset-bottom));
   flex: 0 0 auto;
   align-items: center;
-  border-top: 1px solid var(--line);
+  /*
+   * 위에 선을 긋지 않는다. 이 앱은 단락을 여백으로 나눈다 — 적는 줄과 오간 말 사이도
+   * 그렇다. 다만 흰 바탕은 남긴다. 없으면 지나가는 말풍선이 칸에 비친다.
+   */
   background: var(--white);
 }
 

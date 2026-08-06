@@ -2759,6 +2759,14 @@ test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
    * 적을 것이 없으면 물러난다. display 를 껐다 켜면 나타나는 순간이 툭 끊기므로
    * 자리는 늘 잡아 두고 보이는 것만 바꾼다 — 안 보이는 동안에는 손도 안 닿아야 한다.
    */
+  /*
+   * 적는 줄 위에 선을 긋지 않는다. 이 앱은 단락을 여백으로 나눈다 — 흰 바탕만으로도
+   * 목록과 갈린다. 대신 그 바탕은 있어야 한다. 없으면 지나가는 말풍선이 칸에 비친다.
+   */
+  const 적는줄 = 규칙(".note-form");
+  assert.doesNotMatch(적는줄, /border-top/, "적는 줄 위에 선이 돌아왔다");
+  assert.match(적는줄, /background: var\(--white\)/);
+
   assert.match(보내기, /opacity: 0/);
   assert.match(보내기, /pointer-events: none/);
   assert.match(css, /\.note-send\.is-ready \{[\s\S]*?pointer-events: auto/);
