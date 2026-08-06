@@ -83,20 +83,15 @@
 }
 
 /*
- * 알약과 동그란 보내기는 "이건 대화다" 를 말하는 모양이라 남긴다. 다만 크기는 앱의
- * 적는 칸과 같아야 한다 — 46 은 어느 토큰도 아니었다(계측: 표준 50, 여기만 46).
+ * 상자는 base.css 의 공용 규칙이 정한다. 여기서는 글자 크기만 덧붙인다.
  *
- * 안쪽 여백은 표준(12)보다 한 칸 넉넉한 16 을 쓴다. 알약은 양 끝이 둥글어 그만큼
- * 글자가 곡선에 붙는다.
+ * 한동안 이 칸만 46px 에 알약(999)이었다. "이건 대화다" 를 말하는 모양이라 여겼는데,
+ * 재 보니 이 시트의 말풍선부터 16 이었고(16 16 4) 앱에서 알약은 막대·딱지·작은 알약
+ * 단추에만 쓴다 — 적는 칸에 쓰는 곳이 한 곳도 없었다.
+ *
+ * 보내기가 동그란 것은 그대로 둔다. 머리 줄 아이콘 단추도 --radius-round 라 앱과 맞다.
  */
 .note-form input {
-  width: 100%;
-  min-width: 0;
-  height: var(--field-height);
-  padding: 0 var(--space-4);
-  border: 1px solid var(--field-line);
-  border-radius: var(--radius-pill);
-  background: var(--field-bg);
   /* 16px 미만이면 iOS가 포커스 시 화면을 확대한다. */
   font-size: var(--text-16);
   transition: border-color var(--motion) ease, box-shadow var(--motion) ease;

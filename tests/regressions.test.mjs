@@ -2732,17 +2732,17 @@ test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
     return css.slice(시작, css.indexOf("\n}", 시작 + 1));
   };
 
-  // 적는 칸과 보내기가 같은 높이라야 둘이 한 줄로 읽힌다(계측: 둘 다 밑변 y836).
-  for (const 선택자 of [".note-form input", ".note-send"]) {
-    assert.match(규칙(선택자), /var\(--field-height\)/, `${선택자} 가 제 크기를 따로 적는다`);
-    // 크기를 적는 줄만 본다 — 1px 테두리는 이 앱 어디서나 쓰는 값이다.
-    const 크기줄 = 규칙(선택자)
-      .split("\n")
-      .filter((l) => /^\s*(width|height|padding|border-radius):/.test(l));
-    assert.ok(크기줄.length, `${선택자} 에서 크기를 적는 줄을 못 찾았다`);
-    for (const 줄 of 크기줄) {
-      assert.doesNotMatch(줄, /\d+px/, `${선택자} 에 날 숫자가 남아 있다: ${줄.trim()}`);
-    }
+  /*
+   * 적는 칸은 제 크기를 아예 안 적는다 — base.css 의 공용 상자에 얹혀 있다.
+   * 따로 적던 때 혼자 46px 에 알약(999)이 됐다.
+   */
+  assert.match(css, /\.field-group select,\n\.note-form input,/, "대화 입력이 공용 상자에서 빠져 있다");
+  assert.doesNotMatch(규칙(".note-form input"), /height|border-radius|padding/, "상자를 두 번 적고 있다");
+
+  // 보내기는 적는 칸과 같은 높이라야 둘이 한 줄로 읽힌다(계측: 둘 다 밑변 y836).
+  assert.match(규칙(".note-send"), /var\(--field-height\)/);
+  for (const 줄 of 규칙(".note-send").split("\n").filter((l) => /^\s*(width|height):/.test(l))) {
+    assert.doesNotMatch(줄, /\d+px/, `보내기에 날 숫자가 남아 있다: ${줄.trim()}`);
   }
   // 그림은 다른 아이콘과 같은 값에서 온다.
   assert.equal(
