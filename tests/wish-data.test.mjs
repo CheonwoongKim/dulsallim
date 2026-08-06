@@ -4,6 +4,10 @@ import test from "node:test";
 
 const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migration-wish.sql", import.meta.url), "utf8");
+const multiMigration = await readFile(
+  new URL("../supabase/migration-wish-multi.sql", import.meta.url),
+  "utf8",
+);
 const remote = await readFile(new URL("../src/data/remote.js", import.meta.url), "utf8");
 const store = await readFile(new URL("../src/store.js", import.meta.url), "utf8");
 
@@ -36,12 +40,25 @@ test("schema.sql 과 위시 마이그레이션의 두 표가 같은 구조다", 
   }
 });
 
-test("집마다 향하는 위시는 부분 유니크 인덱스로 하나만 허용한다", () => {
+test("함께 바라는 것은 여럿이어도 된다", () => {
+  /*
+   * 하나로 묶어 뒀던 때는 나중에 담은 것이 앞의 것이 끝날 때까지 아무 표시도 못 받았다.
+   * 진척이 동기인 화면에서 그건 올려두고 아무것도 안 하는 것과 같다.
+   */
   for (const sql of [schema, migration]) {
-    assert.match(
+    assert.doesNotMatch(
       sql,
-      /create unique index if not exists wish_items_one_pursuing_per_household_idx\s+on wish_items \(household_id\)\s+where state = 'pursuing'/,
+      /create unique index[\s\S]*?wish_items_one_pursuing_per_household_idx/,
+      "묶는 제약이 남아 있다",
     );
+  }
+  // 이미 돌린 프로젝트에서도 걷어야 한다.
+  assert.match(multiMigration, /drop index if exists wish_items_one_pursuing_per_household_idx;/);
+  // 인덱스만 지우면 함수 안의 주석이 거짓이 된다. 반환 모양은 그대로라 replace 로 족하다.
+  assert.match(multiMigration, /create or replace function agree_wish\(p_wish_id uuid\)/);
+  assert.doesNotMatch(multiMigration, /drop function if exists agree_wish/);
+  for (const sql of [schema, migration, multiMigration]) {
+    assert.doesNotMatch(sql, /부분 유니크 인덱스가 이 요청 전체를 되돌린다/, "주석이 거짓이 됐다");
   }
 });
 
@@ -111,7 +128,8 @@ test("합의와 이룸 전환은 같은 집 요청을 잠그고 가구 범위를
 
 test("migration-wish.sql 은 다시 실행해도 충돌하지 않는 형태다", () => {
   assert.equal((migration.match(/create table if not exists wish_/g) || []).length, 2);
-  assert.equal((migration.match(/create (?:unique )?index if not exists wish_/g) || []).length, 2);
+  // 표마다 하나씩. 향하는 것을 묶던 유니크 인덱스는 걷었다.
+  assert.equal((migration.match(/create (?:unique )?index if not exists wish_/g) || []).length, 1);
   assert.equal((migration.match(/drop policy if exists wish_/g) || []).length, 2);
   assert.doesNotMatch(migration, /^create table wish_/m);
   assert.doesNotMatch(migration, /^create (?:unique )?index wish_/m);

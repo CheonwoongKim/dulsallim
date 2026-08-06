@@ -497,3 +497,24 @@ test("사람 탭은 찬성한 사람으로 가르고, 분석의 사람 필터와
   // 세 덩이 모두 걸러진 목록을 본다. 하나만 안 걸러지면 탭이 반쯤 듣는 것처럼 보인다.
   assert.match(fn("paintWishPage"), /const wishes = 그사람것\(getWishes\(\)\);/);
 });
+
+test("함께 바라는 것은 여럿이 서고, 이름표는 바깥에 한 번만 있다", () => {
+  assert.match(html, /<div class="wish-section" id="wish-pursuing-section" hidden>/);
+  assert.match(html, /<p class="eyebrow">함께 바라는 것<span id="wish-pursuing-count"><\/span><\/p>/);
+
+  const 그리기 = fn("paintPursuing");
+  assert.match(그리기, /\.filter\(\(wish\) => wish\.state === "pursuing"\)/);
+  // 하나만 찾던 때는 두 번째가 화면에 아예 안 떴다.
+  assert.doesNotMatch(그리기, /\.find\(\(wish\) => wish\.state === "pursuing"\)/);
+  assert.match(그리기, /pursuing\.map\(\(wish\) => createPursuingCard\(wish, context\)\)/);
+  // 없으면 이름표까지 통째로 사라진다. 빈 이름표만 남으면 자리가 비어 보인다.
+  assert.match(그리기, /elements\.wishPursuingSection\.hidden = !pursuing\.length/);
+  // 하나뿐이면 개수를 안 적는다 — "함께 바라는 것(1)" 은 군더더기다.
+  assert.match(그리기, /pursuing\.length > 1 \? `\(\$\{pursuing\.length\}\)` : ""/);
+
+  /*
+   * 무엇인지는 바깥 이름표가 이미 말한다. 카드마다 또 적으면 여럿일 때 같은 말이
+   * 세 번 네 번 반복된다.
+   */
+  assert.doesNotMatch(app, /<p class="eyebrow">지금 향하는 것<\/p>/);
+});

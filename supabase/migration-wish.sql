@@ -38,11 +38,6 @@ create table if not exists wish_items (
 create index if not exists wish_items_household_created_idx
   on wish_items (household_id, created_at desc);
 
--- 집마다 지금 향하는 것은 하나뿐이다. 화면 확인만으로는 두 폰의 동시 요청을 막을 수 없다.
-create unique index if not exists wish_items_one_pursuing_per_household_idx
-  on wish_items (household_id)
-  where state = 'pursuing';
-
 -- 사람 수를 열 개수로 굳히지 않는다. 지금은 둘이지만 profiles 는 여러 사람을 담을 수 있다.
 create table if not exists wish_agreements (
   wish_id   uuid not null references wish_items(id) on delete cascade,
@@ -226,7 +221,8 @@ begin
   if v_state = 'proposed'
      and (select count(*) from wish_agreements where wish_id = p_wish_id)
        = (select count(*) from profiles p where p.household_id = v_household) then
-    -- 이미 다른 위시를 향하고 있으면 부분 유니크 인덱스가 이 요청 전체를 되돌린다.
+    -- 함께 바라는 것은 여럿이어도 된다. 하나로 묶어 두면 나중에 담은 것은 앞의 것이
+    -- 끝날 때까지 아무 표시도 못 받는다.
     update wish_items
        set state = 'pursuing', pursuing_at = now()
      where wish_items.id = p_wish_id;

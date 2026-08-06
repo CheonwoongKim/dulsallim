@@ -229,19 +229,17 @@ with checks as (
 
   union all
 
-  -- 17) 집마다 향하는 위시가 하나뿐인가
+  -- 17) 함께 바라는 것을 하나로 묶던 제약이 걷혔는가
   select
     17,
-    '향하는 위시 하나',
-    case when count(*) = 1 then '부분 유니크 인덱스 있음' else '제약 없음' end,
-    case when count(*) = 1 then 'OK' else 'FAIL' end,
-    'migration-wish.sql 을 실행하세요'
+    '함께 바라는 것 여럿',
+    case when count(*) = 0 then '묶는 제약 없음' else '옛 제약이 남아 있음' end,
+    case when count(*) = 0 then 'OK' else 'FAIL' end,
+    'migration-wish-multi.sql 을 실행하세요'
   from pg_indexes
   where schemaname = 'public'
     and tablename = 'wish_items'
     and indexname = 'wish_items_one_pursuing_per_household_idx'
-    and indexdef like '%UNIQUE%'
-    and indexdef like '%state%pursuing%'
 
   union all
 

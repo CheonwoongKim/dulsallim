@@ -25,7 +25,7 @@ import {
 import { getProfile } from "./auth.js";
 
 /**
- * 사고 싶은 것을 적어 두고, 둘 다 좋다고 하면 "지금 향하는 것" 이 된다.
+ * 사고 싶은 것을 적어 두고, 상대도 "나도" 를 누르면 "함께 바라는 것" 이 된다.
  *
  * 상태를 여기서 판정하지 않는다. 어떤 합의가 몇 개면 pursuing 인지는 서버가 정하고
  * (migration-wish.sql), 화면은 돌아온 state 를 그대로 읽어 세 자리에 나눠 놓을 뿐이다.
@@ -101,11 +101,24 @@ function progressContext() {
   return { expenses: getExpenses(), members: getMembers() };
 }
 
+/**
+ * 둘 다 "나도" 를 누른 것들. 여럿이어도 된다.
+ *
+ * 하나로 묶어 뒀던 때는 나중에 담은 것이 앞의 것이 끝날 때까지 아무 표시도 못 받았다.
+ * 진척이 동기인 화면에서 그건 올려두고 아무것도 안 하는 것과 같다.
+ */
 function paintPursuing(wishes) {
-  const pursuing = wishes.find((wish) => wish.state === "pursuing");
-  elements.wishPursuing.hidden = !pursuing;
+  // 함께 하기로 한 순으로. 나중에 정한 것이 위에 온다.
+  const pursuing = wishes
+    .filter((wish) => wish.state === "pursuing")
+    .sort((a, b) => String(b.pursuingAt).localeCompare(String(a.pursuingAt)) || byNewest(a, b));
+
+  elements.wishPursuingSection.hidden = !pursuing.length;
+  elements.wishPursuingCount.textContent = pursuing.length > 1 ? `(${pursuing.length})` : "";
+
+  const context = progressContext();
   elements.wishPursuing.replaceChildren(
-    ...(pursuing ? [createPursuingCard(pursuing, progressContext())] : []),
+    ...pursuing.map((wish) => createPursuingCard(wish, context)),
   );
 }
 

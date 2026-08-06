@@ -111,14 +111,18 @@ export function formatAchievedOn(dateKey) {
   return String(dateKey ?? "").replaceAll("-", ".");
 }
 
-/** 맨 위에 따로 서는 한 장. 집마다 하나뿐이라 목록이 아니라 카드다. */
+/**
+ * 둘 다 "나도" 를 누른 것. 담아 둔 것보다 그림이 납작하고(16:9) "이뤘어요" 가 붙는다.
+ *
+ * 무엇인지는 바깥 이름표("함께 바라는 것")가 이미 말한다. 카드마다 또 적으면
+ * 여럿일 때 같은 말이 세 번 네 번 반복된다.
+ */
 export function createPursuingCard(wish, context = {}) {
   const card = document.createElement("article");
   card.className = "wish-card";
   card.innerHTML = `
     ${shotMarkup(wish, "wide")}
     <div class="wish-card-body">
-      <p class="eyebrow">지금 향하는 것</p>
       <strong class="wish-card-name">${escapeHtml(wish.name)}</strong>
       <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>
       ${noteMarkup(wish)}
