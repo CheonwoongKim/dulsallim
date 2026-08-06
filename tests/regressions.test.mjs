@@ -1540,6 +1540,27 @@ test("분석의 달 이동은 허용 범위를 벗어나지 않는다", () => {
   assert.match(fn("paintAnalysis"), /elements\.analysisPrev\.disabled/, "경계에서 버튼도 잠가야 한다");
 });
 
+test("사람 탭은 머리 아래에 붙어 있어 어디까지 내려가도 누를 수 있다", () => {
+  /*
+   * 안 붙여 두면 scrollTop 72 부터 붙어 있는 머리 밑으로 들어가고 122 부터는 통째로 덮인다.
+   * 덮인 탭은 눌리지 않는다 — 그 자리를 짚으면 머리가 잡혀서, 사람을 바꾸려던 손이
+   * 뒤로나 추이를 누른다(계측: 스크롤 122 에서 탭은 y16 인데 머리가 66 까지 덮는다).
+   */
+  assert.match(css, /#analysis-members \{[^}]*position: sticky/, "탭 줄은 붙어 있어야 한다");
+  assert.match(css, /#analysis-members \{[^}]*top: var\(--head-height\)/, "머리 바로 아래에 붙는다");
+  // .page 가 세로 flex 라 본문이 넘치면 머리도 눌린다. 그러면 붙는 자리가 10px 어긋난다.
+  assert.match(css, /#analysis-page \.page-head \{[^}]*flex-shrink: 0/, "머리가 줄면 붙는 자리가 어긋난다");
+});
+
+test("사람 탭은 다시 그려도 버튼을 갈아 끼우지 않는다", () => {
+  // 통째로 갈아 끼우면 방금 누른 버튼이 사라져 커서가 <body> 로 떨어진다.
+  // 키보드로 고른 사람은 그 순간 자리를 놓치고 다음 Tab 이 화면 처음부터 다시 짚는다.
+  const picker = fn("paintMemberPicker");
+  assert.match(picker, /childElementCount !== options\.length/, "사람 수가 달라졌을 때만 새로 만든다");
+  assert.match(picker, /picker\.children\[index\]/, "있는 버튼을 고쳐 쓴다");
+  assert.match(picker, /aria-pressed", String\(current === id\)/, "누른 탭 표시는 매번 다시 적는다");
+});
+
 test("분석 페이지도 다른 전체 화면과 같은 처리를 받는다", () => {
   assert.match(app, /pages: \[[\s\S]*?#analysis-page[\s\S]*?\]/, "닫기·스크롤 잠금 목록에 있어야 한다");
   assert.match(html, /<section class="page" id="analysis-page"[^>]*aria-labelledby/);
