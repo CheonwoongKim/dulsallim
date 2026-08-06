@@ -9,11 +9,16 @@ import { escapeHtml, safeHref } from "./escape.js";
  * safeHref 가 http·https 가 아닌 것을 먼저 버린다.
  */
 
-/** 이름 다음 줄. 어림 가격은 있을 때만 자리를 갖는다. */
+/**
+ * 이름 다음 줄. 어림 가격은 있을 때만 자리를 갖는다.
+ *
+ * "어림" 도 "올림" 도 붙이지 않는다. 금액 뒤의 원과 가운뎃점 하나로 이미 갈리고,
+ * 이 화면에서 사람 이름이 놓일 자리는 담은 사람뿐이라 굳이 말로 설명할 것이 없다.
+ */
 function metaLine(wish) {
   return [
-    wish.estimatedPrice ? `어림 ${formatMoney(wish.estimatedPrice)}원` : null,
-    `${getMemberName(wish.createdBy)} 올림`,
+    wish.estimatedPrice ? `${formatMoney(wish.estimatedPrice)}원` : null,
+    getMemberName(wish.createdBy),
   ]
     .filter(Boolean)
     .join(" · ");
