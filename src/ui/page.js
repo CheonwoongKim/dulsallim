@@ -8,10 +8,19 @@ import { lockPageScroll, unlockPageScroll } from "./scroll-lock.js";
  * 바텀시트와 달리 "다른 곳으로 갔다"는 느낌을 주려고 옆에서 밀려 들어온다.
  * 시트보다 아래에 깔리므로, 설정에서 고정비 시트를 열면 설정 화면 위에 시트가 뜬다.
  */
-let openedPage = null;
+/*
+ * 열린 화면을 쌓아 둔다. 뒤로 가기는 한 장씩만 벗긴다.
+ *
+ * 한 장짜리 슬롯이던 때는 설정에서 소비 잔소리를 열면 설정이 그 자리에서 사라져,
+ * 뒤로 가기가 설정이 아니라 가계부로 데려갔다. 어디서 들어왔는지를 기억해야
+ * 돌아갈 곳을 안다.
+ *
+ * 각 칸: { page, openerFocus, scrollTop } — 덮이기 전 스크롤 자리도 함께 기억해
+ * 돌아왔을 때 보던 곳이 그대로 보인다.
+ */
+const pageStack = [];
 let closingPage = null;
 let stopWaiting = null;
-let lastFocusedElement = null;
 
 /**
  * 닫히는 중이던 화면의 뒤처리를 지금 끝낸다.
@@ -35,22 +44,27 @@ function finishClose({ unlock }) {
 }
 
 export function getOpenPage() {
-  return openedPage;
+  return pageStack.at(-1)?.page ?? null;
 }
 
 export function showPage(page) {
   // 곧 다른 화면을 열므로 잠금은 그대로 이어받는다.
   finishClose({ unlock: false });
-  // 이미 다른 화면이 열려 있으면 갈아 끼운다. 두 장이 겹치면 뒤로 가기가 꼬인다.
-  if (openedPage && openedPage !== page) {
-    openedPage.classList.remove("is-visible");
-    openedPage.hidden = true;
-  } else if (!openedPage) {
-    lastFocusedElement = document.activeElement;
+
+  const 아래 = pageStack.at(-1);
+  // 같은 화면을 다시 여는 것은 쌓지 않는다. 뒤로 두 번 눌러야 나가게 된다.
+  if (아래?.page === page) return;
+
+  if (아래) {
+    // 덮이기 전에 보던 자리를 적어 둔다. 돌아왔을 때 그 자리가 그대로 보여야 한다.
+    아래.scrollTop = 아래.page.scrollTop;
+    아래.page.classList.remove("is-visible");
+    아래.page.hidden = true;
+  } else {
     lockPageScroll();
   }
 
-  openedPage = page;
+  pageStack.push({ page, openerFocus: document.activeElement, scrollTop: 0 });
   page.hidden = false;
   page.scrollTop = 0;
   /*
@@ -66,21 +80,34 @@ export function showPage(page) {
   });
 }
 
+/** 한 장만 벗긴다. 밑에 화면이 남아 있으면 그것으로 돌아가고, 없으면 가계부로 나간다. */
 export function hidePage() {
-  const page = openedPage;
-  if (!page) return;
-  openedPage = null;
-  elements.appShell.inert = false;
+  const 지금 = pageStack.pop();
+  if (!지금) return;
+
+  const 아래 = pageStack.at(-1);
+  // 밑에 화면이 남아 있으면 가계부는 여전히 덮여 있다. 잠금도 그대로 둔다.
+  if (!아래) elements.appShell.inert = false;
 
   const focused = document.activeElement;
-  if (focused instanceof HTMLElement && page.contains(focused)) focused.blur();
-  page.classList.remove("is-visible");
+  if (focused instanceof HTMLElement && 지금.page.contains(focused)) focused.blur();
+  지금.page.classList.remove("is-visible");
 
-  finishClose({ unlock: true });
-  closingPage = page;
-  stopWaiting = afterMotion(page, () => {
-    finishClose({ unlock: true });
-    requestAnimationFrame(() => lastFocusedElement?.focus?.());
+  finishClose({ unlock: !아래 });
+  closingPage = 지금.page;
+  stopWaiting = afterMotion(지금.page, () => {
+    finishClose({ unlock: !아래 });
+    requestAnimationFrame(() => 지금.openerFocus?.focus?.());
+  });
+
+  if (!아래) return;
+
+  // 덮여 있던 화면을 도로 올린다. 보던 자리까지 그대로.
+  아래.page.hidden = false;
+  아래.page.scrollTop = 아래.scrollTop;
+  requestAnimationFrame(() => {
+    아래.page.classList.add("is-visible");
+    아래.page.focus({ preventScroll: true });
   });
 }
 
@@ -93,7 +120,7 @@ export function closePageNow() {
     page.classList.remove("is-visible");
     page.hidden = true;
   });
-  if (openedPage) unlockPageScroll();
+  if (pageStack.length) unlockPageScroll();
   elements.appShell.inert = false;
-  openedPage = null;
+  pageStack.length = 0;
 }

@@ -2507,3 +2507,33 @@ test("키보드가 올라오면 시트를 그 위로 올린다", () => {
   assert.match(fn("watchKeyboard"), /if \(!viewport\) return/);
   assert.match(fn("watchKeyboard"), /addEventListener\("resize", sync\)[\s\S]{0,80}addEventListener\("scroll", sync\)/);
 });
+
+test("설정에서 들어간 화면은 뒤로 가면 설정으로 돌아온다", async () => {
+  /*
+   * 열린 화면을 한 장짜리 슬롯에 담던 때는, 설정에서 소비 잔소리를 열면 설정이 그 자리에서
+   * 사라져 뒤로 가기가 설정이 아니라 가계부로 데려갔다. 어디서 들어왔는지를 기억해야
+   * 돌아갈 곳을 안다.
+   */
+  const { readFile } = await import("node:fs/promises");
+  const 화면 = await readFile(new URL("../src/ui/page.js", import.meta.url), "utf8");
+  assert.match(화면, /const pageStack = \[\];/);
+  assert.doesNotMatch(화면, /let openedPage/, "한 장짜리 슬롯이 남아 있다");
+
+  const 열기 = 화면.match(/export function showPage\(page\)[\s\S]*?\n\}/)[0];
+  // 밑에 있던 화면은 지우지 않고 덮어 둔다. 그래야 돌아갈 수 있다.
+  assert.match(열기, /pageStack\.push\(\{ page, openerFocus: document\.activeElement, scrollTop: 0 \}\)/);
+  // 같은 화면을 다시 여는 것은 쌓지 않는다. 뒤로 두 번 눌러야 나가게 된다.
+  assert.match(열기, /if \(아래\?\.page === page\) return;/);
+  // 덮이기 전 스크롤 자리를 적어 둔다. 돌아왔을 때 보던 곳이 그대로 보여야 한다.
+  assert.match(열기, /아래\.scrollTop = 아래\.page\.scrollTop/);
+
+  const 닫기 = 화면.match(/export function hidePage\(\)[\s\S]*?\n\}\n/)[0];
+  assert.match(닫기, /const 지금 = pageStack\.pop\(\);/, "한 장씩만 벗겨야 한다");
+  // 밑에 화면이 남아 있으면 가계부는 여전히 덮여 있다. 잠금도 커서도 넘기지 않는다.
+  assert.match(닫기, /if \(!아래\) elements\.appShell\.inert = false;/);
+  assert.match(닫기, /finishClose\(\{ unlock: !아래 \}\)/);
+  assert.match(닫기, /아래\.page\.scrollTop = 아래\.scrollTop;/);
+
+  // 로그아웃처럼 통째로 갈아엎을 때는 쌓인 것도 비운다.
+  assert.match(화면, /pageStack\.length = 0;/);
+});
