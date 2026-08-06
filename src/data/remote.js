@@ -314,6 +314,24 @@ export async function achieveWish(id, expenseId) {
   return toWish(row);
 }
 
+/** 담아 둔 것을 고친다. 링크가 바뀌면 서버가 그림 주소를 비워 다시 찾게 한다. */
+export async function updateWish(id, { name, url, estimatedPrice, note }) {
+  const row = unwrap(
+    "위시 수정",
+    await supabase
+      .rpc("update_wish", {
+        p_wish_id: id,
+        p_name: name,
+        p_url: url || null,
+        p_estimated_price: estimatedPrice ?? null,
+        p_note: note || null,
+      })
+      .select(WISH_RESULT_COLUMNS)
+      .single(),
+  );
+  return toWish(row);
+}
+
 export async function deleteWish(id) {
   unwrap("위시 삭제", await supabase.rpc("delete_wish", { p_wish_id: id }));
 }

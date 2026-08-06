@@ -6,6 +6,7 @@ import { css, fn, html, source as app } from "./helpers/source.mjs";
 
 const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migration-wish.sql", import.meta.url), "utf8");
+const editMigration = await readFile(new URL("../supabase/migration-wish-edit.sql", import.meta.url), "utf8");
 
 /**
  * 위시리스트 화면이 지켜야 하는 것들.
@@ -158,27 +159,30 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
    */
   assert.match(app, /const href = input\.url \? safeHref\(input\.url\) : null;/);
   assert.match(app, /\n\s+url: href,/, "거르지 않은 값이 서버로 간다");
-  assert.match(app, /그림얹기\(created\.id, href\)/, "그림도 같은 값으로 찾아야 한다");
+  assert.match(app, /그림얹기\(saved\.id, href\)/, "그림도 같은 값으로 찾아야 한다");
+  // 고칠 때 링크가 그대로면 서버가 그림도 그대로 둔다. 비어 있을 때만 다시 찾는다.
+  assert.match(app, /if \(href && !saved\.imageUrl\)/);
 });
 
-test("담아 둔 것은 두 칸 격자이고, 이 목록만 스와이프를 쓰지 않는다", () => {
+test("담아 둔 것은 한 줄에 하나씩이고, 이 목록은 스와이프를 쓰지 않는다", () => {
   /*
-   * 두 칸이 나란히 서면 가로로 밀 자리가 없다. 밀면 옆 칸까지 함께 끌려 무엇을
-   * 지우는지 흐려진다. 그래서 지우기는 그림 위 × 다.
+   * 두 칸으로 놓아 봤더니 그림이 165 밖에 안 됐다. 위시리스트는 훑는 곳이 아니라
+   * 들여다보는 곳이라 폭을 다 준다 — 393 에서 그림이 343×257 이 된다.
    */
-  assert.doesNotMatch(app, /wish-item swipe-row/, "격자 칸에는 밀 자리가 없다");
+  const 목록 = css.match(/\.wish-list \{[\s\S]*?\n\}/)[0];
+  assert.doesNotMatch(목록, /grid-template-columns/, "한 줄에 하나씩이면 열을 나눌 것이 없다");
+
+  // 지우기는 밀어서가 아니라 ⋯ 메뉴로 간다. 격자든 한 열이든 이 목록은 밀지 않는다.
+  assert.doesNotMatch(app, /wish-item swipe-row/);
   assert.doesNotMatch(app, /elements\.wishList\.addEventListener\("pointerdown"/);
-  assert.match(app, /class="wish-drop" type="button" data-remove-wish=/);
-
-  const 격자 = css.match(/\.wish-list \{[\s\S]*?\n\}/)[0];
-  assert.match(격자, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(app, /class="wish-more" type="button" data-wish-menu=/);
+  assert.doesNotMatch(app, /class="wish-drop"/, "늘 떠 있던 x 표가 남아 있다");
 
   /*
-   * 같은 줄의 두 칸은 격자가 높이를 맞춰 주는데, 그냥 두면 글이 짧은 칸의 "나도" 가
-   * 카드 한가운데 떠서 두 단추가 어긋난다 — 실제로 44px 차이가 났다.
-   * 가운데(글)만 늘어나고 단추는 바닥에 붙는다.
+   * 이름이 길어도 ⋯ 는 제자리에 있어야 한다. 밀려나면 손이 닿는 자리도 화면 밖으로 나간다.
    */
-  assert.match(css, /\.wish-item \{[\s\S]*?grid-template-rows: auto 1fr auto/);
+  assert.match(css, /\.wish-head \{[\s\S]*?justify-content: space-between/);
+  assert.match(css, /\.wish-more \{[\s\S]*?flex: 0 0 auto/);
 });
 
 test("화면은 store 만 부른다 — 서버 질의를 새로 짜지 않았다", async () => {
@@ -266,8 +270,8 @@ test("상대가 바꾼 위시도 열어 둔 화면에 그대로 온다", () => {
 test("그림 자리는 너비에 비례하고, 색은 담은 사람에게서 온다", () => {
   assert.match(app, /class="wish-shot is-\$\{모양\}" style="--wish-tile: \$\{escapeHtml\(getMemberColor\(wish\.createdBy\)\)\}/);
   assert.match(app, /aria-hidden="true"/, "그림 자리 글자는 읽어 주지 않는다 — 바로 옆에 이름이 있다");
-  // 담아 둔 것은 정사각, 향하는 것은 가로로 넓은 띠.
-  assert.match(app, /shotMarkup\(wish, "square"\)/);
+  // 담아 둔 것은 4:3, 향하는 것은 더 납작한 16:9. 비율이 갈려야 서로 다른 것으로 읽힌다.
+  assert.match(app, /shotMarkup\(wish, "photo"\)/);
   assert.match(app, /shotMarkup\(wish, "wide"\)/);
 
   const 자리 = css.match(/\.wish-shot \{[\s\S]*?\n\}/)[0];
@@ -276,7 +280,7 @@ test("그림 자리는 너비에 비례하고, 색은 담은 사람에게서 온
    * 한쪽에서 그림이 납작해진다.
    */
   assert.doesNotMatch(자리, /height:/, "높이를 박으면 폭에 따라 그림이 찌그러진다");
-  assert.match(css, /\.wish-shot\.is-square \{[\s\S]*?aspect-ratio: 1/);
+  assert.match(css, /\.wish-shot\.is-photo \{[\s\S]*?aspect-ratio: 4 \/ 3/);
   assert.match(css, /\.wish-shot\.is-wide \{[\s\S]*?aspect-ratio: 16 \/ 9/);
 
   // 사람 색이 없거나 이상해도 자리가 투명해지지 않아야 한다.
@@ -393,8 +397,8 @@ test("지우기는 한 번 묻는다", () => {
   assert.match(html, /<p class="eyebrow" id="wish-drop-name"><\/p>/);
   assert.match(fn("askDropWish"), /elements\.wishDropName\.textContent = wish\.name/);
 
-  // × 는 묻기만 한다. 실제로 지우는 것은 시트의 단추다.
-  assert.match(app, /askDropWish\(remove\.dataset\.removeWish\)/);
+  // ⋯ 메뉴의 지우기가 묻기만 한다. 실제로 지우는 것은 그다음 시트의 단추다.
+  assert.match(app, /what === "edit" \? openWishEditSheet\(id\) : askDropWish\(id\)/);
   assert.match(app, /elements\.wishDropSubmit\.addEventListener\("click", dropWish\)/);
   assert.doesNotMatch(fn("askDropWish"), /removeWish/, "묻기가 곧바로 지운다");
   assert.match(fn("dropWish"), /if \(!droppingWishId\) return;/, "무엇을 지울지 없이 지운다");
@@ -404,4 +408,47 @@ test("지우기는 한 번 묻는다", () => {
   assert.match(app, /!elements\.wishDropSheet\.hidden\) closeDropSheet\(\)/);
   // 닫으면 무엇을 지우려 했는지도 비운다. 남으면 다음에 엉뚱한 것이 지워진다.
   assert.match(fn("closeDropSheet"), /droppingWishId = null/);
+});
+
+test("⋯ 메뉴에서 고치기와 지우기로 갈린다", () => {
+  assert.match(html, /<dialog class="sheet" id="wish-menu-sheet"/);
+  // 무엇에 대한 메뉴인지 이름으로 못 박는다.
+  assert.match(fn("openWishMenu"), /elements\.wishMenuName\.textContent = wish\.name/);
+
+  // 메뉴를 닫고 나서 다음 시트를 올린다. 겹치면 뒤엣것이 먼저 잡힌다.
+  const 고르기 = fn("pickWishMenu");
+  assert.match(고르기, /closeWishMenu\(\);/);
+  assert.match(고르기, /setTimeout\([\s\S]*?MENU_HANDOFF_MS\)/);
+  assert.match(app, /const MENU_HANDOFF_MS = 220;/);
+
+  // 다른 시트와 같은 처리를 받아야 끌어 닫기·Esc·초점 가두기가 함께 붙는다.
+  assert.match(app, /SHEETS = \[[\s\S]*?elements\.wishMenuSheet/);
+  assert.match(app, /!elements\.wishMenuSheet\.hidden\) closeWishMenu\(\)/);
+});
+
+test("고치기는 담기 시트를 다시 쓰고, 말과 값만 갈아 끼운다", () => {
+  const 열기 = fn("openWishEditSheet");
+  // 시트를 하나 더 만들지 않는다. 적는 칸이 똑같다.
+  assert.match(열기, /openWishSheet\(\);/);
+  assert.match(열기, /elements\.wishSheetTitle\.textContent = "무엇을 고칠까요\?"/);
+  assert.match(열기, /elements\.wishSubmitLabel\.textContent = "저장"/);
+  for (const 칸 of ["wishName", "wishUrl", "wishPrice", "wishNote"]) {
+    assert.ok(열기.includes(`elements.${칸}.value`), `${칸} 에 지금 값이 안 채워진다`);
+  }
+
+  // 담기로 열면 반드시 되돌아온다. 안 그러면 다음 담기가 남의 것을 덮어쓴다.
+  const 담기열기 = fn("openWishSheet");
+  assert.match(담기열기, /editingWishId = null;/);
+  assert.match(담기열기, /elements\.wishSubmitLabel\.textContent = "담기"/);
+  assert.match(fn("closeWishSheet"), /editingWishId = null/);
+
+  // 같은 폼이 두 갈래로 나뉜다.
+  assert.match(app, /고치는중 \? await editWish\(고치는중, 값\) : await addWish\(값\)/);
+  assert.match(app, /showToast\(고치는중 \? "고쳤어요" : "위시를 담았어요"\)/);
+
+  // 이룬 것은 못 고친다 — 이미 끝난 줄이다. 링크가 바뀌면 그림도 다시 찾게 비운다.
+  for (const sql of [schema, editMigration]) {
+    assert.match(sql, /if v_state = 'achieved' then\s+raise exception '이미 이룬 위시입니다'/);
+    assert.match(sql, /image_url = case when url is not distinct from v_url then image_url else null end/);
+  }
 });

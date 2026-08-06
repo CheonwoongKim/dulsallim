@@ -545,8 +545,32 @@
 
         <p class="wish-hint">담으면 내 찬성부터 하나 놓입니다. 상대가 “나도”를 누르면 함께 향하는 것이 돼요.</p>
 
-        <button class="submit-button" type="submit" id="wish-submit"><span>담기</span></button>
+        <button class="submit-button" type="submit" id="wish-submit"><span id="wish-submit-label">담기</span></button>
       </form>
+    </dialog>
+
+    <dialog class="sheet" id="wish-menu-sheet" aria-labelledby="wish-menu-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow" id="wish-menu-name"></p>
+          <h2 id="wish-menu-title">무엇을 할까요?</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-wish-menu-sheet" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="sheet-scroll">
+        <button class="menu-row" type="button" id="wish-menu-edit">
+          <span><strong>고치기</strong><small>이름·링크·값·한마디를 바꿉니다</small></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <button class="menu-row danger-row" type="button" id="wish-menu-drop">
+          <span><strong>지우기</strong><small>되돌릴 수 없어요</small></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
     </dialog>
 
     <dialog class="sheet" id="wish-drop-sheet" aria-labelledby="wish-drop-title" hidden>

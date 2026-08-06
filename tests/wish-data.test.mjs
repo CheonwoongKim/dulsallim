@@ -123,7 +123,8 @@ test("위시 열 목록과 읽기 조합은 remote.js 한 곳에서 관리한다
   assert.match(remote, /export const WISH_COLUMNS\s*=\s*\n?\s*"[^"]*estimated_price[^"]*achieved_at"/);
   assert.match(remote, /export const WISH_AGREEMENT_COLUMNS = "wish_id, user_id, agreed_at"/);
   assert.match(remote, /const WISH_RESULT_COLUMNS = `\$\{WISH_COLUMNS\}, agreement_user_ids`/);
-  assert.equal((remote.match(/\.select\(WISH_RESULT_COLUMNS\)/g) || []).length, 3);
+  // 담기·합의·이룸·고치기 넷이 같은 열 목록을 쓴다.
+  assert.equal((remote.match(/\.select\(WISH_RESULT_COLUMNS\)/g) || []).length, 4);
   const fetch = exportedFunction(remote, "fetchWishes");
   assert.match(fetch, /select\(WISH_COLUMNS\)/);
   assert.match(fetch, /select\(WISH_AGREEMENT_COLUMNS\)/);

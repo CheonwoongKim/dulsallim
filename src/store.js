@@ -227,6 +227,12 @@ export async function attachWishImage(id, href) {
   return image;
 }
 
+export async function editWish(id, input) {
+  const updated = await remote.updateWish(id, input);
+  wishes = wishes.map((wish) => (wish.id === id ? updated : wish));
+  return updated;
+}
+
 export async function removeWish(id) {
   await remote.deleteWish(id);
   wishes = wishes.filter((wish) => wish.id !== id);

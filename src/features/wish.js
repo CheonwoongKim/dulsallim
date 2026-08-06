@@ -6,6 +6,7 @@ import {
   addWish,
   agreeWish,
   attachWishImage,
+  editWish,
   getExpenses,
   getWishes,
   removeWish,
@@ -33,6 +34,9 @@ import { getProfile } from "./auth.js";
 /** 이룬 것으로 이을 지출을 고를 때, 목록에 올릴 최대 줄 수. 그보다 옛것은 시트에서 찾을 일이 없다. */
 const CHOICE_LIMIT = 40;
 
+/** 메뉴를 닫고 다음 시트를 올리기까지 기다리는 시간. 시트 닫히는 연출과 맞춘다. */
+const MENU_HANDOFF_MS = 220;
+
 /** 한마디에 적을 수 있는 길이. DB 의 check 와 시트 칸의 maxlength 가 같은 값을 쓴다. */
 const NOTE_LIMIT = 100;
 
@@ -47,6 +51,12 @@ let achievingWishId = null;
 
 /** 지우기를 묻는 시트가 어느 위시를 위해 열렸나. 닫으면 비운다. */
 let droppingWishId = null;
+
+/** ⋯ 메뉴가 어느 위시를 위해 열렸나. 닫으면 비운다. */
+let menuWishId = null;
+
+/** 담기 시트가 고치는 중이면 그 위시. 새로 담는 중이면 null. */
+let editingWishId = null;
 
 const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt));
 
@@ -131,7 +141,30 @@ async function 빠진그림채우기() {
 
 /* ── 담기 ─────────────────────────────────────────────────── */
 
+/**
+ * 담기 시트를 고치기에도 쓴다.
+ *
+ * 적는 칸이 똑같아서 시트를 하나 더 만들 이유가 없다. 말만 바꾸고 값을 채워 둔다.
+ * 무엇을 고치는 중인지는 editingWishId 하나로 안다 — 닫을 때 반드시 비운다.
+ */
+export function openWishEditSheet(id) {
+  const wish = getWishes().find((current) => current.id === id);
+  if (!wish) return;
+
+  openWishSheet();
+  editingWishId = id;
+  elements.wishSheetTitle.textContent = "무엇을 고칠까요?";
+  elements.wishSubmitLabel.textContent = "저장";
+  elements.wishName.value = wish.name;
+  elements.wishUrl.value = wish.url ?? "";
+  elements.wishPrice.value = wish.estimatedPrice ? formatAmountInput(String(wish.estimatedPrice)) : "";
+  elements.wishNote.value = wish.note ?? "";
+}
+
 export function openWishSheet() {
+  editingWishId = null;
+  elements.wishSheetTitle.textContent = "무엇을 담을까요?";
+  elements.wishSubmitLabel.textContent = "담기";
   elements.wishForm.reset();
   elements.wishNameError.textContent = "";
   elements.wishUrlError.textContent = "";
@@ -143,7 +176,9 @@ export function openWishSheet() {
 }
 
 export function closeWishSheet() {
-  hideSheet(elements.wishSheet);
+  hideSheet(elements.wishSheet, () => {
+    editingWishId = null;
+  });
 }
 
 /** 금액 칸은 지출 폼과 같은 규칙을 쓴다. 콤마도 상한도 한 곳(money.js)에서 온다. */
@@ -204,15 +239,18 @@ export async function handleWishSubmit(event) {
   // 주소는 통과한 것만, 그것도 정규화된 형태로 보낸다.
   const href = input.url ? safeHref(input.url) : null;
 
+  const 고치는중 = editingWishId;
+  const 값 = {
+    name: input.name,
+    url: href,
+    estimatedPrice: input.price || null,
+    note: input.note || null,
+  };
+
   elements.wishSubmit.disabled = true;
-  let created;
+  let saved;
   try {
-    created = await addWish({
-      name: input.name,
-      url: href,
-      estimatedPrice: input.price || null,
-      note: input.note || null,
-    });
+    saved = 고치는중 ? await editWish(고치는중, 값) : await addWish(값);
   } catch (error) {
     showToast(error.message);
     return;
@@ -222,10 +260,40 @@ export async function handleWishSubmit(event) {
 
   closeWishSheet();
   paintWishPage();
-  showToast("위시를 담았어요");
+  showToast(고치는중 ? "고쳤어요" : "위시를 담았어요");
 
-  // 그림은 남의 사이트를 읽어 와야 해서 몇 초가 걸린다. 담기를 붙잡아 두지 않고 뒤따라 붙인다.
-  if (href) void 그림얹기(created.id, href);
+  /*
+   * 그림은 남의 사이트를 읽어 와야 해서 몇 초가 걸린다. 담기를 붙잡아 두지 않고 뒤따라 붙인다.
+   * 고칠 때는 링크가 그대로면 서버가 그림도 그대로 두므로, 비어 있을 때만 찾는다.
+   */
+  if (href && !saved.imageUrl) void 그림얹기(saved.id, href);
+}
+
+/* ── ⋯ 메뉴 ───────────────────────────────────────────────── */
+
+export function openWishMenu(id) {
+  const wish = getWishes().find((current) => current.id === id);
+  if (!wish) return;
+
+  menuWishId = id;
+  elements.wishMenuName.textContent = wish.name;
+  showSheet(elements.wishMenuSheet);
+}
+
+export function closeWishMenu() {
+  hideSheet(elements.wishMenuSheet, () => {
+    menuWishId = null;
+  });
+}
+
+/** 메뉴에서 고르면 그 시트를 닫고 다음 것을 연다. 두 장이 겹쳐 뜨지 않게 한다. */
+export function pickWishMenu(what) {
+  const id = menuWishId;
+  if (!id) return;
+
+  closeWishMenu();
+  // 닫히는 연출이 끝난 뒤에 다음 시트를 올린다. 겹치면 뒤엣것이 먼저 잡힌다.
+  setTimeout(() => (what === "edit" ? openWishEditSheet(id) : askDropWish(id)), MENU_HANDOFF_MS);
 }
 
 /**

@@ -112,8 +112,10 @@ export function createPursuingCard(wish) {
 /**
  * 담아 둔 것 한 칸. 두 칸 격자에 놓인다.
  *
- * 밀어서 지우던 것을 그림 위 × 로 바꿨다 — 격자에서는 가로로 밀 자리가 없고,
- * 옆 칸을 함께 끌고 가 무엇을 지우는지도 흐려진다.
+ * 한 줄에 하나씩. 그림이 먼저 보이고 글이 그 아래 붙는다.
+ *
+ * 지우기는 그림 위에 늘 떠 있던 × 에서 이름 옆 ⋯ 로 옮겼다. 지우기가 이 화면에서
+ * 가장 눈에 띄는 것이 될 이유가 없다 — 여기는 갖고 싶은 것을 보는 곳이다.
  *
  * @param {{canAgree: boolean, waiting: string}} view 내가 누를 수 있는지와, 못 누를 때 대신 할 말
  */
@@ -121,12 +123,14 @@ export function createWishRow(wish, { canAgree, waiting }) {
   const card = document.createElement("article");
   card.className = "wish-item";
   card.innerHTML = `
-    ${shotMarkup(wish, "square")}
-    <button class="wish-drop" type="button" data-remove-wish="${escapeHtml(wish.id)}" aria-label="${escapeHtml(wish.name)} 지우기">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
-    </button>
+    ${shotMarkup(wish, "photo")}
     <div class="wish-copy">
-      <strong>${escapeHtml(wish.name)}</strong>
+      <div class="wish-head">
+        <strong>${escapeHtml(wish.name)}</strong>
+        <button class="wish-more" type="button" data-wish-menu="${escapeHtml(wish.id)}" aria-label="${escapeHtml(wish.name)} 더 보기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        </button>
+      </div>
       <span class="wish-meta">${escapeHtml(metaLine(wish))}</span>
       ${noteMarkup(wish)}
       ${linkMarkup(wish)}

@@ -40,17 +40,19 @@ import {
 } from "../features/trend.js";
 import {
   agreeOnWish,
-  askDropWish,
   closeAchieveSheet,
   closeDropSheet,
+  closeWishMenu,
   closeWishSheet,
   dropWish,
   handleWishPriceInput,
   handleWishSubmit,
   openAchieveSheet,
+  openWishMenu,
   openWishPage,
   openWishSheet,
   pickAchievedExpense,
+  pickWishMenu,
 } from "../features/wish.js";
 import { render } from "../render.js";
 import { hidePage } from "../ui/page.js";
@@ -174,14 +176,18 @@ elements.wishPursuing.addEventListener("click", (event) => {
  * 지우는지 흐려진다. 그래서 이 목록만 스와이프를 쓰지 않는다.
  */
 elements.wishList.addEventListener("click", (event) => {
-  const remove = event.target.closest("[data-remove-wish]");
-  if (remove) {
-    askDropWish(remove.dataset.removeWish);
+  const menu = event.target.closest("[data-wish-menu]");
+  if (menu) {
+    openWishMenu(menu.dataset.wishMenu);
     return;
   }
   const agree = event.target.closest("[data-agree-wish]");
   if (agree) agreeOnWish(agree.dataset.agreeWish);
 });
+
+closeOnPress(elements.closeWishMenuSheet, closeWishMenu);
+elements.wishMenuEdit.addEventListener("click", () => pickWishMenu("edit"));
+elements.wishMenuDrop.addEventListener("click", () => pickWishMenu("drop"));
 
 // 지우기는 한 번 묻는다. 시트의 지우기 단추가 실제로 지운다.
 closeOnPress(elements.closeWishDropSheet, closeDropSheet);

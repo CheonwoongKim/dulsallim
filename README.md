@@ -66,6 +66,7 @@
 | 10 | `supabase/migration-wish.sql` | 위시·합의·향하는 것·이룸 기록 |
 | 11 | `supabase/migration-wish-image.sql` | 위시 줄에 링크 대표 그림 (10번을 이미 돌렸다면 이것만) |
 | 12 | `supabase/migration-wish-note.sql` | 위시에 "왜 갖고 싶은지" 한 줄 |
+| 13 | `supabase/migration-wish-edit.sql` | 담아 둔 위시 고치기 |
 
 ### 알림을 쓰려면
 
