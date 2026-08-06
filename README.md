@@ -63,6 +63,7 @@
 | 7 | `supabase/migration-avatar-custom-color.sql` | 아바타 색상 직접 선택 |
 | 8 | `supabase/migration-push.sql` | 알림 받을 곳 저장 |
 | 9 | `supabase/migration-push-triggers.sql` | 알림 보내는 시점 (아래 준비가 먼저 필요) |
+| 10 | `supabase/migration-wish.sql` | 위시·합의·향하는 것·이룸 기록 |
 
 ### 알림을 쓰려면
 

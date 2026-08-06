@@ -8,6 +8,7 @@ import {
   toAppliedKey,
   toExpense,
   toTemplate,
+  toWish,
 } from "../src/data/rows.js";
 
 const 천 = "11111111-1111-1111-1111-111111111111";
@@ -84,4 +85,28 @@ test("반영 기록은 며칠에 넣었든 그 달 1일로 모인다", () => {
 
 test("toAppliedKey는 화면이 쓰는 한 줄짜리 키를 만든다", () => {
   assert.equal(toAppliedKey({ fixed_cost_id: "f1", month: "2026-08-01" }), "f1:2026-08");
+});
+
+test("toWish는 위시 행과 합의자 목록을 화면 이름으로 옮긴다", () => {
+  const wish = toWish({
+    id: "w1",
+    household_id: 집,
+    name: "큰 식탁",
+    url: null,
+    estimated_price: 800000,
+    created_by: 천,
+    created_at: "2026-08-06T09:30:00+00:00",
+    state: "pursuing",
+    pursuing_at: "2026-08-06T10:00:00+00:00",
+    expense_id: null,
+    achieved_on: null,
+    achieved_at: null,
+    agreement_user_ids: [천],
+  });
+
+  assert.equal(wish.householdId, 집);
+  assert.equal(wish.estimatedPrice, 800000);
+  assert.equal(wish.createdBy, 천);
+  assert.equal(wish.pursuingAt, "2026-08-06T10:00:00+00:00");
+  assert.deepEqual(wish.agreementUserIds, [천]);
 });

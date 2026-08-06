@@ -8,6 +8,7 @@ import {
   toExpense,
   toNote,
   toTemplate,
+  toWish,
 } from "./rows.js";
 
 /**
@@ -36,6 +37,12 @@ function unwrap(action, { data, error }) {
  * 그 값이 비어 화면이 조용히 어긋난다(avatar_color 를 더할 때 실제로 셋을 고쳐야 했다).
  */
 export const MY_PROFILE_COLUMNS = "id, display_name, avatar_color, monthly_goal, nag_enabled, household_id";
+
+/** 위시 읽기와 RPC 응답이 같은 모양을 쓰도록 열 목록을 한 곳에 둔다. */
+export const WISH_COLUMNS =
+  "id, household_id, name, url, estimated_price, created_by, created_at, state, pursuing_at, expense_id, achieved_on, achieved_at";
+export const WISH_AGREEMENT_COLUMNS = "wish_id, user_id, agreed_at";
+const WISH_RESULT_COLUMNS = `${WISH_COLUMNS}, agreement_user_ids`;
 
 /* ── 읽기 ─────────────────────────────────────────────────── */
 
@@ -124,16 +131,40 @@ export async function fetchFixedCosts(householdId) {
   return rows.map(toTemplate);
 }
 
+/** 위시와 합의는 정규화해 저장하고, 읽을 때 화면용 객체 하나로 합친다. */
+export async function fetchWishes(householdId) {
+  const [rows, agreements] = await Promise.all([
+    unwrap(
+      "위시 불러오기",
+      await supabase
+        .from("wish_items")
+        .select(WISH_COLUMNS)
+        .eq("household_id", householdId)
+        .order("created_at", { ascending: false }),
+    ),
+    unwrap(
+      "위시 합의 불러오기",
+      await supabase.from("wish_agreements").select(WISH_AGREEMENT_COLUMNS).order("agreed_at"),
+    ),
+  ]);
+  const agreedByWish = agreements.reduce((byWish, agreement) => {
+    (byWish[agreement.wish_id] ||= []).push(agreement.user_id);
+    return byWish;
+  }, {});
+  return rows.map((row) => toWish(row, agreedByWish[row.id] || []));
+}
+
 /** 시작에 필요한 것을 한꺼번에 읽는다. 순서대로 기다리면 첫 화면이 그만큼 느려진다. */
 export async function fetchAll(householdId) {
-  const [members, expenses, fixedCosts, applied, noteCounts] = await Promise.all([
+  const [members, expenses, fixedCosts, applied, noteCounts, wishes] = await Promise.all([
     fetchMembers(householdId),
     fetchExpenses(householdId),
     fetchFixedCosts(householdId),
     fetchApplied(),
     fetchNoteCounts(),
+    fetchWishes(householdId),
   ]);
-  return { members, expenses, fixedCosts, applied, noteCounts };
+  return { members, expenses, fixedCosts, applied, noteCounts, wishes };
 }
 
 /**
@@ -240,6 +271,52 @@ export async function deleteTemplate(id) {
   unwrap("고정비 삭제", await supabase.from("fixed_costs").delete().eq("id", id));
 }
 
+/* ── 위시리스트 쓰기 ──────────────────────────────────────── */
+
+/** 항목과 올린 사람의 첫 합의를 서버 트랜잭션 하나로 만든다. */
+export async function insertWish({ name, url, estimatedPrice }) {
+  const row = unwrap(
+    "위시 저장",
+    await supabase
+      .rpc("create_wish", {
+        p_name: name,
+        p_url: url || null,
+        p_estimated_price: estimatedPrice ?? null,
+      })
+      .select(WISH_RESULT_COLUMNS)
+      .single(),
+  );
+  return toWish(row);
+}
+
+/** 합의 기록과 필요하다면 pursuing 전환까지 서버가 원자적으로 처리한다. */
+export async function agreeWish(id) {
+  const row = unwrap(
+    "위시 합의",
+    await supabase
+      .rpc("agree_wish", { p_wish_id: id })
+      .select(WISH_RESULT_COLUMNS)
+      .single(),
+  );
+  return toWish(row);
+}
+
+/** 지출 날짜 복사와 achieved 전환을 한 요청 안에서 끝낸다. */
+export async function achieveWish(id, expenseId) {
+  const row = unwrap(
+    "위시 이루기",
+    await supabase
+      .rpc("achieve_wish", { p_wish_id: id, p_expense_id: expenseId })
+      .select(WISH_RESULT_COLUMNS)
+      .single(),
+  );
+  return toWish(row);
+}
+
+export async function deleteWish(id) {
+  unwrap("위시 삭제", await supabase.rpc("delete_wish", { p_wish_id: id }));
+}
+
 /* ── 고정비 반영 ──────────────────────────────────────────── */
 
 /**
@@ -338,7 +415,7 @@ export async function removePushSubscription(endpoint) {
 /* ── 실시간 ───────────────────────────────────────────────── */
 
 /**
- * 상대가 폰에서 기록하면 내 화면도 따라 바뀌게 한다. 지출과 고정비를 한 채널에서 함께 듣는다.
+ * 상대가 폰에서 기록하면 내 화면도 따라 바뀌게 한다. 가구 공유 자료를 한 채널에서 함께 듣는다.
  * 둘이 함께 쓰는 가계부인데 새로고침해야 보인다면 "함께"가 아니다.
  *
  * 고정비가 빠져 있으면 한쪽이 데이터를 초기화해도 상대 화면에는 지운 고정비가 남는다.
@@ -356,6 +433,13 @@ export function subscribeHousehold(householdId, onChange) {
     .channel(`household-${householdId}`)
     .on("postgres_changes", { ...scope, table: "expenses" }, onChange)
     .on("postgres_changes", { ...scope, table: "fixed_costs" }, onChange)
+    .on("postgres_changes", { ...scope, table: "wish_items" }, onChange)
+    // 합의 표에는 household_id 가 없다. RLS 가 같은 집의 이벤트만 흘려보낸다.
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "wish_agreements" },
+      onChange,
+    )
     .subscribe();
 }
 

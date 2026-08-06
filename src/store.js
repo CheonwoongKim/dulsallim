@@ -12,6 +12,7 @@ import * as remote from "./data/remote.js";
 let expenses = [];
 let fixedTemplates = [];
 let fixedApplied = [];
+let wishes = [];
 /** 지출 id별 대화 개수. 목록에 표시만 하므로 본문은 들고 있지 않는다. */
 let noteCounts = {};
 /**
@@ -44,6 +45,7 @@ export async function loadAll(profile) {
   expenses = data.expenses;
   fixedTemplates = data.fixedCosts;
   fixedApplied = data.applied;
+  wishes = data.wishes;
   noteCounts = data.noteCounts;
   countedNoteIds = new Set();
 }
@@ -62,6 +64,7 @@ function 비우기() {
   expenses = [];
   fixedTemplates = [];
   fixedApplied = [];
+  wishes = [];
   noteCounts = {};
   countedNoteIds = new Set();
 }
@@ -83,10 +86,11 @@ export async function resetHousehold() {
 export async function reloadHousehold() {
   const session = context;
   if (!session) return;
-  const [nextExpenses, nextApplied, nextTemplates] = await Promise.all([
+  const [nextExpenses, nextApplied, nextTemplates, nextWishes] = await Promise.all([
     remote.fetchExpenses(session.householdId),
     remote.fetchApplied(),
     remote.fetchFixedCosts(session.householdId),
+    remote.fetchWishes(session.householdId),
   ]);
   /*
    * 다녀오는 사이에 로그아웃했거나 다른 사람이 로그인했을 수 있다.
@@ -97,6 +101,7 @@ export async function reloadHousehold() {
   expenses = nextExpenses;
   fixedApplied = nextApplied;
   fixedTemplates = nextTemplates;
+  wishes = nextWishes;
 }
 
 /** 로그아웃. 다음 사람이 앞사람 기록을 보지 않도록 사본을 비운다. */
@@ -173,6 +178,36 @@ export async function updateFixedCost(id, input) {
 export async function deleteFixedCost(id) {
   await remote.deleteTemplate(id);
   fixedTemplates = fixedTemplates.filter((template) => template.id !== id);
+}
+
+/* ── 위시리스트 ───────────────────────────────────────────── */
+
+/** 화면은 서버를 기다리지 않고 이 메모리 사본을 즉시 읽는다. */
+export function getWishes() {
+  return wishes;
+}
+
+export async function addWish(input) {
+  const created = await remote.insertWish(input);
+  wishes = [created, ...wishes];
+  return created;
+}
+
+export async function agreeWish(id) {
+  const updated = await remote.agreeWish(id);
+  wishes = wishes.map((wish) => (wish.id === id ? updated : wish));
+  return updated;
+}
+
+export async function achieveWish(id, expenseId) {
+  const updated = await remote.achieveWish(id, expenseId);
+  wishes = wishes.map((wish) => (wish.id === id ? updated : wish));
+  return updated;
+}
+
+export async function removeWish(id) {
+  await remote.deleteWish(id);
+  wishes = wishes.filter((wish) => wish.id !== id);
 }
 
 /** 한 건 넣기. 실패는 여기서 삼키고 null 로 알린다 — 나머지는 계속 시도해야 한다. */

@@ -5,17 +5,18 @@
 
 with checks as (
 
-  -- 1) 테이블 8개가 모두 있는가
+  -- 1) 테이블 10개가 모두 있는가
   select
     1 as no,
     '테이블 생성' as item,
-    count(*)::text || ' / 8' as detail,
-    case when count(*) = 8 then 'OK' else 'FAIL' end as status,
+    count(*)::text || ' / 10' as detail,
+    case when count(*) = 10 then 'OK' else 'FAIL' end as status,
     'schema.sql 을 다시 실행하세요' as hint
   from information_schema.tables
   where table_schema = 'public'
     and table_name in ('households','profiles','fixed_costs','expenses',
-                       'fixed_cost_applications','expense_notes','nags','nag_fires')
+                       'fixed_cost_applications','expense_notes','nags','nag_fires',
+                       'wish_items','wish_agreements')
 
   union all
 
@@ -24,28 +25,30 @@ with checks as (
     2,
     'RLS 활성화',
     count(*) filter (where rowsecurity)::text || ' / ' || count(*)::text,
-    case when count(*) = 8 and count(*) = count(*) filter (where rowsecurity)
+    case when count(*) = 10 and count(*) = count(*) filter (where rowsecurity)
          then 'OK' else 'FAIL' end,
     'RLS 가 꺼진 테이블은 anon key 로 전부 읽힙니다'
   from pg_tables
   where schemaname = 'public'
     and tablename in ('households','profiles','fixed_costs','expenses',
-                      'fixed_cost_applications','expense_notes','nags','nag_fires')
+                      'fixed_cost_applications','expense_notes','nags','nag_fires',
+                      'wish_items','wish_agreements')
 
   union all
 
-  -- 3) 정책이 8개 다 있는가
-  -- nag_fires 에는 일부러 정책을 두지 않는다(fire_nags 만 손대므로). 그래서 표는 8개, 정책도 8개다.
+  -- 3) 정책이 10개 다 있는가
+  -- nag_fires 에는 일부러 정책을 두지 않는다(fire_nags 만 손댄다).
   select
     3,
     '접근 정책',
-    count(*)::text || ' / 8',
-    case when count(*) = 8 then 'OK' else 'FAIL' end,
+    count(*)::text || ' / 10',
+    case when count(*) = 10 then 'OK' else 'FAIL' end,
     'RLS 만 켜고 정책이 없으면 본인도 아무것도 못 봅니다'
   from pg_policies
   where schemaname = 'public'
     and tablename in ('households','profiles','fixed_costs','expenses',
-                      'fixed_cost_applications','expense_notes','nags')
+                      'fixed_cost_applications','expense_notes','nags',
+                      'wish_items','wish_agreements')
 
   union all
 
@@ -94,7 +97,8 @@ with checks as (
   where grantee = 'anon'
     and table_schema = 'public'
     and table_name in ('households','profiles','fixed_costs','expenses',
-                       'fixed_cost_applications','expense_notes','nags','nag_fires')
+                       'fixed_cost_applications','expense_notes','nags','nag_fires',
+                       'wish_items','wish_agreements')
 
   union all
 
@@ -125,15 +129,16 @@ with checks as (
 
   union all
 
-  -- 10) 서버가 통째로 처리하는 함수 3개가 있는가
+  -- 10) 앱이 부르는 서버 함수 7개가 있는가
   select
     10,
     '서버 함수',
     coalesce(string_agg(proname, ', ' order by proname), '없음'),
-    case when count(*) = 3 then 'OK' else 'FAIL' end,
-    'migration-hardening.sql (또는 schema.sql) 을 실행하세요'
+    case when count(*) = 7 then 'OK' else 'FAIL' end,
+    'migration-hardening.sql 과 migration-wish.sql 을 실행하세요'
   from pg_proc
-  where proname in ('fire_nags', 'reset_household', 'apply_fixed_cost')
+  where proname in ('fire_nags', 'reset_household', 'apply_fixed_cost',
+                    'create_wish', 'agree_wish', 'achieve_wish', 'delete_wish')
 
   union all
 
@@ -171,10 +176,12 @@ with checks as (
   select
     13,
     '함수 실행 차단',
-    count(*)::text || ' / 3 잠김',
-    case when count(*) = 3 then 'OK' else 'FAIL' end,
-    'migration-hardening.sql 의 revoke execute 를 실행하세요'
-  from (values ('reset_household()'), ('apply_fixed_cost(uuid, date, date)'), ('fire_nags(uuid)')) as f(sig)
+    count(*)::text || ' / 7 잠김',
+    case when count(*) = 7 then 'OK' else 'FAIL' end,
+    'migration-hardening.sql 과 migration-wish.sql 의 revoke execute 를 실행하세요'
+  from (values ('reset_household()'), ('apply_fixed_cost(uuid, date, date)'), ('fire_nags(uuid)'),
+               ('create_wish(text, text, integer)'), ('agree_wish(uuid)'),
+               ('achieve_wish(uuid, uuid)'), ('delete_wish(uuid)')) as f(sig)
   where not has_function_privilege('anon', f.sig, 'execute')
 
   union all
@@ -198,13 +205,13 @@ with checks as (
   select
     15,
     '실시간 대상',
-    count(*)::text || ' / 3 등록',
-    case when count(*) = 3 then 'OK' else 'FAIL' end,
-    'migration-fixed-sync.sql 을 실행하세요'
+    count(*)::text || ' / 5 등록',
+    case when count(*) = 5 then 'OK' else 'FAIL' end,
+    'migration-fixed-sync.sql 과 migration-wish.sql 을 실행하세요'
   from pg_publication_tables
   where pubname = 'supabase_realtime'
     and schemaname = 'public'
-    and tablename in ('expenses', 'expense_notes', 'fixed_costs')
+    and tablename in ('expenses', 'expense_notes', 'fixed_costs', 'wish_items', 'wish_agreements')
 
   union all
 
@@ -219,6 +226,37 @@ with checks as (
   where conrelid = 'profiles'::regclass
     and conname = 'profiles_avatar_color_check'
     and pg_get_constraintdef(oid) like '%[0-9a-f]{6}%'
+
+  union all
+
+  -- 17) 집마다 향하는 위시가 하나뿐인가
+  select
+    17,
+    '향하는 위시 하나',
+    case when count(*) = 1 then '부분 유니크 인덱스 있음' else '제약 없음' end,
+    case when count(*) = 1 then 'OK' else 'FAIL' end,
+    'migration-wish.sql 을 실행하세요'
+  from pg_indexes
+  where schemaname = 'public'
+    and tablename = 'wish_items'
+    and indexname = 'wish_items_one_pursuing_per_household_idx'
+    and indexdef like '%UNIQUE%'
+    and indexdef like '%state%pursuing%'
+
+  union all
+
+  -- 18) 위시 표를 직접 바꿀 권한이 열려 있지 않은가
+  select
+    18,
+    '위시 상태 전환 보호',
+    count(*)::text || ' 건 남음',
+    case when count(*) = 0 then 'OK' else 'FAIL' end,
+    'migration-wish.sql 의 revoke/grant 구문을 다시 실행하세요'
+  from information_schema.role_table_grants
+  where grantee in ('authenticated', 'anon')
+    and table_schema = 'public'
+    and table_name in ('wish_items', 'wish_agreements')
+    and privilege_type in ('INSERT', 'UPDATE', 'DELETE')
 )
 
 select status, item, detail, hint

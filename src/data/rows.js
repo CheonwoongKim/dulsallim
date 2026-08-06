@@ -83,6 +83,25 @@ export function toNote(row) {
   };
 }
 
+/** 위시 행과 별도 표에 있는 합의자 목록을 화면이 읽기 쉬운 한 객체로 모은다. */
+export function toWish(row, agreementUserIds = row.agreement_user_ids || []) {
+  return {
+    id: row.id,
+    householdId: row.household_id,
+    name: row.name,
+    url: row.url,
+    estimatedPrice: row.estimated_price,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    state: row.state,
+    pursuingAt: row.pursuing_at,
+    expenseId: row.expense_id,
+    achievedOn: row.achieved_on,
+    achievedAt: row.achieved_at,
+    agreementUserIds: [...agreementUserIds],
+  };
+}
+
 export function fromOccurrence(occurrence) {
   return {
     fixed_cost_id: occurrence.template.id,
