@@ -17,6 +17,7 @@ export const SHEETS = [
   elements.resetSheet,
   elements.wishSheet,
   elements.wishDetailSheet,
+  elements.wishMenuSheet,
   elements.wishDropSheet,
   elements.wishAchieveSheet,
 ];

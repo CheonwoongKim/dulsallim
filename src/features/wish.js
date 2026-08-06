@@ -347,14 +347,48 @@ export function closeWishDetail() {
 }
 
 /** 자세히에서 고치기를 고르면 그 시트를 닫고 담기 시트를 올린다. 두 장이 겹쳐 뜨지 않게 한다. */
-export function editFromDetail(id) {
-  closeWishDetail();
-  setTimeout(() => openWishEditSheet(id), MENU_HANDOFF_MS);
+/* ── 칸의 ⋯ 메뉴 ──────────────────────────────────────────── */
+
+/** ⋯ 메뉴가 어느 위시를 위해 열렸나. 닫으면 비운다. */
+let menuWishId = null;
+
+/**
+ * 칸 오른쪽 위 ⋯ 가 여는 메뉴.
+ *
+ * 고치기·지우기를 자세히 시트에서 여기로 옮겼다. 자세히는 무엇을 담았는지 보고 이룸을
+ * 누르는 자리고, 손보는 일은 목록에서 바로 하는 편이 걸음이 짧다.
+ *
+ * 이룬 것에는 ⋯ 를 안 붙이므로 여기도 안 이룬 것만 받는다.
+ */
+export function openWishMenu(id) {
+  const wish = getWishes().find((current) => current.id === id && current.state !== "achieved");
+  if (!wish) return;
+
+  menuWishId = id;
+  elements.wishMenuName.textContent = wish.name;
+  showSheet(elements.wishMenuSheet);
 }
 
-export function dropFromDetail(id) {
-  closeWishDetail();
-  setTimeout(() => askDropWish(id), MENU_HANDOFF_MS);
+export function closeWishMenu() {
+  hideSheet(elements.wishMenuSheet, () => {
+    menuWishId = null;
+  });
+}
+
+/*
+ * 메뉴를 먼저 닫고 다음 시트를 올린다. 겹쳐 뜨면 뒤엣것이 먼저 잡혀 끌어 닫기가 엉킨다.
+ * 무엇을 고르는지는 닫기 전에 붙잡아 둔다 — 닫는 사이에 menuWishId 가 비워진다.
+ */
+export function editFromMenu() {
+  const id = menuWishId;
+  closeWishMenu();
+  if (id) setTimeout(() => openWishEditSheet(id), MENU_HANDOFF_MS);
+}
+
+export function dropFromMenu() {
+  const id = menuWishId;
+  closeWishMenu();
+  if (id) setTimeout(() => askDropWish(id), MENU_HANDOFF_MS);
 }
 
 /* ── 합의 · 지우기 ────────────────────────────────────────── */

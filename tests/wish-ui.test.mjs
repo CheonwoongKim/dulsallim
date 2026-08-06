@@ -130,7 +130,8 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
    * 위시 이름은 innerHTML 을 아예 안 지난다 — 칸의 읽어 주는 이름과 시트 제목 둘 다
    * setAttribute·textContent 로 넣는다. 글자로 들어가지 않으니 태그가 될 일이 없다.
    */
-  assert.match(그리기, /tile\.setAttribute\("aria-label"/);
+  assert.match(그리기, /\.setAttribute\("aria-label", `\$\{wish\.name\} 자세히 보기`\)/);
+  assert.match(그리기, /\.setAttribute\("aria-label", `\$\{wish\.name\} 더 보기`\)/);
   assert.doesNotMatch(그리기, /\$\{escapeHtml\(wish\.name\)\}/);
   assert.match(app, /elements\.wishDetailName\.textContent = wish\.name;/);
 
@@ -172,18 +173,43 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
    * 읽히지도 않으면서 그림을 잘라먹는다.
    */
   const 칸 = fn("createWishTile");
-  assert.match(칸, /tile\.innerHTML = shotMarkup\(wish\);/, "칸에 그림 말고 다른 것이 들어 있다");
+  assert.match(칸, /\$\{shotMarkup\(wish\)\}/, "칸에 그림이 없다");
+  assert.doesNotMatch(칸, /wish-detail-price|wish-note|formatMoney/, "칸에 글이 들어 있다");
   // 그림에는 글이 없으므로 읽어 주는 이름은 여기서 낸다.
   assert.match(칸, /aria-label", `\$\{wish\.name\} 자세히 보기`/);
-  assert.match(칸, /tile\.dataset\.openWish = wish\.id/);
+  assert.match(칸, /data-open-wish="\$\{escapeHtml\(wish\.id\)\}"/);
+
+  /*
+   * 칸은 단추가 아니라 감싸는 자리다. 단추 안에 단추를 넣을 수 없어서 그림 단추와
+   * ⋯ 단추를 나란히 놓는다.
+   */
+  assert.match(칸, /createElement\("div"\)/, "칸이 아직 단추 하나다");
+  assert.match(css, /\.wish-tile \{[^}]*position: relative/);
+  assert.match(css, /\.wish-more \{[\s\S]*?position: absolute/);
+  // 이룬 것에는 ⋯ 를 안 붙인다. 끝난 줄이다.
+  assert.match(칸, /wish\.state === "achieved"\s*\?\s*""/);
 
   const 격자 = css.match(/\.wish-list \{[\s\S]*?\n\}/)[0];
   assert.match(격자, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 
-  // 세 자리가 같은 목록을 쓰고, 어디를 눌러도 자세히가 열린다.
+  // 세 자리가 같은 목록을 쓴다. ⋯ 를 먼저 봐야 겹친 두 단추가 갈린다.
   assert.match(app, /\[elements\.wishPursuing, elements\.wishList, elements\.wishAchieved\]/);
-  assert.match(app, /if \(tile\) openWishDetail\(tile\.dataset\.openWish\)/);
+  const 목록누르기 = app.match(/const more = event\.target\.closest\("\[data-menu-wish\]"\);[\s\S]*?openWishDetail\(tile\.dataset\.openWish\)/)[0];
+  assert.ok(
+    목록누르기.indexOf("data-menu-wish") < 목록누르기.indexOf("data-open-wish"),
+    "그림을 먼저 보면 ⋯ 를 눌러도 자세히가 뜬다",
+  );
   assert.doesNotMatch(app, /elements\.wishList\.addEventListener\("pointerdown"/, "이 목록은 밀지 않는다");
+
+  /*
+   * 34 는 애플이 말하는 44 에 못 미친다. 동그라미를 키우면 그림을 그만큼 더 가리므로
+   * 누를 자리만 넓힌다 — .icon-button 이 하는 것과 같은 방식이다.
+   */
+  assert.match(
+    css,
+    /\.wish-more::after \{[^}]*inset: calc\(\(var\(--tap-min\) - var\(--more-size\)\) \/ -2\)/,
+    "⋯ 가 보이는 크기만큼만 눌린다",
+  );
 });
 
 test("화면은 store 만 부른다 — 서버 질의를 새로 짜지 않았다", async () => {
@@ -407,7 +433,11 @@ test("지우기는 한 번 묻는다", () => {
   assert.match(fn("askDropWish"), /elements\.wishDropName\.textContent = wish\.name/);
 
   // ⋯ 메뉴의 지우기가 묻기만 한다. 실제로 지우는 것은 그다음 시트의 단추다.
-  assert.match(app, /if \(remove\) return dropFromDetail\(remove\.dataset\.removeWish\)/);
+  assert.match(app, /elements\.wishMenuDrop\.addEventListener\("click", dropFromMenu\)/);
+  // 메뉴를 먼저 닫고 다음 시트를 올린다. 닫는 사이에 비워지므로 무엇인지는 미리 붙잡는다.
+  assert.match(fn("dropFromMenu"), /const id = menuWishId;[\s\S]*?closeWishMenu\(\);[\s\S]*?MENU_HANDOFF_MS/);
+  assert.match(fn("editFromMenu"), /const id = menuWishId;[\s\S]*?closeWishMenu\(\);[\s\S]*?MENU_HANDOFF_MS/);
+  assert.match(fn("closeWishMenu"), /menuWishId = null/, "닫고도 무엇을 골랐는지가 남는다");
   assert.match(app, /elements\.wishDropSubmit\.addEventListener\("click", dropWish\)/);
   assert.doesNotMatch(fn("askDropWish"), /removeWish/, "묻기가 곧바로 지운다");
   assert.match(fn("dropWish"), /if \(!droppingWishId\) return;/, "무엇을 지울지 없이 지운다");
@@ -438,36 +468,27 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
   assert.match(자세히, /action === "agree"[\s\S]*?class="submit-button quiet" type="button" data-agree-wish/);
 
   /*
-   * 그림 셋은 머리 줄 아이콘 단추를 그대로 쓴다 — 크기도 손닿는 자리도 거기서 온다.
-   * 그림만 있으므로 이름은 aria-label 로 낸다. 링크는 여기서만 밖으로 나간다.
+   * 링크는 이뤘어요 왼쪽에 작은 단추로 선다. 글자를 안 적는다 — "링크 열기" 라고 쓰면
+   * 옆의 이뤘어요와 같은 무게가 되어 무엇이 이 시트의 일인지 흐려진다.
+   * 모양은 큰 단추에서 오고 색만 물러난다. 링크는 여기서만 밖으로 나간다.
    */
-  assert.match(자세히, /class="icon-button" href=[\s\S]*?rel="noopener noreferrer" aria-label="링크 열기"/);
-  for (const [무엇, 이름] of [["edit", "고치기"], ["remove", "지우기"]]) {
-    assert.match(
-      자세히,
-      new RegExp(`class="icon-button" type="button" data-${무엇}-wish=[\\s\\S]*?aria-label="${이름}"`),
-      `${이름} 가 그림 단추가 아니다`,
-    );
-  }
-  for (const 그림 of ["link", "edit", "drop"]) {
-    assert.match(fn("도구그림") || app, new RegExp(`${그림}: \`<path d="`), `${그림} 그림이 없다`);
-  }
-  assert.match(css, /\.wish-detail-tools \{[^}]*justify-content: center/);
+  assert.match(fn("링크단추"), /class="submit-button quiet wish-detail-link" href=[\s\S]*?rel="noopener noreferrer" aria-label="링크 열기"/);
+  assert.match(자세히, /<div class="wish-detail-do">\s*\$\{링크단추\(href\)\}\s*<button class="submit-button" type="button" data-achieve-wish/);
+  // 이룬 것에는 이뤘어요가 없어 링크가 홀로 줄을 다 쓴다.
+  assert.match(자세히, /이룸\s*\?\s*링크단추\(href\)/);
+  assert.match(css, /\.wish-detail-do \{[^}]*display: flex/);
+  assert.match(css, /\.wish-detail-do \.wish-detail-link \{[^}]*flex: 0 0 var\(--control-lg\)/);
+  assert.match(css, /\.wish-detail-do \[data-achieve-wish\] \{[^}]*flex: 1/);
+
+  // 고치기·지우기는 목록 칸의 ⋯ 로 갔다. 여기 남아 있으면 입구가 둘이 된다.
+  assert.doesNotMatch(자세히, /data-edit-wish|data-remove-wish/, "손보는 동작이 자세히에 남아 있다");
 
   // 어느 자리인지 시트가 스스로 말한다. 목록의 이름표는 여기에 없다.
   assert.match(fn("자리이름"), /wish\.state === "pursuing" \? "함께 바라는 것" : "담아 둔 것"/);
 
-  // 이룬 것에는 이룸·고치기·지우기를 안 붙인다. 끝난 줄이다.
+  // 이룬 것에는 이뤘어요를 안 붙인다. 끝난 줄이다.
   assert.match(자세히, /const 이룸 = wish\.state === "achieved";/);
-  assert.equal((자세히.match(/이룸\s*\?\s*""/g) || []).length, 2, "이룬 것에도 붙는 동작이 있다");
-
-  /*
-   * 고치기·지우기는 이 시트를 먼저 닫고 다음 것을 올린다. 겹쳐 뜨면 뒤엣것이 먼저 잡힌다.
-   */
-  for (const 이름 of ["editFromDetail", "dropFromDetail"]) {
-    assert.match(fn(이름), /closeWishDetail\(\);/, `${이름} 이 시트를 안 닫는다`);
-    assert.match(fn(이름), /setTimeout\([\s\S]*?MENU_HANDOFF_MS\)/);
-  }
+  assert.doesNotMatch(자세히, /이룸\s*\?\s*[^:]*data-achieve-wish/, "이룬 것에 이뤘어요가 붙는다");
 
   // 열려 있는 동안 상대가 바꾸면 따라 그린다 — 진척도 단추도 달라진다.
   assert.match(fn("paintWishPage"), /if \(!elements\.wishDetailSheet\.hidden\) paintWishDetail\(\);/);

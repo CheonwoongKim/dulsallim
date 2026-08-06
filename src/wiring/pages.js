@@ -54,11 +54,13 @@ import {
   handleWishSubmit,
   openAchieveSheet,
   openWishDetail,
+  openWishMenu,
+  closeWishMenu,
+  editFromMenu,
+  dropFromMenu,
   openWishPage,
   openWishSheet,
   pickAchievedExpense,
-  dropFromDetail,
-  editFromDetail,
   setWishTab,
 } from "../features/wish.js";
 import { render } from "../render.js";
@@ -192,9 +194,15 @@ elements.wishTabs.addEventListener("click", (event) => {
   if (tab) setWishTab(tab.dataset.wishTab);
 });
 
-/* 목록은 그림만 있다. 무엇을 할지는 눌러서 뜨는 자세히에서 고른다. */
+/*
+ * 목록은 그림과 오른쪽 위 ⋯ 뿐이다. 그림을 누르면 자세히, ⋯ 를 누르면 손보는 메뉴.
+ *
+ * ⋯ 를 먼저 본다. 두 단추가 겹쳐 있어 순서를 바꾸면 ⋯ 를 눌러도 자세히가 뜬다.
+ */
 [elements.wishPursuing, elements.wishList, elements.wishAchieved].forEach((list) => {
   list.addEventListener("click", (event) => {
+    const more = event.target.closest("[data-menu-wish]");
+    if (more) return openWishMenu(more.dataset.menuWish);
     const tile = event.target.closest("[data-open-wish]");
     if (tile) openWishDetail(tile.dataset.openWish);
   });
@@ -206,11 +214,11 @@ elements.wishDetailBody.addEventListener("click", (event) => {
   if (agree) return agreeOnWish(agree.dataset.agreeWish);
   const achieve = 무엇("achieve-wish");
   if (achieve) return openAchieveSheet(achieve.dataset.achieveWish);
-  const edit = 무엇("edit-wish");
-  if (edit) return editFromDetail(edit.dataset.editWish);
-  const remove = 무엇("remove-wish");
-  if (remove) return dropFromDetail(remove.dataset.removeWish);
 });
+
+closeOnPress(elements.closeWishMenuSheet, closeWishMenu);
+elements.wishMenuEdit.addEventListener("click", editFromMenu);
+elements.wishMenuDrop.addEventListener("click", dropFromMenu);
 
 closeOnPress(elements.closeWishDetailSheet, closeWishDetail);
 
