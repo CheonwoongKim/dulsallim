@@ -15,7 +15,7 @@ import { safeHref } from "../ui/escape.js";
 import { showPage } from "../ui/page.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
 import { showToast } from "../ui/toast.js";
-import { createExpenseChoice, createWishCard } from "../ui/wish-list.js";
+import { createExpenseChoice, createWishDetail, createWishTile } from "../ui/wish-list.js";
 import { getProfile } from "./auth.js";
 
 /**
@@ -47,8 +47,8 @@ let achievingWishId = null;
 /** 지우기를 묻는 시트가 어느 위시를 위해 열렸나. 닫으면 비운다. */
 let droppingWishId = null;
 
-/** ⋯ 메뉴가 어느 위시를 위해 열렸나. 닫으면 비운다. */
-let menuWishId = null;
+/** 자세히 시트가 어느 위시를 열고 있나. 닫으면 비운다. */
+let detailWishId = null;
 
 /** 담기 시트가 고치는 중이면 그 위시. 새로 담는 중이면 null. */
 let editingWishId = null;
@@ -86,9 +86,11 @@ function waitingFor(wish) {
  * 다르고, 누가 담았는지는 카드마다 이름이 이미 말한다.
  */
 export function paintWishPage() {
+  // 열려 있는 자세히도 같은 사본을 봐야 한다. 상대가 바꾼 것이 여기서 들어온다.
+  if (!elements.wishDetailSheet.hidden) paintWishDetail();
+
   const wishes = getWishes();
   const 달성중 = wishTab === "done";
-  const context = progressContext();
 
   [...elements.wishTabs.children].forEach((button) => {
     button.setAttribute("aria-pressed", String((button.dataset.wishTab === "done") === 달성중));
@@ -102,9 +104,7 @@ export function paintWishPage() {
         .sort((a, b) => String(b.pursuingAt).localeCompare(String(a.pursuingAt)) || byNewest(a, b));
   elements.wishPursuingSection.hidden = !pursuing.length;
   elements.wishPursuingCount.textContent = pursuing.length > 1 ? `(${pursuing.length})` : "";
-  elements.wishPursuing.replaceChildren(
-    ...pursuing.map((wish) => createWishCard(wish, { action: "achieve", context })),
-  );
+  elements.wishPursuing.replaceChildren(...pursuing.map(createWishTile));
 
   // 담아 둔 것 — 아직 한 사람만 바라는 것.
   const proposed = 달성중 ? [] : wishes.filter((wish) => wish.state === "proposed").sort(byNewest);
@@ -115,15 +115,7 @@ export function paintWishPage() {
       <p class="wish-empty">아직 담아 둔 것이 없어요.<br />둘이 사고 싶은 것을 먼저 적어 두면 아끼는 이유가 생겨요.</p>
     `;
   } else {
-    elements.wishList.replaceChildren(
-      ...proposed.map((wish) =>
-        createWishCard(wish, {
-          action: iAgreed(wish) ? "none" : "agree",
-          waiting: waitingFor(wish),
-          context,
-        }),
-      ),
-    );
+    elements.wishList.replaceChildren(...proposed.map(createWishTile));
   }
 
   // 이룬 것 — 이룬 순으로. 날짜가 같으면 나중에 적힌 것이 위다.
@@ -134,7 +126,7 @@ export function paintWishPage() {
     : [];
   elements.wishAchievedSection.hidden = !달성중;
   elements.wishAchievedCount.textContent = achieved.length ? `(${achieved.length})` : "";
-  elements.wishAchieved.replaceChildren(...achieved.map((wish) => createWishCard(wish, { context })));
+  elements.wishAchieved.replaceChildren(...achieved.map(createWishTile));
   if (달성중 && !achieved.length) {
     elements.wishAchieved.innerHTML = `
       <p class="wish-empty">아직 이룬 것이 없어요.<br />함께 바라는 것을 사고 나면 "이뤘어요" 로 옮겨 주세요.</p>
@@ -298,43 +290,64 @@ export async function handleWishSubmit(event) {
   if (href && !saved.imageUrl) void 그림얹기(saved.id, href);
 }
 
-/* ── ⋯ 메뉴 ───────────────────────────────────────────────── */
+/* ── 자세히 ───────────────────────────────────────────────── */
 
-export function openWishMenu(id) {
-  const wish = getWishes().find((current) => current.id === id);
-  if (!wish) return;
-
-  menuWishId = id;
-  elements.wishMenuName.textContent = wish.name;
-  showSheet(elements.wishMenuSheet);
+/**
+ * 목록이 그림만 남긴 만큼 여기가 다 말한다.
+ *
+ * 열려 있는 동안 상대가 바꾸면 다시 그린다 — 진척은 지출이 들어올 때마다 달라지고,
+ * 상대가 "나도" 를 누르면 단추도 바뀌어야 한다.
+ */
+export function openWishDetail(id) {
+  detailWishId = id;
+  paintWishDetail();
+  showSheet(elements.wishDetailSheet);
 }
 
-export function closeWishMenu() {
-  hideSheet(elements.wishMenuSheet, () => {
-    menuWishId = null;
+function paintWishDetail() {
+  const wish = getWishes().find((current) => current.id === detailWishId);
+  if (!wish) {
+    closeWishDetail();
+    return;
+  }
+
+  elements.wishDetailState.textContent = 자리이름(wish);
+  elements.wishDetailName.textContent = wish.name;
+  elements.wishDetailBody.replaceChildren(
+    createWishDetail(wish, {
+      action: 무엇을할수있나(wish),
+      waiting: wish.state === "proposed" ? waitingFor(wish) : "",
+      context: progressContext(),
+    }),
+  );
+}
+
+/** 세 자리 가운데 어디에 있는지. 목록에서는 이름표가 말해 주지만 시트에는 그것이 없다. */
+function 자리이름(wish) {
+  if (wish.state === "achieved") return "이룬 것";
+  return wish.state === "pursuing" ? "함께 바라는 것" : "담아 둔 것";
+}
+
+function 무엇을할수있나(wish) {
+  if (wish.state === "pursuing") return "achieve";
+  return wish.state === "proposed" && !iAgreed(wish) ? "agree" : "none";
+}
+
+export function closeWishDetail() {
+  hideSheet(elements.wishDetailSheet, () => {
+    detailWishId = null;
   });
 }
 
-/** 메뉴에서 고르면 그 시트를 닫고 다음 것을 연다. 두 장이 겹쳐 뜨지 않게 한다. */
-export function pickWishMenu(what) {
-  const id = menuWishId;
-  if (!id) return;
-
-  closeWishMenu();
-  // 닫히는 연출이 끝난 뒤에 다음 시트를 올린다. 겹치면 뒤엣것이 먼저 잡힌다.
-  setTimeout(() => (what === "edit" ? openWishEditSheet(id) : askDropWish(id)), MENU_HANDOFF_MS);
+/** 자세히에서 고치기를 고르면 그 시트를 닫고 담기 시트를 올린다. 두 장이 겹쳐 뜨지 않게 한다. */
+export function editFromDetail(id) {
+  closeWishDetail();
+  setTimeout(() => openWishEditSheet(id), MENU_HANDOFF_MS);
 }
 
-/**
- * 링크에서 찾은 대표 그림을 뒤늦게 얹는다.
- *
- * 못 찾아도 아무 말도 하지 않는다 — 그림 없는 링크가 흔하고, 그때는 첫 글자 타일이
- * 그대로 남는다. 담기는 이미 끝났으므로 여기서 실패해도 되돌릴 것이 없다.
- */
-async function 그림얹기(id, href) {
-  const image = await attachWishImage(id, href);
-  // 그 사이에 다른 화면으로 갔을 수 있다. 열려 있을 때만 다시 그린다.
-  if (image && !elements.wishPage.hidden) paintWishPage();
+export function dropFromDetail(id) {
+  closeWishDetail();
+  setTimeout(() => askDropWish(id), MENU_HANDOFF_MS);
 }
 
 /* ── 합의 · 지우기 ────────────────────────────────────────── */

@@ -18,26 +18,31 @@
 /* ── 담아 둔 것 ───────────────────────────────────────────── */
 
 /*
- * 한 줄에 하나씩. 세 자리(함께 바라는 것 · 담아 둔 것 · 이룬 것)가 같은 목록을 쓴다.
+ * 두 칸 격자. 세 자리(함께 바라는 것 · 담아 둔 것 · 이룬 것)가 같은 목록을 쓴다.
+ *
+ * 칸에는 그림만 있다. 이름도 값도 안 적는다 — 두 칸에 늘어놓으면 글자가 들어갈 자리가
+ * 손톱만 해서 읽히지도 않으면서 그림을 잘라먹는다. 자세한 것은 눌러서 시트로 본다.
  */
 .wish-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
-/*
- * 왼쪽 절반이 그림, 오른쪽 절반이 글.
- *
- * 그림을 위에 얹던 때는 카드 하나가 화면의 절반을 먹어 한 번에 둘밖에 안 보였다.
- * 반반으로 나누면 그림은 여전히 크고(393 에서 172) 한 화면에 넷이 들어온다.
- */
-.wish-item {
-  display: grid;
+/* 빈 자리 안내는 두 칸을 다 쓴다. 한 칸에 갇히면 줄이 잘게 끊긴다. */
+.wish-list .wish-empty {
+  grid-column: 1 / -1;
+}
+
+/* 칸 자체가 단추다. 눌러야 자세히가 뜬다. */
+.wish-tile {
+  display: block;
   overflow: hidden;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-16);
-  grid-template-columns: 1fr 1fr;
   background: var(--white);
+  cursor: pointer;
 }
 
 /*
@@ -68,11 +73,6 @@
  * 글 옆에 흰 자리가 남으면 카드가 반쯤 빈 것처럼 보인다.
  */
 
-/* 링크가 걸리면 이 자리가 곧 링크다. 밑줄이나 색은 필요 없다 — 그림이 이미 누를 것으로 보인다. */
-a.wish-shot {
-  color: var(--wish-tile, var(--ink));
-  text-decoration: none;
-}
 
 /*
  * 이룬 것 위에 얹는 표.
@@ -112,72 +112,12 @@ a.wish-shot {
   object-fit: cover;
 }
 
-.wish-copy {
-  display: grid;
-  min-width: 0;
-  padding: var(--space-3);
-  gap: var(--space-1);
-  align-content: start;
-}
 
-/*
- * 이름과 ⋯ 가 한 줄에 선다. 이름이 길면 ⋯ 자리를 뺀 만큼에서 잘린다 —
- * ⋯ 가 밀려나면 손이 닿는 자리도 함께 화면 밖으로 나간다.
- */
-.wish-head {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  justify-content: space-between;
-}
 
-/*
- * 지우기가 이 화면에서 가장 눈에 띄는 것이 될 이유가 없다. 여기는 갖고 싶은 것을 보는 곳이다.
- * 늘 떠 있던 x 표 대신, 눌러야 무엇을 할지 고르는 자리만 조용히 남긴다.
- *
- * 보이는 크기는 28, 손이 닿는 자리는 44 에서 역산해 넓힌다.
- */
-.wish-more {
-  --more-size: 28px;
 
-  display: grid;
-  position: relative;
-  width: var(--more-size);
-  height: var(--more-size);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-round);
-  flex: 0 0 auto;
-  place-items: center;
-  color: var(--ink-soft);
-  background: transparent;
-  cursor: pointer;
-}
 
-.wish-more::after {
-  content: "";
-  position: absolute;
-  inset: calc((var(--tap-min) - var(--more-size)) / -2);
-}
 
-.wish-more svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-  stroke: none;
-}
 
-.wish-more:active {
-  background: var(--paper-deep);
-}
-
-.wish-copy strong {
-  overflow: hidden;
-  font-size: var(--text-15);
-  letter-spacing: var(--tracking-body);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 /*
  * 얼마나 다가갔나.
@@ -307,6 +247,70 @@ a.wish-shot {
 
 
 
+
+/* ── 자세히 시트 ─────────────────────────────────────────── */
+
+.wish-detail {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* 그림은 시트 폭을 다 쓴다. 목록에서는 손톱만 했던 것을 여기서 제대로 본다. */
+.wish-detail .wish-shot {
+  border-radius: var(--radius-16);
+  aspect-ratio: 4 / 3;
+}
+
+.wish-detail-price {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-20);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-heading);
+}
+
+.wish-detail-note {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-15);
+  letter-spacing: var(--tracking-body);
+  line-height: var(--leading-text);
+}
+
+.wish-detail-by {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--text-13);
+  letter-spacing: var(--tracking-small);
+}
+
+/* 링크는 한 줄을 다 쓴다. 시트에서 유일하게 밖으로 나가는 길이라 헷갈리면 안 된다. */
+.wish-detail-link {
+  display: grid;
+  min-height: var(--tap-min);
+  place-items: center;
+  text-decoration: none;
+}
+
+/*
+ * 큰 단추가 위, 고치기·지우기가 아래 한 줄.
+ * 자주 누를 것과 아닌 것을 층으로 가른다 — 나란히 두면 지우기가 같은 무게로 보인다.
+ */
+.wish-detail-actions {
+  display: grid;
+  margin-top: var(--space-2);
+  gap: var(--space-2);
+  grid-template-columns: 1fr 1fr;
+}
+
+.wish-detail-actions .submit-button {
+  grid-column: 1 / -1;
+}
+
+.wish-detail-actions .wish-waiting {
+  grid-column: 1 / -1;
+  margin: 0;
+}
 
 /* ── 빈 자리와 시트 ───────────────────────────────────────── */
 

@@ -123,12 +123,11 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
 
   // 서버에서 온 글자가 화면에 들어가는 자리는 하나도 빠짐없이 escapeHtml 을 지난다.
   for (const 값 of [
-    "wish.name",
     "wish.id",
-    "metaLine(wish)",
+    "byLine(wish)",
+    "wish.note",
     "href",
     "waiting",
-    "formatAchievedOn(wish.achievedOn)",
     "expense.item",
     "formatShortDate(expense.date)",
     "getMemberName(expense.member)",
@@ -137,11 +136,23 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
   }
 
   /*
-   * 서버 값을 통째로 끼워 넣은 자리가 없어야 한다.
-   * 이름을 합치는 metaLine 은 글자만 만들고, 그 결과가 붙는 자리에서 한 번에 걸린다.
+   * 위시 이름은 innerHTML 을 아예 안 지난다 — 칸의 읽어 주는 이름과 시트 제목 둘 다
+   * setAttribute·textContent 로 넣는다. 글자로 들어가지 않으니 태그가 될 일이 없다.
    */
-  assert.doesNotMatch(그리기, /\$\{wish\.[\w.]+\}/, "위시 값이 escapeHtml 없이 들어간다");
-  assert.doesNotMatch(그리기, /\$\{expense\.[\w.]+\}/, "지출 값이 escapeHtml 없이 들어간다");
+  assert.match(그리기, /tile\.setAttribute\("aria-label"/);
+  assert.doesNotMatch(그리기, /\$\{escapeHtml\(wish\.name\)\}/);
+  assert.match(app, /elements\.wishDetailName\.textContent = wish\.name;/);
+
+  /*
+   * 서버 값을 통째로 끼워 넣은 자리가 없어야 한다.
+   *
+   * innerHTML 로 들어가는 자리만 본다. setAttribute·textContent 로 넘기는 값은 브라우저가
+   * 글자로만 다뤄 태그가 될 수 없다 — 거기까지 막으면 안전한 코드를 못 쓰게 된다.
+   */
+  const 글자로짓는곳 = (그리기.match(/innerHTML = `[\s\S]*?`;/g) || []).join("\n");
+  assert.ok(글자로짓는곳.length > 200, "innerHTML 자리를 못 찾았다 — 검사가 헛돈다");
+  assert.doesNotMatch(글자로짓는곳, /\$\{wish\.[\w.]+\}/, "위시 값이 escapeHtml 없이 들어간다");
+  assert.doesNotMatch(글자로짓는곳, /\$\{expense\.[\w.]+\}/, "지출 값이 escapeHtml 없이 들어간다");
 
   // 고를 지출의 id 는 글자로 엮지 않고 dataset 으로 건넨다 — 브라우저가 값으로만 다룬다.
   assert.match(그리기, /button\.dataset\.pickExpense = expense\.id;/);
@@ -164,25 +175,24 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
   assert.match(app, /if \(href && !saved\.imageUrl\)/);
 });
 
-test("담아 둔 것은 한 줄에 하나씩이고, 이 목록은 스와이프를 쓰지 않는다", () => {
+test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
   /*
-   * 두 칸으로 놓아 봤더니 그림이 165 밖에 안 됐다. 위시리스트는 훑는 곳이 아니라
-   * 들여다보는 곳이라 폭을 다 준다 — 393 에서 그림이 343×257 이 된다.
+   * 칸에 이름도 값도 안 적는다 — 두 칸에 늘어놓으면 글자가 들어갈 자리가 손톱만 해서
+   * 읽히지도 않으면서 그림을 잘라먹는다.
    */
-  const 목록 = css.match(/\.wish-list \{[\s\S]*?\n\}/)[0];
-  assert.doesNotMatch(목록, /grid-template-columns/, "한 줄에 하나씩이면 열을 나눌 것이 없다");
+  const 칸 = fn("createWishTile");
+  assert.match(칸, /tile\.innerHTML = shotMarkup\(wish\);/, "칸에 그림 말고 다른 것이 들어 있다");
+  // 그림에는 글이 없으므로 읽어 주는 이름은 여기서 낸다.
+  assert.match(칸, /aria-label", `\$\{wish\.name\} 자세히 보기`/);
+  assert.match(칸, /tile\.dataset\.openWish = wish\.id/);
 
-  // 지우기는 밀어서가 아니라 ⋯ 메뉴로 간다. 격자든 한 열이든 이 목록은 밀지 않는다.
-  assert.doesNotMatch(app, /wish-item swipe-row/);
-  assert.doesNotMatch(app, /elements\.wishList\.addEventListener\("pointerdown"/);
-  assert.match(app, /class="wish-more" type="button" data-wish-menu=/);
-  assert.doesNotMatch(app, /class="wish-drop"/, "늘 떠 있던 x 표가 남아 있다");
+  const 격자 = css.match(/\.wish-list \{[\s\S]*?\n\}/)[0];
+  assert.match(격자, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 
-  /*
-   * 이름이 길어도 ⋯ 는 제자리에 있어야 한다. 밀려나면 손이 닿는 자리도 화면 밖으로 나간다.
-   */
-  assert.match(css, /\.wish-head \{[\s\S]*?justify-content: space-between/);
-  assert.match(css, /\.wish-more \{[\s\S]*?flex: 0 0 auto/);
+  // 세 자리가 같은 목록을 쓰고, 어디를 눌러도 자세히가 열린다.
+  assert.match(app, /\[elements\.wishPursuing, elements\.wishList, elements\.wishAchieved\]/);
+  assert.match(app, /if \(tile\) openWishDetail\(tile\.dataset\.openWish\)/);
+  assert.doesNotMatch(app, /elements\.wishList\.addEventListener\("pointerdown"/, "이 목록은 밀지 않는다");
 });
 
 test("화면은 store 만 부른다 — 서버 질의를 새로 짜지 않았다", async () => {
@@ -271,27 +281,18 @@ test("상대가 바꾼 위시도 열어 둔 화면에 그대로 온다", () => {
   assert.match(app, /if \(!elements\.wishPage\.hidden\) paintWishPage\(\);/);
 });
 
-test("그림은 카드 왼쪽 절반이고, 링크가 있으면 그 자리가 곧 링크다", () => {
+test("그림 자리는 정사각이고 색은 담은 사람에게서 온다", () => {
   const 그리기 = fn("shotMarkup");
-  assert.match(그리기, /getMemberColor\(wish\.createdBy\)/, "색은 담은 사람에게서 온다");
-  // 주소를 글자로 또 적지 않는다 — 카드 오른쪽이 좁아 도메인 한 줄이 이름을 밀어낸다.
-  assert.match(그리기, /class="wish-shot" \$\{색\} href=/);
-  assert.match(그리기, /rel="noopener noreferrer"/);
-  assert.doesNotMatch(app, /class="wish-link"/, "도메인 글자가 남아 있다");
-  // 링크가 없으면 누를 것이 아니므로 읽어 주지도 않는다.
-  assert.match(그리기, /<span class="wish-shot" \$\{색\} aria-hidden="true">/);
-
-  const 카드 = css.match(/\.wish-item \{[\s\S]*?\n\}/)[0];
-  assert.match(카드, /grid-template-columns: 1fr 1fr/, "왼쪽 절반이 그림이다");
+  assert.match(그리기, /getMemberColor\(wish\.createdBy\)/);
+  assert.match(그리기, /const image = safeHref\(wish\.imageUrl\)/, "그림 주소도 한 겹 더 받는다");
+  assert.match(그리기, /aria-hidden="true"/, "첫 글자는 읽어 주지 않는다 — 칸이 이름을 이미 낸다");
+  assert.match(그리기, /referrerpolicy="no-referrer"/);
 
   const 자리 = css.match(/\.wish-shot \{[\s\S]*?\n\}/)[0];
-  /*
-   * 정사각이 바닥이고, 오른쪽 글이 더 길면 그만큼 늘어난다. 글 옆에 흰 자리가 남으면
-   * 카드가 반쯤 빈 것처럼 보인다.
-   */
   assert.match(자리, /aspect-ratio: 1/);
-  assert.match(자리, /height: 100%/);
   assert.match(자리, /var\(--wish-tile, var\(--ink\)\)/, "사람 색이 없어도 투명해지지 않는다");
+  // 자세히에서는 더 넓게 본다. 목록에서 손톱만 했던 것을 여기서 제대로 본다.
+  assert.match(css, /\.wish-detail \.wish-shot \{[\s\S]*?aspect-ratio: 4 \/ 3/);
 });
 
 
@@ -375,10 +376,10 @@ test("한마디는 담을 때 함께 들어가고, 없으면 자리를 안 만�
   assert.match(app, /note: input\.note \|\| null/, "적은 것이 서버로 안 간다");
 
   // 없으면 빈 줄을 남기지 않는다. 남기면 격자의 카드 높이가 들쭉날쭉해진다.
-  assert.match(fn("noteMarkup"), /return note \? .*wish-note.* : ""/);
+
 
   // 담아 둔 칸과 향하는 카드가 같은 것을 쓴다.
-  assert.equal((app.match(/\$\{noteMarkup\(wish\)\}/g) || []).length, 1);
+  assert.match(fn("createWishDetail"), /wish\.note \? `<p class="wish-detail-note">/);
 
   // 길이가 칸마다 다르면 격자 아래 선이 어긋난다. 두 줄에서 자른다.
   assert.match(css, /\.wish-note \{[\s\S]*?-webkit-line-clamp: 2/);
@@ -396,7 +397,7 @@ test("지우기는 한 번 묻는다", () => {
   assert.match(fn("askDropWish"), /elements\.wishDropName\.textContent = wish\.name/);
 
   // ⋯ 메뉴의 지우기가 묻기만 한다. 실제로 지우는 것은 그다음 시트의 단추다.
-  assert.match(app, /what === "edit" \? openWishEditSheet\(id\) : askDropWish\(id\)/);
+  assert.match(app, /if \(remove\) return dropFromDetail\(remove\.dataset\.removeWish\)/);
   assert.match(app, /elements\.wishDropSubmit\.addEventListener\("click", dropWish\)/);
   assert.doesNotMatch(fn("askDropWish"), /removeWish/, "묻기가 곧바로 지운다");
   assert.match(fn("dropWish"), /if \(!droppingWishId\) return;/, "무엇을 지울지 없이 지운다");
@@ -408,20 +409,36 @@ test("지우기는 한 번 묻는다", () => {
   assert.match(fn("closeDropSheet"), /droppingWishId = null/);
 });
 
-test("⋯ 메뉴에서 고치기와 지우기로 갈린다", () => {
-  assert.match(html, /<dialog class="sheet" id="wish-menu-sheet"/);
-  // 무엇에 대한 메뉴인지 이름으로 못 박는다.
-  assert.match(fn("openWishMenu"), /elements\.wishMenuName\.textContent = wish\.name/);
+test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링크", () => {
+  assert.match(html, /<dialog class="sheet" id="wish-detail-sheet"/);
+  const 자세히 = fn("createWishDetail");
+  assert.match(자세히, /\$\{shotMarkup\(wish\)\}/);
+  assert.match(자세히, /wish-detail-price/);
+  assert.match(자세히, /wish\.note \?/, "한마디는 있을 때만");
+  assert.match(자세히, /\$\{progressMarkup\(wish, context\)\}/);
+  assert.match(자세히, /wish-detail-by/);
+  // 링크는 여기서만 밖으로 나간다. 목록 칸에는 주소가 없다.
+  assert.match(자세히, /class="ghost-button wish-detail-link" href=[\s\S]*?rel="noopener noreferrer"/);
+  assert.match(자세히, /const href = safeHref\(wish\.url\);/, "주소는 한 겹 더 받는다");
 
-  // 메뉴를 닫고 나서 다음 시트를 올린다. 겹치면 뒤엣것이 먼저 잡힌다.
-  const 고르기 = fn("pickWishMenu");
-  assert.match(고르기, /closeWishMenu\(\);/);
-  assert.match(고르기, /setTimeout\([\s\S]*?MENU_HANDOFF_MS\)/);
-  assert.match(app, /const MENU_HANDOFF_MS = 220;/);
+  // 어느 자리인지 시트가 스스로 말한다. 목록의 이름표는 여기에 없다.
+  assert.match(fn("자리이름"), /wish\.state === "pursuing" \? "함께 바라는 것" : "담아 둔 것"/);
 
-  // 다른 시트와 같은 처리를 받아야 끌어 닫기·Esc·초점 가두기가 함께 붙는다.
-  assert.match(app, /SHEETS = \[[\s\S]*?elements\.wishMenuSheet/);
-  assert.match(app, /!elements\.wishMenuSheet\.hidden\) closeWishMenu\(\)/);
+  // 이룬 것에는 고치기·지우기를 안 붙인다. 끝난 줄이다.
+  assert.match(자세히, /wish\.state === "achieved"\s*\?\s*""/);
+
+  /*
+   * 고치기·지우기는 이 시트를 먼저 닫고 다음 것을 올린다. 겹쳐 뜨면 뒤엣것이 먼저 잡힌다.
+   */
+  for (const 이름 of ["editFromDetail", "dropFromDetail"]) {
+    assert.match(fn(이름), /closeWishDetail\(\);/, `${이름} 이 시트를 안 닫는다`);
+    assert.match(fn(이름), /setTimeout\([\s\S]*?MENU_HANDOFF_MS\)/);
+  }
+
+  // 열려 있는 동안 상대가 바꾸면 따라 그린다 — 진척도 단추도 달라진다.
+  assert.match(fn("paintWishPage"), /if \(!elements\.wishDetailSheet\.hidden\) paintWishDetail\(\);/);
+  assert.match(app, /SHEETS = \[[\s\S]*?elements\.wishDetailSheet/);
+  assert.match(app, /!elements\.wishDetailSheet\.hidden\) closeWishDetail\(\)/);
 });
 
 test("고치기는 담기 시트를 다시 쓰고, 말과 값만 갈아 끼운다", () => {
@@ -493,15 +510,11 @@ test("탭은 미달성 · 달성 둘이고, 미달성이 기본이다", () => {
 
 test("함께 바라는 것은 여럿이 서고, 이룬 것에는 체크가 얹힌다", () => {
   assert.match(html, /<div class="wish-section" id="wish-pursuing-section" hidden>/);
-  assert.match(html, /<p class="eyebrow">함께 바라는 것<span id="wish-pursuing-count"><\/span><\/p>/);
 
   const 그리기 = fn("paintWishPage");
   assert.match(그리기, /\.filter\(\(wish\) => wish\.state === "pursuing"\)/);
-  // 하나만 찾던 때는 두 번째가 화면에 아예 안 떴다.
   assert.doesNotMatch(그리기, /\.find\(\(wish\) => wish\.state === "pursuing"\)/);
-  // 없으면 이름표까지 통째로 사라진다. 빈 이름표만 남으면 자리가 비어 보인다.
   assert.match(그리기, /elements\.wishPursuingSection\.hidden = !pursuing\.length/);
-  // 하나뿐이면 개수를 안 적는다 — "함께 바라는 것(1)" 은 군더더기다.
   assert.match(그리기, /pursuing\.length > 1 \? `\(\$\{pursuing\.length\}\)` : ""/);
 
   /*
@@ -512,6 +525,4 @@ test("함께 바라는 것은 여럿이 서고, 이룬 것에는 체크가 얹�
   assert.match(css, /\.wish-done \{[\s\S]*?inset: 0/);
   assert.match(css, /\.wish-done \{[\s\S]*?color-mix\(in srgb, var\(--ink\) 45%, transparent\)/);
   assert.match(css, /\.wish-done svg \{[\s\S]*?stroke: var\(--white\)/);
-  // 이룬 것에는 고치기·지우기 메뉴를 안 붙인다. 끝난 줄이다.
-  assert.match(app, /wish\.state === "achieved"\s*\?\s*""\s*:\s*`<button class="wish-more"/);
 });

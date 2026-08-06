@@ -42,17 +42,18 @@ import {
   agreeOnWish,
   closeAchieveSheet,
   closeDropSheet,
-  closeWishMenu,
+  closeWishDetail,
   closeWishSheet,
   dropWish,
   handleWishPriceInput,
   handleWishSubmit,
   openAchieveSheet,
-  openWishMenu,
+  openWishDetail,
   openWishPage,
   openWishSheet,
   pickAchievedExpense,
-  pickWishMenu,
+  dropFromDetail,
+  editFromDetail,
   setWishTab,
 } from "../features/wish.js";
 import { render } from "../render.js";
@@ -165,10 +166,6 @@ elements.wishUrl.addEventListener("input", () => {
   elements.wishUrlError.textContent = "";
 });
 
-elements.wishPursuing.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-achieve-wish]");
-  if (button) openAchieveSheet(button.dataset.achieveWish);
-});
 
 /*
  * 격자에서는 밀지 않는다. 지우기는 그림 위 × 이고 두 단추 모두 그냥 눌린다.
@@ -181,19 +178,27 @@ elements.wishTabs.addEventListener("click", (event) => {
   if (tab) setWishTab(tab.dataset.wishTab);
 });
 
-elements.wishList.addEventListener("click", (event) => {
-  const menu = event.target.closest("[data-wish-menu]");
-  if (menu) {
-    openWishMenu(menu.dataset.wishMenu);
-    return;
-  }
-  const agree = event.target.closest("[data-agree-wish]");
-  if (agree) agreeOnWish(agree.dataset.agreeWish);
+/* 목록은 그림만 있다. 무엇을 할지는 눌러서 뜨는 자세히에서 고른다. */
+[elements.wishPursuing, elements.wishList, elements.wishAchieved].forEach((list) => {
+  list.addEventListener("click", (event) => {
+    const tile = event.target.closest("[data-open-wish]");
+    if (tile) openWishDetail(tile.dataset.openWish);
+  });
 });
 
-closeOnPress(elements.closeWishMenuSheet, closeWishMenu);
-elements.wishMenuEdit.addEventListener("click", () => pickWishMenu("edit"));
-elements.wishMenuDrop.addEventListener("click", () => pickWishMenu("drop"));
+elements.wishDetailBody.addEventListener("click", (event) => {
+  const 무엇 = (이름) => event.target.closest(`[data-${이름}]`);
+  const agree = 무엇("agree-wish");
+  if (agree) return agreeOnWish(agree.dataset.agreeWish);
+  const achieve = 무엇("achieve-wish");
+  if (achieve) return openAchieveSheet(achieve.dataset.achieveWish);
+  const edit = 무엇("edit-wish");
+  if (edit) return editFromDetail(edit.dataset.editWish);
+  const remove = 무엇("remove-wish");
+  if (remove) return dropFromDetail(remove.dataset.removeWish);
+});
+
+closeOnPress(elements.closeWishDetailSheet, closeWishDetail);
 
 // 지우기는 한 번 묻는다. 시트의 지우기 단추가 실제로 지운다.
 closeOnPress(elements.closeWishDropSheet, closeDropSheet);
