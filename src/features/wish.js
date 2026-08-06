@@ -45,6 +45,9 @@ const triedImage = new Set();
 /** 이룸 시트가 어느 위시를 위해 열렸나. 닫으면 비운다. */
 let achievingWishId = null;
 
+/** 지우기를 묻는 시트가 어느 위시를 위해 열렸나. 닫으면 비운다. */
+let droppingWishId = null;
+
 const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt));
 
 /** 내가 이미 찬성했는지. 올린 것도 첫 찬성으로 세므로 내가 올린 것에는 "나도" 가 안 뜬다. */
@@ -252,16 +255,38 @@ export async function agreeOnWish(id) {
   paintWishPage();
 }
 
-export async function dropWish(id) {
+/**
+ * 지우기 전에 한 번 묻는다.
+ *
+ * 밀어서 지우던 때는 밀고 누르는 두 동작이었는데, 격자로 오면서 × 한 번이 됐다.
+ * 그림 위에 있는 작은 단추라 스치듯 눌릴 수 있고, 지운 위시는 되돌릴 길이 없다.
+ */
+export function askDropWish(id) {
   const wish = getWishes().find((current) => current.id === id);
   if (!wish) return;
 
+  droppingWishId = id;
+  elements.wishDropName.textContent = wish.name;
+  showSheet(elements.wishDropSheet);
+}
+
+export function closeDropSheet() {
+  hideSheet(elements.wishDropSheet, () => {
+    droppingWishId = null;
+  });
+}
+
+export async function dropWish() {
+  if (!droppingWishId) return;
+
+  const id = droppingWishId;
   try {
     await removeWish(id);
   } catch (error) {
     showToast(error.message);
     return;
   }
+  closeDropSheet();
   paintWishPage();
   showToast("위시를 지웠어요");
 }

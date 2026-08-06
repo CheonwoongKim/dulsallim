@@ -381,3 +381,27 @@ test("한마디는 담을 때 함께 들어가고, 없으면 자리를 안 만�
   // 길이가 칸마다 다르면 격자 아래 선이 어긋난다. 두 줄에서 자른다.
   assert.match(css, /\.wish-note \{[\s\S]*?-webkit-line-clamp: 2/);
 });
+
+test("지우기는 한 번 묻는다", () => {
+  /*
+   * 밀어서 지우던 때는 밀고 누르는 두 동작이었는데 격자로 오면서 × 한 번이 됐다.
+   * 그림 위 작은 단추라 스치듯 눌릴 수 있고, 지운 위시는 되돌릴 길이 없다.
+   */
+  assert.match(html, /<dialog class="sheet" id="wish-drop-sheet"/);
+  assert.match(html, /<h2 id="wish-drop-title">정말 지울까요\?<\/h2>/);
+  // 무엇을 지우는지 이름으로 못 박는다. 격자에서는 어느 칸을 눌렀는지 헷갈리기 쉽다.
+  assert.match(html, /<p class="eyebrow" id="wish-drop-name"><\/p>/);
+  assert.match(fn("askDropWish"), /elements\.wishDropName\.textContent = wish\.name/);
+
+  // × 는 묻기만 한다. 실제로 지우는 것은 시트의 단추다.
+  assert.match(app, /askDropWish\(remove\.dataset\.removeWish\)/);
+  assert.match(app, /elements\.wishDropSubmit\.addEventListener\("click", dropWish\)/);
+  assert.doesNotMatch(fn("askDropWish"), /removeWish/, "묻기가 곧바로 지운다");
+  assert.match(fn("dropWish"), /if \(!droppingWishId\) return;/, "무엇을 지울지 없이 지운다");
+
+  // 다른 시트와 같은 처리를 받아야 끌어 닫기·Esc·초점 가두기가 함께 붙는다.
+  assert.match(app, /SHEETS = \[[\s\S]*?elements\.wishDropSheet/);
+  assert.match(app, /!elements\.wishDropSheet\.hidden\) closeDropSheet\(\)/);
+  // 닫으면 무엇을 지우려 했는지도 비운다. 남으면 다음에 엉뚱한 것이 지워진다.
+  assert.match(fn("closeDropSheet"), /droppingWishId = null/);
+});

@@ -8,7 +8,7 @@ import { closeNagSheet } from "../features/nag.js";
 import { closeNotes } from "../features/notes.js";
 import { closeResetSheet } from "../features/settings.js";
 import { closeTrendSheet } from "../features/trend.js";
-import { closeAchieveSheet, closeWishSheet } from "../features/wish.js";
+import { closeAchieveSheet, closeDropSheet, closeWishSheet } from "../features/wish.js";
 import { getOpenPage, hidePage } from "../ui/page.js";
 import {
   SHEETS,
@@ -36,6 +36,7 @@ function closeActiveSheet() {
   if (!elements.trendSheet.hidden) closeTrendSheet();
   if (!elements.resetSheet.hidden) closeResetSheet();
   if (!elements.wishSheet.hidden) closeWishSheet();
+  if (!elements.wishDropSheet.hidden) closeDropSheet();
   if (!elements.wishAchieveSheet.hidden) closeAchieveSheet();
 }
 

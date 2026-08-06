@@ -549,6 +549,24 @@
       </form>
     </dialog>
 
+    <dialog class="sheet" id="wish-drop-sheet" aria-labelledby="wish-drop-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow" id="wish-drop-name"></p>
+          <h2 id="wish-drop-title">정말 지울까요?</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-wish-drop-sheet" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="sheet-scroll danger-zone">
+        <p>지운 위시는 되돌릴 수 없어요. 둘이 나눈 찬성도 함께 사라집니다.</p>
+        <button class="submit-button danger" type="button" id="wish-drop-submit"><span>지우기</span></button>
+      </div>
+    </dialog>
+
     <dialog class="sheet" id="wish-achieve-sheet" aria-labelledby="wish-achieve-title" hidden>
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-header">

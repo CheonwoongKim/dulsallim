@@ -40,7 +40,9 @@ import {
 } from "../features/trend.js";
 import {
   agreeOnWish,
+  askDropWish,
   closeAchieveSheet,
+  closeDropSheet,
   closeWishSheet,
   dropWish,
   handleWishPriceInput,
@@ -174,12 +176,16 @@ elements.wishPursuing.addEventListener("click", (event) => {
 elements.wishList.addEventListener("click", (event) => {
   const remove = event.target.closest("[data-remove-wish]");
   if (remove) {
-    dropWish(remove.dataset.removeWish);
+    askDropWish(remove.dataset.removeWish);
     return;
   }
   const agree = event.target.closest("[data-agree-wish]");
   if (agree) agreeOnWish(agree.dataset.agreeWish);
 });
+
+// 지우기는 한 번 묻는다. 시트의 지우기 단추가 실제로 지운다.
+closeOnPress(elements.closeWishDropSheet, closeDropSheet);
+elements.wishDropSubmit.addEventListener("click", dropWish);
 
 closeOnPress(elements.closeWishAchieveSheet, closeAchieveSheet);
 elements.wishExpenseList.addEventListener("click", (event) => {
