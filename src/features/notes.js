@@ -101,16 +101,13 @@ export function closeNotes() {
 }
 
 /**
- * 적을 것이 있을 때만 보내기가 나타난다.
+ * 적은 것이 있을 때만 보내기가 눌린다.
  *
- * 늘 떠 있으면 빈 칸 옆에서 누를 수 없는 단추가 자리를 지킨다. 자리를 비켜 주는 대신
- * 사라지게만 두면 칸 너비가 오락가락하므로, 칸 안에 겹쳐 두고 보이고 안 보이고만 바꾼다.
+ * 단추는 늘 보인다 — 어디를 눌러 보내는지가 처음부터 보여야 한다. 대신 적은 것이 없으면
+ * 눌리지 않고 흐려진다(모양새는 CSS 가 :disabled 로 잡는다).
  */
 export function syncNoteSend() {
-  const 적었나 = Boolean(elements.noteInput.value.trim());
-  elements.noteSend.classList.toggle("is-ready", 적었나);
-  // 안 보이는 단추가 탭 순서에 남아 있으면 커서가 빈 곳에 멈춘다.
-  elements.noteSend.disabled = !적었나;
+  elements.noteSend.disabled = !elements.noteInput.value.trim();
 }
 
 export async function handleNoteSubmit(event) {

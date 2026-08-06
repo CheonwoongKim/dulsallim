@@ -2745,20 +2745,15 @@ test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
   );
 
   /*
-   * 보내기는 칸 안에 앉는다. 옆에 세워 두던 때는 빈 칸에서도 누를 수 없는 단추가
-   * 50px 을 지키고 있었다. 크기는 머리 줄 아이콘 단추와 같은 --control-sm 이다.
+   * 보내기는 칸 안에 앉는다. 옆에 세워 두던 때는 단추가 줄에서 50px 을 떼어 갔다.
+   * 크기는 머리 줄 아이콘 단추와 같은 --control-sm 이다.
    */
   const 보내기 = 규칙(".note-send");
-  assert.match(보내기, /position: absolute/);
   assert.match(보내기, /width: var\(--control-sm\)/);
   for (const 줄 of 보내기.split("\n").filter((l) => /^\s*(width|height):/.test(l))) {
     assert.doesNotMatch(줄, /\d+px/, `보내기에 날 숫자가 남아 있다: ${줄.trim()}`);
   }
 
-  /*
-   * 적을 것이 없으면 물러난다. display 를 껐다 켜면 나타나는 순간이 툭 끊기므로
-   * 자리는 늘 잡아 두고 보이는 것만 바꾼다 — 안 보이는 동안에는 손도 안 닿아야 한다.
-   */
   /*
    * 적는 줄 위에 선을 긋지 않는다. 이 앱은 단락을 여백으로 나눈다 — 흰 바탕만으로도
    * 목록과 갈린다. 대신 그 바탕은 있어야 한다. 없으면 지나가는 말풍선이 칸에 비친다.
@@ -2767,17 +2762,31 @@ test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
   assert.doesNotMatch(적는줄, /border-top/, "적는 줄 위에 선이 돌아왔다");
   assert.match(적는줄, /background: var\(--white\)/);
 
-  assert.match(보내기, /opacity: 0/);
-  assert.match(보내기, /pointer-events: none/);
-  assert.match(css, /\.note-send\.is-ready \{[\s\S]*?pointer-events: auto/);
-  assert.match(fn("syncNoteSend"), /classList\.toggle\("is-ready", 적었나\)/);
-  // 안 보이는 단추가 탭 순서에 남아 있으면 커서가 빈 곳에 멈춘다.
-  assert.match(fn("syncNoteSend"), /elements\.noteSend\.disabled = !적었나/);
+  /*
+   * 칸과 단추는 같은 자리에 겹쳐 둔다. 띄워서(absolute) 줄의 한가운데에 맞추던 때는
+   * 4px 이 어긋났다 — 줄 여백이 위 8 아래 16 으로 짝이 아닌데 그 줄의 절반을 잡았다.
+   * 겹쳐 두면 단추가 칸의 가운데를 그대로 쓰므로 여백이 어떻든 어긋날 수가 없다.
+   */
+  assert.doesNotMatch(보내기, /position: absolute|top:|transform:/, "단추가 다시 줄에 맞춰졌다");
+  assert.match(css, /\.note-send,\n\.note-form input \{\n  grid-area: 1 \/ 1;/);
+
+  /*
+   * 적을 것이 없어도 자리를 지킨다 — 어디를 눌러 보내는지가 처음부터 보여야 한다.
+   * 대신 눌러도 안 되는 것은 그렇게 보인다. 흐린 값은 머리 줄 아이콘 단추와 같이 쓴다.
+   */
+  // 값이 아니라 규칙으로 본다 — transition 에 적힌 opacity 는 흐려지는 방식이지 숨는 것이 아니다.
+  assert.doesNotMatch(보내기, /^\s*(opacity|pointer-events):/m, "단추가 다시 숨는다");
+  assert.doesNotMatch(css, /is-ready/, "보이고 안 보이고를 가르던 이름이 남아 있다");
+  const 못누름 = 규칙(".note-send:disabled");
+  assert.equal(
+    못누름.match(/opacity: ([\d.]+)/)[1],
+    규칙(".icon-button:disabled").match(/opacity: ([\d.]+)/)[1],
+    "못 누르는 모양이 화면마다 다르다",
+  );
+  assert.match(fn("syncNoteSend"), /elements\.noteSend\.disabled = !elements\.noteInput\.value\.trim\(\)/);
   // 적을 때마다, 그리고 보낸 뒤에도 다시 맞춘다.
   assert.match(app, /elements\.noteInput\.addEventListener\("input", syncNoteSend\)/);
   assert.match(fn("handleNoteSubmit"), /finally \{[\s\S]*?syncNoteSend\(\)/);
-  // 흐리게만 두던 옛 규칙이 남아 있으면 못 누르는 단추가 칸 안에 비쳐 보인다(계측: 0.45).
-  assert.doesNotMatch(규칙(".note-send:disabled"), /opacity/);
   // 그림은 다른 아이콘과 같은 값에서 온다.
   assert.equal(
     규칙(".note-send svg").match(/width: (\d+px)/)[1],

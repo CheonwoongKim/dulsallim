@@ -75,13 +75,11 @@
 /*
  * 적는 칸이 줄을 다 쓰고, 보내기는 그 안에 겹쳐 선다.
  *
- * 옆에 세워 두던 때는 빈 칸에서도 누를 수 없는 단추가 50px 을 지키고 있었다.
- * 안에 넣으면 적을 것이 있을 때만 나타나게 할 수 있고, 나타나고 사라져도 칸 너비가
- * 흔들리지 않는다.
+ * 옆에 세워 두던 때는 단추가 줄에서 50px 을 떼어 갔다. 안에 넣으면 칸이 줄을 다 쓴다.
  */
 .note-form {
-  position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   padding: var(--space-2) var(--space-6) max(var(--space-4), env(safe-area-inset-bottom));
   flex: 0 0 auto;
   align-items: center;
@@ -112,36 +110,33 @@
   transition: border-color var(--motion) ease, box-shadow var(--motion) ease;
 }
 /*
- * 칸 안 오른쪽에 앉는다. 적은 것이 없으면 물러나 있다.
+ * 칸과 단추를 같은 자리에 겹쳐 둔다.
  *
- * display 를 껐다 켜면 나타나는 순간이 툭 끊긴다. 자리는 늘 잡아 두고 보이는 것만
- * 바꾼다 — 안 보이는 동안에는 손도 안 닿게 한다(pointer-events).
+ * 띄워서(absolute) 줄의 한가운데에 맞추던 때는 4px 이 어긋났다 — 줄은 위 8 아래 16 으로
+ * 여백이 짝이 아닌데 그 줄의 절반을 잡았기 때문이다. 같은 자리에 겹쳐 두면 단추가
+ * 칸의 가운데를 그대로 쓰므로 여백이 어떻든 어긋날 수가 없다.
  */
+.note-send,
+.note-form input {
+  grid-area: 1 / 1;
+}
+
+/* 칸 안 오른쪽에 앉는다. */
 .note-send {
-  position: absolute;
-  top: 50%;
-  right: calc(var(--space-6) + var(--space-05));
   display: grid;
   width: var(--control-sm);
   height: var(--control-sm);
+  justify-self: end;
+  margin-right: var(--space-05);
   border: 0;
   border-radius: var(--radius-round);
   background: var(--ink);
   cursor: pointer;
-  opacity: 0;
   place-items: center;
-  pointer-events: none;
-  transform: translateY(-50%) scale(0.8);
-  transition: opacity var(--motion) ease, transform var(--motion) ease;
+  transition: opacity var(--motion) ease;
 }
 
-.note-send.is-ready {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(-50%) scale(1);
-}
-
-.note-send:active {
+.note-send:active:not(:disabled) {
   background: var(--ink-soft);
 }
 
@@ -157,11 +152,12 @@
 }
 
 /*
- * 못 누르는 동안은 아예 안 보인다. 예전에는 0.45 로 흐리게만 두었는데, 이제 적을 것이
- * 없으면 물러나는 것이 규칙이라 두 값이 겨루면 흐린 단추가 칸 안에 남는다(계측: 0.45).
+ * 적을 것이 없어도 자리를 지킨다 — 어디를 눌러 보내는지가 처음부터 보여야 한다.
+ * 다만 눌러도 안 되는 것은 그렇게 보인다. 흐린 값은 머리 줄 아이콘 단추와 같이 쓴다.
  */
 .note-send:disabled {
   cursor: default;
+  opacity: 0.25;
 }
 
 /* 목록 행에 붙는 대화 표시 */
