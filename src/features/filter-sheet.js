@@ -1,7 +1,6 @@
 import { elements } from "../dom.js";
 import {
   CATEGORIES,
-  formatDayLabel,
   formatMoney,
   getMonthlyExpenses,
   nextCategoryFilter,
@@ -9,7 +8,6 @@ import {
 import { render } from "../render.js";
 import {
   getCategoryFilter,
-  getDateFilter,
   getExpenses,
   getSelectedMonth,
   setCategoryFilter,
@@ -21,7 +19,7 @@ import { hideSheet, showSheet } from "../ui/sheet.js";
 import { closeOpenRow } from "../ui/swipe.js";
 
 /**
- * 지출 내역 거르기 — 분류 · 날짜.
+ * 지출 내역 거르기 — 분류.
  *
  * 예전에는 분류만 제목 줄의 아이콘으로 걸렀다. 그 아이콘이 옆의 보기 토글과 크기도
  * (42 vs 34) 성격도 달라 한 무리처럼 보이지 않았다.
@@ -30,8 +28,9 @@ import { closeOpenRow } from "../ui/swipe.js";
  * 자리다("지출 내역(5) · 이름"). 거기가 곧 여는 자리이기도 하면 읽는 곳과 바꾸는 곳이
  * 같아진다.
  *
- * 사람은 여기에 두지 않는다. 요약 카드를 누르면 한 번에 되는데 시트에 또 두면 같은 일에
- * 길이 둘이 된다. 날짜도 캘린더 칸이 있으니 여기서는 걸린 것을 보여 주고 푸는 자리다.
+ * 사람도 날짜도 여기에 두지 않는다. 요약 카드와 캘린더 칸을 누르면 한 번에 되는 일이라,
+ * 시트에 또 두면 같은 일에 길이 둘이 된다 — 어느 쪽으로 바꿨는지 헷갈리고 한쪽만 고쳐진다.
+ * 다만 "모두 지우기" 는 셋을 다 푼다. 여기서 못 걸 뿐, 걸려 있으면 여기서 풀린다.
  */
 
 /** 그 달에 실제로 쓴 분류만, 많이 쓴 순으로. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다. */
@@ -83,7 +82,6 @@ function 그리기() {
 
 export function openFilterSheet() {
   그리기();
-  날짜그리기();
   showSheet(elements.filterSheet);
 }
 
@@ -91,24 +89,7 @@ export function closeFilterSheet() {
   hideSheet(elements.filterSheet);
 }
 
-/**
- * 날짜는 캘린더에서만 고른다. 여기서는 걸린 것을 보여 주고 푸는 자리다.
- *
- * 시트 안에서 날을 고르게 하면 달력을 하나 더 그려야 하는데, 그 달력은 이미 이 화면에 있다.
- */
-function 날짜그리기() {
-  const 걸린날 = getDateFilter();
-  elements.filterDateRow.hidden = !걸린날;
-  if (걸린날) elements.filterDateLabel.textContent = formatDayLabel(걸린날);
-}
-
-export function clearDateFilter() {
-  setDateFilter(null);
-  render();
-  날짜그리기();
-}
-
-/** 셋을 한꺼번에 푼다. 시트는 닫는다 — 풀고 나면 더 볼 것이 없다. */
+/** 사람·분류·날짜를 한꺼번에 푼다. 시트는 닫는다 — 풀고 나면 더 볼 것이 없다. */
 export function clearAllFilters() {
   setMemberFilter(null);
   setCategoryFilter(null);

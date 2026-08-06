@@ -437,17 +437,22 @@ test("제목 줄에는 이제 제목과 보기 방식뿐이다", () => {
   assert.match(css, /\.ledger-heading \{[^}]*align-items: flex-end/);
 });
 
-test("거르기 시트는 분류와 날짜만 맡는다", () => {
+test("거르기 시트는 분류만 맡는다", () => {
   /*
-   * 사람은 여기에 두지 않는다. 요약 카드를 누르면 한 번에 되는데 시트에 또 두면
-   * 같은 일에 길이 둘이 된다 — 어느 쪽으로 바꿨는지 헷갈리고, 한쪽만 고쳐지는 버그도 생긴다.
+   * 사람도 날짜도 여기에 두지 않는다. 요약 카드와 캘린더 칸을 누르면 한 번에 되는 일이라,
+   * 시트에 또 두면 같은 일에 길이 둘이 된다 — 어느 쪽으로 바꿨는지 헷갈리고 한쪽만 고쳐진다.
    */
   assert.match(html, /<dialog class="sheet" id="filter-sheet"/);
   assert.doesNotMatch(html, /id="filter-members"/, "사람 칸이 남아 있다");
-  assert.doesNotMatch(app, /pickFilterMember/, "사람을 고르는 길이 시트에 남아 있다");
+  assert.doesNotMatch(html, /id="filter-date-row"/, "날짜 칸이 남아 있다");
+  assert.doesNotMatch(app, /pickFilterMember|clearDateFilter/, "시트에서 사람·날짜를 거는 길이 남아 있다");
   assert.match(html, /id="category-list"/);
-  assert.match(html, /id="filter-date-row" hidden/);
   assert.match(html, /id="clear-filters">모두 지우기/);
+  /*
+   * 덩이가 하나뿐이라 "분류" 이름표는 가를 것이 없다. 시트 제목이 이미 무엇을 고르는지 말한다.
+   */
+  const 시트본문 = html.slice(html.indexOf('class="sheet-scroll filter-body"'));
+  assert.doesNotMatch(시트본문.slice(0, 400), /class="eyebrow"/, "가를 것 없는 이름표가 남아 있다");
 
   // 시트를 여는 것은 제목이다.
   assert.match(html, /<button class="ledger-heading" type="button" id="open-filter-sheet"/);
@@ -457,11 +462,12 @@ test("거르기 시트는 분류와 날짜만 맡는다", () => {
   const 고르기 = fn("pickCategory");
   assert.match(고르기, /closeFilterSheet\(\)/);
   assert.doesNotMatch(고르기, /hidePage/, "화면을 떠나지 않는다");
-  // 날짜는 캘린더에서만 고른다. 여기서는 걸린 것을 보여 주고 푸는 자리다.
-  assert.match(fn("날짜그리기"), /elements\.filterDateRow\.hidden = !걸린날/);
-  assert.match(fn("clearDateFilter"), /setDateFilter\(null\)/);
-  // 모두 지우기는 사람까지 푼다 — 시트에서 못 걸 뿐, 걸려 있으면 여기서 풀린다.
-  assert.match(fn("clearAllFilters"), /setMemberFilter\(null\)/);
+
+  // 다만 모두 지우기는 셋을 다 푼다 — 여기서 못 걸 뿐, 걸려 있으면 여기서 풀린다.
+  const 지우기 = fn("clearAllFilters");
+  for (const 끄기 of [/setMemberFilter\(null\)/, /setCategoryFilter\(null\)/, /setDateFilter\(null\)/]) {
+    assert.match(지우기, 끄기);
+  }
 
   // 그 달에 쓴 분류만, 많이 쓴 순. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다.
   assert.match(fn("이번달분류"), /sort\(\(a, b\) => b\.total - a\.total/);

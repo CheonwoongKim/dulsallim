@@ -1,6 +1,5 @@
 import {
   clearAllFilters,
-  clearDateFilter,
   closeFilterSheet,
   openFilterSheet,
   pickCategory,
@@ -47,7 +46,6 @@ elements.memberSlots.forEach(({ row }) => {
 });
 elements.openFilterSheet.addEventListener("click", openFilterSheet);
 closeOnPress(elements.closeFilterSheet, closeFilterSheet);
-elements.clearDateFilter.addEventListener("click", clearDateFilter);
 elements.clearFilters.addEventListener("click", clearAllFilters);
 elements.categoryList.addEventListener("click", (event) => {
   const 줄 = event.target.closest("[data-category]");

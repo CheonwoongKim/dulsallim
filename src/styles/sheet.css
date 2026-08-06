@@ -663,21 +663,10 @@ body.sheet-open .app-shell {
 
 /* ── 지출 내역 거르기 ─────────────────────────────────────── */
 
-/*
- * 세 덩이(누구 · 분류 · 날짜)가 이름표로 갈린다.
- * 이름표와 그 아래 것은 붙이고, 덩이 사이는 벌린다.
- */
+/* 시트 안에 분류 목록 하나와 지우는 단추뿐이다. */
 .filter-body {
   display: grid;
   gap: var(--space-2);
-}
-
-.filter-body .eyebrow {
-  margin: var(--space-3) 0 0;
-}
-
-.filter-body .eyebrow:first-child {
-  margin-top: 0;
 }
 
 /* 셋을 한꺼번에 푸는 자리. 고르는 것들과 한 박자 떨어뜨린다. */
