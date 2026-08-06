@@ -27,24 +27,28 @@ const 설정본문 = html.slice(
   html.indexOf("<dialog class=\"sheet\" id=\"entry-sheet\""),
 );
 
-test("머리 줄 아이콘은 사람에서 별로 바뀌었다", () => {
+test("머리 줄 아이콘은 사람에서 즐겨찾기 표시로 바뀌었다", () => {
   // 이름은 두 곳이 같아야 한다 — 읽어 주는 이름과 화면 제목.
   assert.match(html, /id="open-wish" aria-label="위시리스트"/);
   assert.match(html, /<h2 id="wish-page-title">위시리스트<\/h2>/);
   assert.doesNotMatch(html, /id="open-profile" aria-label="마이페이지"/, "사람 아이콘이 남아 있다");
 
-  const 별 = html.match(/id="open-wish"[\s\S]*?<\/button>/)[0];
-  assert.match(별, /viewBox="0 0 24 24"/, "다른 아이콘과 같은 24 상자여야 한다");
-  assert.doesNotMatch(별, /fill="/, "선으로만 그린다 — 칠은 .icon-button svg 가 none 으로 정한다");
-  assert.doesNotMatch(별, /stroke="/, "색도 .icon-button svg 의 currentColor 를 따른다");
+  const 표 = html.match(/id="open-wish"[\s\S]*?<\/button>/)[0];
+  assert.match(표, /viewBox="0 0 24 24"/, "다른 아이콘과 같은 24 상자여야 한다");
+  assert.doesNotMatch(표, /fill="/, "선으로만 그린다 — 칠은 .icon-button svg 가 none 으로 정한다");
+  assert.doesNotMatch(표, /stroke="/, "색도 .icon-button svg 의 currentColor 를 따른다");
 
   /*
-   * 별이 상자 안에서 놀아야 한다. 24 를 넘으면 잘리고, 너무 작으면 옆 아이콘보다 작아 보인다.
+   * 표가 상자 안에서 놀아야 한다. 24 를 넘으면 잘리고, 너무 작으면 옆 아이콘보다 작아 보인다.
    * 다른 아이콘은 3~4px 안쪽에서 논다(분석 4~20, 설정 3~21).
    */
-  const 좌표 = [...별.match(/ d="([^"]+)"/)[1].matchAll(/(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/g)]
+  const 좌표 = [...표.match(/ d="([^"]+)"/)[1].matchAll(/(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/g)]
     .map(([, x, y]) => [Number(x), Number(y)]);
-  assert.equal(좌표.length, 10, "정오각별은 꼭짓점이 열이다");
+  // 위 두 귀 · 오른쪽 아래 · 가운데 홈 · 왼쪽 아래.
+  assert.equal(좌표.length, 5, "책갈피는 꼭짓점이 다섯이다");
+  // 아래가 파여 있어야 네모가 아니라 즐겨찾기 표시로 읽힌다.
+  assert.equal(좌표[3][0], 12, "홈은 한가운데다");
+  assert.ok(좌표[3][1] < Math.max(...좌표.map(([, y]) => y)), "아래가 안 파였다 — 그냥 네모다");
   const 가로 = 좌표.map(([x]) => x);
   const 세로 = 좌표.map(([, y]) => y);
   const 안에 = (값들) => Math.min(...값들) >= 2 && Math.max(...값들) <= 22;
