@@ -2789,18 +2789,58 @@ test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
   assert.match(css, /\.note-send,\n\.note-form input \{\n  grid-area: 1 \/ 1;/);
 
   /*
+   * 이 시트에서 누르면 되는 것은 강조색이다. 바로 위 내 말풍선도, 다른 시트의 큰 단추도
+   * --accent 인데 여기만 --ink 였다 — 대화 기능을 처음 만들 때부터고 따로 정한 까닭이 없었다.
+   */
+  assert.match(보내기, /background: var\(--accent\)/, "보내기만 다른 색이다");
+  assert.match(규칙(".note-row.is-mine .note-bubble"), /background: var\(--accent\)/);
+  assert.match(규칙(".note-send:active:not(:disabled)"), /background: var\(--accent-dark\)/);
+
+  /*
+   * 흰 화살표가 그 바탕에서 읽혀야 한다. 컨트롤은 바탕과 3:1 이 바닥이다(WCAG 1.4.11).
+   * 눈으로 고르지 않고 여기서 센다 — 계측 3.08:1.
+   */
+  const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const 밝기 = (색) =>
+    색
+      .map((v) => v / 255)
+      .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+      .reduce((합, v, i) => 합 + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const 대비 = (a, b) => {
+    const [밝, 어] = [밝기(a), 밝기(b)].sort((x, y) => y - x);
+    return (밝 + 0.05) / (어 + 0.05);
+  };
+  const 색값 = (이름) => rgb(css.match(new RegExp(`${이름}: (#[0-9a-f]{6})`))[1]);
+  for (const 바탕 of ["--accent", "--accent-dark"]) {
+    const 잰값 = 대비(색값("--white"), 색값(바탕));
+    assert.ok(잰값 >= 3, `보내기 화살표가 ${바탕} 위에서 ${잰값.toFixed(2)}:1 — 3:1 에 못 미친다`);
+  }
+
+  /*
    * 적을 것이 없어도 자리를 지킨다 — 어디를 눌러 보내는지가 처음부터 보여야 한다.
-   * 대신 눌러도 안 되는 것은 그렇게 보인다. 흐린 값은 머리 줄 아이콘 단추와 같이 쓴다.
+   * 못 누르는 동안은 회색, 누를 수 있으면 강조색. 색이 바뀌는 것이 곧 준비됐다는 말이다.
    */
   // 값이 아니라 규칙으로 본다 — transition 에 적힌 opacity 는 흐려지는 방식이지 숨는 것이 아니다.
   assert.doesNotMatch(보내기, /^\s*(opacity|pointer-events):/m, "단추가 다시 숨는다");
   assert.doesNotMatch(css, /is-ready/, "보이고 안 보이고를 가르던 이름이 남아 있다");
+
+  /*
+   * 아이콘 단추처럼 opacity 로 흐리게 하지 않는다. 그쪽은 어두운 잉크라 흐려도 남지만
+   * 강조색은 원래 밝아서 0.25 로 내리면 종이에 묻힌다. 눈으로 고르지 않고 여기서 센다 —
+   * 흐리게 한 강조색보다 잘 보여야 하고, 누를 수 있을 때와는 색으로 갈려야 한다.
+   */
   const 못누름 = 규칙(".note-send:disabled");
-  assert.equal(
-    못누름.match(/opacity: ([\d.]+)/)[1],
-    규칙(".icon-button:disabled").match(/opacity: ([\d.]+)/)[1],
-    "못 누르는 모양이 화면마다 다르다",
+  assert.doesNotMatch(못누름, /opacity/, "밝은 색을 흐리게 하면 종이에 묻힌다");
+  assert.match(못누름, /background: var\(--line-strong\)/);
+
+  const 칸바탕 = 색값("--field-bg");
+  const 섞기 = (색, 알파) => 색.map((v, i) => v * 알파 + 칸바탕[i] * (1 - 알파));
+  const 회색 = 대비(색값("--line-strong"), 칸바탕);
+  assert.ok(
+    회색 > 대비(섞기(색값("--accent"), 0.25), 칸바탕),
+    `못 누르는 동그라미가 ${회색.toFixed(2)}:1 — 흐린 강조색보다도 안 보인다`,
   );
+  assert.ok(대비(색값("--accent"), 색값("--line-strong")) > 1.5, "누를 수 있고 없고가 색으로 안 갈린다");
   assert.match(fn("syncNoteSend"), /elements\.noteSend\.disabled = !elements\.noteInput\.value\.trim\(\)/);
   // 적을 때마다, 그리고 보낸 뒤에도 다시 맞춘다.
   assert.match(app, /elements\.noteInput\.addEventListener\("input", syncNoteSend\)/);

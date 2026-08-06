@@ -141,7 +141,13 @@
   margin-right: var(--space-2);
   border: 0;
   border-radius: var(--radius-round);
-  background: var(--ink);
+  /*
+   * 강조색이다. 이 시트에서 누르면 되는 것은 강조색이라는 규칙을 따른다 — 바로 위
+   * 내 말풍선(.note-row.is-mine)도, 다른 시트의 큰 단추(.submit-button)도 --accent 다.
+   * 여기만 --ink 였던 것은 대화 기능을 처음 만들 때부터고, 따로 정한 까닭은 없었다.
+   * 흰 화살표는 이 바탕에서 3.08:1 — 컨트롤 바닥인 3:1 을 넘는다(검사가 센다).
+   */
+  background: var(--accent);
   cursor: pointer;
   place-items: center;
   transition: opacity var(--motion) ease;
@@ -158,7 +164,7 @@
 }
 
 .note-send:active:not(:disabled) {
-  background: var(--ink-soft);
+  background: var(--accent-dark);
 }
 
 /* 다른 아이콘과 같은 20px · 굵기 1.8. 19 와 2 는 이 파일에만 있던 값이었다. */
@@ -174,11 +180,16 @@
 
 /*
  * 적을 것이 없어도 자리를 지킨다 — 어디를 눌러 보내는지가 처음부터 보여야 한다.
- * 다만 눌러도 안 되는 것은 그렇게 보인다. 흐린 값은 머리 줄 아이콘 단추와 같이 쓴다.
+ * 못 누르는 동안은 회색, 누를 수 있으면 강조색. 색이 바뀌는 것이 곧 준비됐다는 말이다.
+ *
+ * 아이콘 단추처럼 opacity 로 흐리게 하지 않는다. 그쪽은 어두운 잉크라 흐려도 남지만,
+ * 강조색은 원래 밝아서 0.25 로 내리면 종이에 묻힌다 — 재 보니 동그라미가 칸 바탕과
+ * 1.30:1, 안의 흰 화살표는 1.34:1 로 사실상 사라졌다. --line-strong 은 1.89 / 1.94 라
+ * 흐리게 하던 옛 잉크(1.68 / 1.72)보다도 잘 보인다. 늘 보이게 한 뜻을 지키려면 이쪽이다.
  */
 .note-send:disabled {
   cursor: default;
-  opacity: 0.25;
+  background: var(--line-strong);
 }
 
 /* 목록 행에 붙는 대화 표시 */
