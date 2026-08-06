@@ -102,7 +102,7 @@ export function createWishDetail(wish, { action = "none", waiting = "", context 
     <p class="wish-detail-by">${escapeHtml(byLine(wish))}</p>
     ${
       href
-        ? `<a class="ghost-button wish-detail-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">링크 열기</a>`
+        ? `<a class="submit-button quiet wish-detail-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">링크 열기</a>`
         : ""
     }
     <div class="wish-detail-actions">

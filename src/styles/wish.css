@@ -286,9 +286,6 @@
 
 /* 링크는 한 줄을 다 쓴다. 시트에서 유일하게 밖으로 나가는 길이라 헷갈리면 안 된다. */
 .wish-detail-link {
-  display: grid;
-  min-height: var(--tap-min);
-  place-items: center;
   text-decoration: none;
 }
 

@@ -409,7 +409,8 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
   assert.match(자세히, /\$\{progressMarkup\(wish, context\)\}/);
   assert.match(자세히, /wish-detail-by/);
   // 링크는 여기서만 밖으로 나간다. 목록 칸에는 주소가 없다.
-  assert.match(자세히, /class="ghost-button wish-detail-link" href=[\s\S]*?rel="noopener noreferrer"/);
+  // 시트 바닥의 큰 동작은 모양이 하나다 — 저장 단추와 같은 높이·모서리·글자에 색만 물러난다.
+  assert.match(자세히, /class="submit-button quiet wish-detail-link" href=[\s\S]*?rel="noopener noreferrer"/);
   assert.match(자세히, /const href = safeHref\(wish\.url\);/, "주소는 한 겹 더 받는다");
 
   // 어느 자리인지 시트가 스스로 말한다. 목록의 이름표는 여기에 없다.

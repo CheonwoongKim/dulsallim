@@ -571,6 +571,27 @@
   transition: background var(--motion) ease, transform var(--motion) ease;
 }
 
+/*
+ * 시트 바닥의 조용한 동작 — 취소·모두 지우기·링크 열기.
+ *
+ * 자리도 노릇도 같은데 모양이 제각각이었다. 카드 안에 넣으라고 만든 작은 알약
+ * (.ghost-button: 38px · 알약 · 13px)을 시트 바닥에 가로로 늘려 썼기 때문이다.
+ * 계측: 모두 지우기 345×44 알약 13px 옆에 저장 345×56 모서리16 16px,
+ * 고정비 시트에서는 취소 74×60 과 저장 263×56 이 높이마저 4px 달랐다.
+ *
+ * 모양은 저장 단추에서 그대로 물려받고 색만 물러난다. 되돌릴 수 없는 일이 아니므로
+ * 붉은색(danger)도 아니고, 채워 두면 저장과 겨루므로 종이색으로 깐다.
+ */
+.submit-button.quiet {
+  color: var(--ink);
+  background: var(--paper-deep);
+  box-shadow: none;
+}
+
+.submit-button.quiet:active {
+  background: var(--line);
+}
+
 .submit-button:hover {
   background: var(--accent-dark);
 }
@@ -664,8 +685,7 @@ body.sheet-open .app-shell {
   gap: var(--space-2);
 }
 
-/* 셋을 한꺼번에 푸는 자리. 고르는 것들과 한 박자 떨어뜨린다. */
+/* 한꺼번에 푸는 자리. 고르는 것들과 한 박자 떨어뜨린다. 크기는 .submit-button 이 정한다. */
 .filter-clear {
   margin-top: var(--space-3);
-  min-height: var(--tap-min);
 }

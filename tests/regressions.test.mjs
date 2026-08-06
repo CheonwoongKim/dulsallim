@@ -447,7 +447,14 @@ test("거르기 시트는 분류만 맡는다", () => {
   assert.doesNotMatch(html, /id="filter-date-row"/, "날짜 칸이 남아 있다");
   assert.doesNotMatch(app, /pickFilterMember|clearDateFilter/, "시트에서 사람·날짜를 거는 길이 남아 있다");
   assert.match(html, /id="category-list"/);
-  assert.match(html, /id="clear-filters">모두 지우기/);
+  assert.match(html, /id="clear-filters"><span>모두 지우기<\/span>/);
+  /*
+   * 시트 바닥의 큰 동작은 모양이 하나다. 카드 안에 넣으라고 만든 작은 알약
+   * (.ghost-button: 38 · 알약 · 13px)을 여기 늘려 쓰면 옆 시트의 저장 단추와
+   * 높이도 모서리도 글자도 달라진다 — 계측: 345×44 알약 13px 대 345×56 모서리16 16px.
+   */
+  assert.match(html, /class="submit-button quiet" type="button" id="clear-filters"/);
+  assert.match(css, /\.submit-button\.quiet \{[\s\S]*?background: var\(--paper-deep\)/);
   /*
    * 덩이가 하나뿐이라 "분류" 이름표는 가를 것이 없다. 시트 제목이 이미 무엇을 고르는지 말한다.
    */
@@ -2652,4 +2659,35 @@ test("거르기 시트는 분류가 많아도 화면 높이를 다 쓴다", () =
   assert.match(css, /#filter-sheet \{[\s\S]*?max-height: min\(92svh, var\(--viewport-h, 100svh\)\)/);
   // 월 선택 시트는 그대로 낮게 둔다 — 거기는 실제로 내용이 짧다.
   assert.match(css, /\.month-sheet \{[\s\S]*?max-height: min\(92svh, 640px\)/);
+});
+
+test("시트 바닥의 큰 동작은 모양이 하나다", () => {
+  /*
+   * 자리도 노릇도 같은데 모양이 제각각이었다. 카드 안에 넣으라고 만든 작은 알약
+   * (.ghost-button: 38px · 알약 · 13px)을 시트 바닥에 가로로 늘려 쓴 탓이다.
+   *
+   * 계측: 모두 지우기 345×44 알약 13px 옆에 저장 345×56 모서리16 16px,
+   * 고정비 시트에서는 취소 74×60 과 저장 263×56 이 높이마저 4px 달랐다.
+   *
+   * 이제 모양은 .submit-button 이 한 곳에서 정하고 색만 갈린다 —
+   * 기본(accent) · quiet(종이색) · danger.
+   */
+  for (const id of ["clear-filters", "cancel-fixed"]) {
+    assert.match(html, new RegExp(`class="submit-button quiet"[^>]*id="${id}"`), `${id} 가 다른 부품을 쓴다`);
+  }
+  assert.match(app, /class="submit-button quiet wish-detail-link"/);
+
+  // 조용한 변종은 색만 바꾼다. 크기·모서리·글자를 다시 적으면 그때부터 또 갈린다.
+  const 조용 = css.match(/\.submit-button\.quiet \{[\s\S]*?\n\}/)[0];
+  assert.doesNotMatch(조용, /min-height|border-radius|font-size|padding/);
+
+  /*
+   * .ghost-button 은 카드 안 작은 동작에만 남는다(위시 자세히의 고치기·지우기).
+   *
+   * 설정 맨 아래 로그아웃은 그대로 둔다 — .danger-text 가 테두리와 바탕을 지워
+   * 단추가 아니라 글자로 읽히고, 자주 누를 것이 아니라서 그게 맞다.
+   */
+  const 시트들 = html.slice(html.indexOf("<dialog"));
+  assert.doesNotMatch(시트들, /ghost-button wide/, "시트 바닥에 작은 알약을 늘려 쓰고 있다");
+  assert.match(html, /class="ghost-button wide danger-text" type="button" id="sign-out"/);
 });
