@@ -1,4 +1,5 @@
 import { elements } from "../dom.js";
+import { paintMemberTabs } from "../ui/member-tabs.js";
 import { compareCategories, compareMonth, sumByCategory, untilDay } from "../analysis.js";
 import {
   filterByMember,
@@ -39,38 +40,6 @@ function paintCompare(cell, result) {
   cell.classList.toggle("is-down", result.diff < 0);
 }
 
-/**
- * 전체 / 사람 각각. 요약 카드를 누르는 것과 같은 상태를 쓴다.
- *
- * 있는 버튼을 고쳐 쓰고 새로 만들지 않는다. 통째로 갈아 끼우면 방금 누른 버튼이
- * 그 자리에서 사라져 커서가 갈 곳을 잃고 <body> 로 떨어진다 — 키보드로 고른 사람은
- * 누른 순간 자리를 놓치고, 다음 Tab 이 화면 처음부터 다시 짚는다(세 엔진에서 확인).
- * 명부는 로그인 뒤로 거의 바뀌지 않으므로 새로 만드는 것은 사람 수가 달라졌을 때뿐이다.
- */
-function paintMemberPicker() {
-  const current = getMemberFilter();
-  const options = [{ id: null, name: "전체" }, ...getMembers()];
-  const picker = elements.analysisMembers;
-
-  if (picker.childElementCount !== options.length) {
-    picker.replaceChildren(
-      ...options.map(() => {
-        const button = document.createElement("button");
-        button.type = "button";
-        return button;
-      }),
-    );
-  }
-
-  options.forEach(({ id, name }, index) => {
-    const button = picker.children[index];
-    button.dataset.member = id || "";
-    // 같은 글자를 다시 쓰면 안의 글자 마디가 통째로 갈린다. 바뀐 것만 손댄다.
-    if (button.textContent !== name) button.textContent = name;
-    button.setAttribute("aria-pressed", String(current === id));
-  });
-}
-
 export function paintAnalysis() {
   const monthKey = getSelectedMonth();
   const memberFilter = getMemberFilter();
@@ -79,7 +48,7 @@ export function paintAnalysis() {
   elements.analysisMonth.textContent = formatMonth(monthKey);
   elements.analysisPrev.disabled = !isValidMonthKey(shiftMonthKey(monthKey, -1));
   elements.analysisNext.disabled = !isValidMonthKey(shiftMonthKey(monthKey, 1));
-  paintMemberPicker();
+  paintMemberTabs(elements.analysisMembers, getMemberFilter());
 
   const compared = compareMonth(mine, monthKey);
   const who = memberFilter ? getMembers().find((m) => m.id === memberFilter)?.name : null;

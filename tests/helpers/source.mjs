@@ -38,6 +38,7 @@ const SOURCE_FILES = [
   "ui/sheet.js",
   "ui/swipe.js",
   "ui/toast.js",
+  "ui/member-tabs.js",
   "ui/wish-list.js",
   "features/auth.js",
   "features/notes.js",

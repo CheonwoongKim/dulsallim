@@ -460,3 +460,54 @@ main {
   color: var(--accent-dark);
   font-weight: var(--weight-bold);
 }
+
+/* ── 전체 / 사람 탭 ───────────────────────────────────────── */
+
+/*
+ * 전체 / 사람 탭. 분석 화면과 위시리스트가 함께 쓴다.
+ *
+ * 입력 폼의 결제자 선택과 같은 생김새를 쓰되 사람 수만큼 늘어난다. 두 이름을 함께 거는
+ * 이유는 순서 때문이다 — .segmented-control 이 sheet.css 에 있어 이 파일보다 뒤에 실린다.
+ * 이름 하나로는 열 나누기가 1fr 1fr 로 되돌아가 사람이 셋이면 두 줄로 접힌다(실제로 그랬다).
+ *
+ * 머리 바로 아래에 붙어 있는다. 그냥 두면 스크롤을 따라 올라가 붙어 있는 머리 밑으로
+ * 들어간다. 덮인 탭은 눌리지 않는다 — 393×600 에서 scrollTop 122 일 때 탭은 y20~62 인데
+ * 머리가 0~66 을 덮어, 그 자리를 elementFromPoint 로 짚으면 탭이 아니라 머리가 잡힌다.
+ * 사람을 바꾸려던 손이 뒤로나 추이를 누르는 것이다. 붙여 두면 어디까지 내려가 있든
+ * 그 자리에서 바꿀 수 있다.
+ */
+.segmented-control.member-tabs {
+  position: sticky;
+  z-index: var(--layer-above);
+  top: var(--head-height);
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  /*
+   * 붙어 있는 동안 위아래 틈으로 목록이 비쳐 지나간다 — 글자가 반쯤 잘린 채 스친다.
+   * 번짐 없는 그림자로 사방 한 칸(틈과 같은 값)을 종이색으로 덮는다. 둘레가 다 종이색이라
+   * (머리 줄도 같은 색) 덮은 자리가 드러나지 않는다.
+   */
+  box-shadow: 0 0 0 var(--space-4) var(--paper);
+}
+
+.segmented-control.member-tabs button {
+  display: flex;
+  min-height: var(--control-sm);
+  min-width: 0;
+  padding: var(--space-2) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-12);
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--text-13);
+  font-weight: var(--weight-bold);
+  transition: color var(--motion) ease, background var(--motion) ease, box-shadow var(--motion) ease;
+}
+
+.segmented-control.member-tabs button[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--white);
+  box-shadow: var(--shadow-raised);
+}

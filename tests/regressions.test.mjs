@@ -1559,8 +1559,14 @@ test("사람 탭은 머리 아래에 붙어 있어 어디까지 내려가도 누
    * 덮인 탭은 눌리지 않는다 — 그 자리를 짚으면 머리가 잡혀서, 사람을 바꾸려던 손이
    * 뒤로나 추이를 누른다(계측: 스크롤 122 에서 탭은 y16 인데 머리가 66 까지 덮는다).
    */
-  assert.match(css, /#analysis-members \{[^}]*position: sticky/, "탭 줄은 붙어 있어야 한다");
-  assert.match(css, /#analysis-members \{[^}]*top: var\(--head-height\)/, "머리 바로 아래에 붙는다");
+  assert.match(css, /\.segmented-control\.member-tabs \{[^}]*position: sticky/, "탭 줄은 붙어 있어야 한다");
+  assert.match(css, /\.segmented-control\.member-tabs \{[^}]*top: var\(--head-height\)/, "머리 바로 아래에 붙는다");
+  /*
+   * 이름 둘을 함께 건다. .segmented-control 이 sheet.css 에 있어 layout.css 보다 뒤에
+   * 실리므로, 이름 하나로는 열 나누기가 1fr 1fr 로 되돌아가 사람이 셋이면 두 줄로 접힌다
+   * (실제로 그렇게 나와 탭 높이가 50 에서 96 이 됐다).
+   */
+  assert.doesNotMatch(css, /\n\.member-tabs \{/, "이름 하나로 걸면 .segmented-control 이 이긴다");
   // .page 가 세로 flex 라 본문이 넘치면 머리도 눌린다. 그러면 붙는 자리가 10px 어긋난다.
   assert.match(css, /#analysis-page \.page-head \{[^}]*flex-shrink: 0/, "머리가 줄면 붙는 자리가 어긋난다");
 });
@@ -1568,7 +1574,10 @@ test("사람 탭은 머리 아래에 붙어 있어 어디까지 내려가도 누
 test("사람 탭은 다시 그려도 버튼을 갈아 끼우지 않는다", () => {
   // 통째로 갈아 끼우면 방금 누른 버튼이 사라져 커서가 <body> 로 떨어진다.
   // 키보드로 고른 사람은 그 순간 자리를 놓치고 다음 Tab 이 화면 처음부터 다시 짚는다.
-  const picker = fn("paintMemberPicker");
+  // 분석과 위시리스트가 같은 것을 쓴다. 한쪽만 고쳐지는 일이 없어야 한다.
+  const picker = fn("paintMemberTabs");
+  assert.match(app, /paintMemberTabs\(elements\.analysisMembers, getMemberFilter\(\)\)/);
+  assert.match(app, /paintMemberTabs\(elements\.wishMembers, wishMemberFilter\)/);
   assert.match(picker, /childElementCount !== options\.length/, "사람 수가 달라졌을 때만 새로 만든다");
   assert.match(picker, /picker\.children\[index\]/, "있는 버튼을 고쳐 쓴다");
   assert.match(picker, /aria-pressed", String\(current === id\)/, "누른 탭 표시는 매번 다시 적는다");

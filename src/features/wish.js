@@ -1,5 +1,6 @@
 import { elements } from "../dom.js";
 import { getMembers } from "../members.js";
+import { paintMemberTabs } from "../ui/member-tabs.js";
 import { formatAmountInput, isValidAmount, readAmount } from "../money.js";
 import {
   achieveWish,
@@ -58,6 +59,30 @@ let menuWishId = null;
 /** 담기 시트가 고치는 중이면 그 위시. 새로 담는 중이면 null. */
 let editingWishId = null;
 
+/**
+ * 누구 위시를 보는 중인가. null 이면 전체.
+ *
+ * 분석 화면의 사람 필터와 따로 둔다 — 지출을 볼 때와 갖고 싶은 것을 볼 때 보고 싶은
+ * 사람이 같으리라는 법이 없고, 한쪽에서 고른 것이 다른 쪽을 조용히 바꾸면 놀란다.
+ */
+let wishMemberFilter = null;
+
+/**
+ * 그 사람이 원한다고 한 것.
+ *
+ * 담은 사람이 아니라 찬성한 사람으로 가른다. 혼자 담은 것은 담은 사람 탭에만 서고,
+ * 상대가 "나도" 를 누르면 둘 다의 탭에 선다 — 그때부터 둘이 함께 바라는 것이니까.
+ */
+function 그사람것(wishes) {
+  if (!wishMemberFilter) return wishes;
+  return wishes.filter((wish) => wish.agreementUserIds.includes(wishMemberFilter));
+}
+
+export function setWishMemberFilter(member) {
+  wishMemberFilter = member || null;
+  paintWishPage();
+}
+
 const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt));
 
 /** 내가 이미 찬성했는지. 올린 것도 첫 찬성으로 세므로 내가 올린 것에는 "나도" 가 안 뜬다. */
@@ -115,7 +140,8 @@ function paintAchieved(wishes) {
 
 /** 화면에 있는 것을 지금 사본으로 맞춘다. 상대가 바꿔도 render() 를 거쳐 여기로 온다. */
 export function paintWishPage() {
-  const wishes = getWishes();
+  const wishes = 그사람것(getWishes());
+  paintMemberTabs(elements.wishMembers, wishMemberFilter);
   paintPursuing(wishes);
   paintProposed(wishes);
   paintAchieved(wishes);

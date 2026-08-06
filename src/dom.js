@@ -75,6 +75,7 @@ export const elements = {
   openWish: document.querySelector("#open-wish"),
   wishPage: document.querySelector("#wish-page"),
   addWish: document.querySelector("#add-wish"),
+  wishMembers: document.querySelector("#wish-members"),
   wishPursuing: document.querySelector("#wish-pursuing"),
   wishCount: document.querySelector("#wish-count"),
   wishList: document.querySelector("#wish-list"),

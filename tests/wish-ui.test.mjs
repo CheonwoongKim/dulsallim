@@ -474,3 +474,26 @@ test("진척 막대는 값을 적은 위시에만 서고, 분석 화면과 같�
   // 줄마다 다시 읽지 않는다. 지출 전부를 훑는 계산이라 한 번 모아 넘긴다.
   assert.match(fn("progressContext"), /expenses: getExpenses\(\), members: getMembers\(\)/);
 });
+
+test("사람 탭은 찬성한 사람으로 가르고, 분석의 사람 필터와 따로 논다", () => {
+  assert.match(html, /<div class="segmented-control member-tabs" id="wish-members"/);
+
+  /*
+   * 담은 사람이 아니라 찬성한 사람으로 가른다. 혼자 담은 것은 담은 사람 탭에만 서고,
+   * 상대가 "나도" 를 누르면 둘 다의 탭에 선다 — 그때부터 둘이 함께 바라는 것이니까.
+   */
+  const 거르기 = fn("그사람것");
+  assert.match(거르기, /wish\.agreementUserIds\.includes\(wishMemberFilter\)/);
+  assert.doesNotMatch(거르기, /createdBy/, "담은 사람으로 가르면 공동 위시가 한쪽에만 선다");
+  assert.match(거르기, /if \(!wishMemberFilter\) return wishes;/, "전체는 거르지 않는다");
+
+  /*
+   * 분석의 사람 필터와 상태를 나눠 둔다. 지출을 볼 때와 갖고 싶은 것을 볼 때 보고 싶은
+   * 사람이 같으리라는 법이 없고, 한쪽에서 고른 것이 다른 쪽을 조용히 바꾸면 놀란다.
+   */
+  assert.match(app, /let wishMemberFilter = null;/);
+  assert.doesNotMatch(fn("setWishMemberFilter"), /setMemberFilter/);
+
+  // 세 덩이 모두 걸러진 목록을 본다. 하나만 안 걸러지면 탭이 반쯤 듣는 것처럼 보인다.
+  assert.match(fn("paintWishPage"), /const wishes = 그사람것\(getWishes\(\)\);/);
+});

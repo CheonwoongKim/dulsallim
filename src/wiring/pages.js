@@ -53,6 +53,7 @@ import {
   openWishSheet,
   pickAchievedExpense,
   pickWishMenu,
+  setWishMemberFilter,
 } from "../features/wish.js";
 import { render } from "../render.js";
 import { hidePage } from "../ui/page.js";
@@ -175,6 +176,11 @@ elements.wishPursuing.addEventListener("click", (event) => {
  * 두 칸이 나란히 서면 가로로 밀 자리가 없고, 밀면 옆 칸까지 함께 끌려 무엇을
  * 지우는지 흐려진다. 그래서 이 목록만 스와이프를 쓰지 않는다.
  */
+elements.wishMembers.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-member]");
+  if (tab) setWishMemberFilter(tab.dataset.member);
+});
+
 elements.wishList.addEventListener("click", (event) => {
   const menu = event.target.closest("[data-wish-menu]");
   if (menu) {
