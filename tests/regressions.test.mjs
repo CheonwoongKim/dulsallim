@@ -2560,3 +2560,20 @@ test("설정에서 들어간 화면은 뒤로 가면 설정으로 돌아온다",
   // 로그아웃처럼 통째로 갈아엎을 때는 쌓인 것도 비운다.
   assert.match(화면, /pageStack\.length = 0;/);
 });
+
+test("목록·캘린더 아이콘도 다른 아이콘과 같은 20px 이다", () => {
+  /*
+   * 17 이던 때는 머리 줄 아이콘(20) 옆에서 작아 보였다 — 알약 배경이 있어 상자는 커
+   * 보이는데 그림만 15% 작으니 눌러야 할 것이 덜 또렷했다.
+   *
+   * 숫자를 한쪽에만 적지 않고 둘이 같은지를 본다. 한쪽만 바뀌면 여기서 걸린다.
+   */
+  const 그림크기 = (선택자) => {
+    const 시작 = css.indexOf(`${선택자} {`);
+    assert.ok(시작 >= 0, `${선택자} 규칙이 없다`);
+    const 한덩이 = css.slice(시작, css.indexOf("\n}", 시작));
+    return 한덩이.match(/width: (\d+px)/)[1];
+  };
+  assert.equal(그림크기(".view-toggle svg"), 그림크기(".icon-button svg"));
+  assert.equal(그림크기(".view-toggle svg"), "20px");
+});

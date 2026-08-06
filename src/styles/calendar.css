@@ -36,9 +36,15 @@
   inset: calc((var(--tap-min) - var(--pill-height)) / -2) 0;
 }
 
+/*
+ * 다른 아이콘과 같은 20px.
+ *
+ * 17 이던 때는 머리 줄 아이콘(20) 옆에서 작아 보였다 — 알약 배경이 있어 상자는 커
+ * 보이는데 그림만 15% 작으니 눌러야 할 것이 덜 또렷했다. 선 굵기는 원래 같다(1.8).
+ */
 .view-toggle svg {
-  width: 17px;
-  height: 17px;
+  width: 20px;
+  height: 20px;
   fill: none;
   stroke: currentColor;
   /* 점으로 찍은 목록 표식이 동그랗게 보이려면 둥근 끝이 필요하다. */
