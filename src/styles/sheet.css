@@ -95,7 +95,8 @@
 .category-row {
   display: grid;
   min-height: var(--control-lg);
-  padding: 0 var(--space-1);
+  /* 배경이 깔리면 이 여백이 글자와 배경 끝 사이의 숨통이 된다. */
+  padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-12);
   align-items: center;
@@ -257,6 +258,11 @@
  */
 .category-list {
   display: grid;
+  /*
+   * 좌우로 조금 들여 둔다. 없으면 고른 줄의 배경이 시트 내용 폭을 꽉 채워
+   * 띠처럼 보인다 — 모서리 12 를 준 뜻이 사라지고 글자도 배경 끝에 붙는다.
+   */
+  padding-inline: var(--space-2);
   padding-bottom: var(--space-2);
   gap: 0;
   align-content: start;
