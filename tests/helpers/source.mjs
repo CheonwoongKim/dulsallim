@@ -37,6 +37,7 @@ const SOURCE_FILES = [
   "ui/sheet.js",
   "ui/swipe.js",
   "ui/toast.js",
+  "ui/wish-list.js",
   "features/auth.js",
   "features/notes.js",
   "features/analysis.js",
@@ -50,10 +51,11 @@ const SOURCE_FILES = [
   "features/fixed-sheet.js",
   "features/expense-form.js",
   "features/month-picker.js",
+  "features/wish.js",
 ];
 
 /** 캐스케이드 순서가 특이도 경합을 좌우하므로 순서를 지켜 이어 붙인다. */
-export const STYLE_FILES = ["base", "swipe", "layout", "ledger", "calendar", "page", "sheet", "notes", "analysis", "trend", "auth", "responsive"];
+export const STYLE_FILES = ["base", "swipe", "layout", "ledger", "calendar", "page", "sheet", "notes", "analysis", "trend", "wish", "auth", "responsive"];
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 

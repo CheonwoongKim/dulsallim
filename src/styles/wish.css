@@ -1,0 +1,217 @@
+/*
+ * 위시리스트 — 담아 둔 것 · 지금 향하는 것 · 이룬 것.
+ *
+ * 세 덩이가 한 화면에 서지만 무게가 다르다. 향하는 것은 카드로 도드라지고,
+ * 담아 둔 것은 목록이며, 이룬 것은 이름과 날짜만 남아 조용히 아래에 깔린다.
+ */
+
+.wish-section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* 이름표와 목록 사이는 .wish-section 의 gap 이 정한다. 여기서 또 벌리면 두 번 벌어진다. */
+.wish-section .eyebrow {
+  margin: 0;
+}
+
+/* ── 지금 향하는 것 ───────────────────────────────────────── */
+
+.wish-card {
+  display: grid;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-16);
+  gap: var(--space-1);
+  background: var(--white);
+}
+
+.wish-card .eyebrow {
+  color: var(--accent-dark);
+}
+
+.wish-card-name {
+  font-size: var(--text-20);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-heading);
+}
+
+.wish-card-actions {
+  display: flex;
+  /* 위 12. 이름·설명이 4px 로 붙어 있으므로 단추 줄만 한 박자 떨어뜨린다. */
+  margin-top: var(--space-3);
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+/*
+ * 링크 하나뿐일 때도 단추는 오른쪽 끝에 선다.
+ *
+ * .ghost-button 은 기본이 38 이라 손이 닿는 44 에 모자란다. 다른 화면이 함께 쓰는
+ * 부품이라 그쪽을 키우지 않고, 카드 안에서 유일한 동작인 이 자리만 44 로 세운다
+ * (자리만 넓히는 ::after 를 쓸 이유가 없다 — 여기는 넓힐 공간이 있다).
+ */
+.wish-card-actions .ghost-button {
+  min-height: var(--tap-min);
+  margin-left: auto;
+}
+
+/* ── 담아 둔 것 ───────────────────────────────────────────── */
+
+.wish-list {
+  display: grid;
+}
+
+.wish-item + .wish-item {
+  border-top: 1px solid var(--line-row);
+}
+
+/* 밀어 낸 뒤에도 뒤가 비치지 않도록 배경을 쥔다. 이 화면은 종이색이다. */
+.wish-surface {
+  display: flex;
+  padding: var(--space-3) 0;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  background: var(--paper);
+}
+
+.wish-copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.wish-copy strong {
+  overflow: hidden;
+  font-size: var(--text-15);
+  letter-spacing: var(--tracking-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wish-meta {
+  color: var(--ink-soft);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-small);
+}
+
+.wish-link {
+  color: var(--ink-soft);
+  font-size: var(--text-12);
+  font-weight: var(--weight-bold);
+  justify-self: start;
+  letter-spacing: var(--tracking-small);
+}
+
+/*
+ * "나도" 는 이 화면에서 가장 자주 누르는 곳이다. 보이는 높이는 38 로 두고
+ * 손이 닿는 자리는 44 에서 역산해 넓힌다 — 아이콘 단추와 같은 방식이다.
+ */
+.wish-agree {
+  /* 보이는 높이를 한 곳에서 정한다. 아래 ::after 가 이 값에서 모자란 만큼을 낸다. */
+  --agree-height: 38px;
+
+  position: relative;
+  min-width: 60px;
+  min-height: var(--agree-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  flex: 0 0 auto;
+  color: var(--white);
+  background: var(--ink);
+  cursor: pointer;
+  font-size: var(--text-13);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-small);
+}
+
+/*
+ * 옆으로는 넓히지 않는다. 왼쪽에 위시 이름이 바로 붙어 있어, 가로로 늘리면
+ * 이름을 누르려던 손이 "나도" 에 잡힌다. 세로로만 44 를 채운다.
+ */
+.wish-agree::after {
+  content: "";
+  position: absolute;
+  inset: calc((var(--tap-min) - var(--agree-height)) / -2) 0;
+}
+
+.wish-agree:active {
+  background: var(--ink-soft);
+}
+
+.wish-waiting {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-small);
+  text-align: right;
+}
+
+/* ── 이룬 것 ──────────────────────────────────────────────── */
+
+.wish-achieved {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.wish-achieved-row {
+  display: flex;
+  margin: 0;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--ink-soft);
+  font-size: var(--text-13);
+  letter-spacing: var(--tracking-small);
+}
+
+.wish-achieved-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wish-achieved-row time {
+  flex: 0 0 auto;
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 빈 자리와 시트 ───────────────────────────────────────── */
+
+.wish-empty {
+  margin: 0;
+  padding: var(--space-2) var(--space-05);
+  color: var(--ink-soft);
+  font-size: var(--text-13);
+  line-height: var(--leading-text);
+}
+
+.wish-hint {
+  margin: 0;
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-12);
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+  font-size: var(--text-13);
+  line-height: var(--leading-text);
+}
+
+.wish-expense-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* ── 설정 맨 위의 내 줄 ───────────────────────────────────── */
+
+/* .menu-row span 이 모든 span 을 세로 격자로 만든다. 아바타와 글자는 나란히 서야 한다. */
+.menu-row .menu-me {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-3);
+  align-items: center;
+}

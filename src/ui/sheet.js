@@ -15,6 +15,8 @@ export const SHEETS = [
   elements.nagSheet,
   elements.trendSheet,
   elements.resetSheet,
+  elements.wishSheet,
+  elements.wishAchieveSheet,
 ];
 
 const sheetStates = new WeakMap();

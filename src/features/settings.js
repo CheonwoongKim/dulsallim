@@ -1,6 +1,6 @@
 import { syncPushToggle } from "./push.js";
 import { elements } from "../dom.js";
-import { getMembers } from "../members.js";
+import { getMembers, toDisplayColor } from "../members.js";
 import { paintMembers, render, resetTotalAnimation } from "../render.js";
 import { loadAll, resetHousehold } from "../store.js";
 import { hidePage, showPage } from "../ui/page.js";
@@ -11,8 +11,24 @@ import { getProfile } from "./auth.js";
 /** 지우려면 이 말을 그대로 적어야 한다. 손이 미끄러져 눌리는 일을 막는 유일한 방법이다. */
 const CONFIRM_WORD = "초기화";
 
+/**
+ * 설정 맨 위의 내 줄.
+ *
+ * 이름만 적어 두면 "내 것" 이라는 게 안 읽힌다. 요약 카드와 같은 아바타를 함께 놓는다.
+ * 색은 서버에서 온 값이라 toDisplayColor 를 지나야 한다 — style 에 그대로 들어가는 자리다.
+ */
+function paintMeRow() {
+  const profile = getProfile();
+  if (!profile) return;
+  const name = profile.display_name || "";
+  elements.settingsAvatar.textContent = name.slice(-1) || "?";
+  elements.settingsAvatar.style.background = toDisplayColor(profile.avatar_color);
+  elements.settingsName.textContent = name;
+}
+
 export function openSettingsPage() {
   syncPushToggle();
+  paintMeRow();
   showPage(elements.settingsPage);
 }
 

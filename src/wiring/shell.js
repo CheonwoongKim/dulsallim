@@ -8,6 +8,7 @@ import { closeNagSheet } from "../features/nag.js";
 import { closeNotes } from "../features/notes.js";
 import { closeResetSheet } from "../features/settings.js";
 import { closeTrendSheet } from "../features/trend.js";
+import { closeAchieveSheet, closeWishSheet } from "../features/wish.js";
 import { getOpenPage, hidePage } from "../ui/page.js";
 import {
   SHEETS,
@@ -34,6 +35,8 @@ function closeActiveSheet() {
   if (!elements.nagSheet.hidden) closeNagSheet();
   if (!elements.trendSheet.hidden) closeTrendSheet();
   if (!elements.resetSheet.hidden) closeResetSheet();
+  if (!elements.wishSheet.hidden) closeWishSheet();
+  if (!elements.wishAchieveSheet.hidden) closeAchieveSheet();
 }
 
 /* ── 시트 공통: 아래로 끌어 닫기 · 포커스 가두기 ──────────── */

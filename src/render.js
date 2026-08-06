@@ -16,6 +16,7 @@ import { getMemberGoal, getMemberName, getMembers } from "./members.js";
 import { renderCalendar } from "./ui/calendar-grid.js";
 import { paintAnalysis } from "./features/analysis.js";
 import { refreshTrend } from "./features/trend.js";
+import { paintWishPage } from "./features/wish.js";
 import {
   getCategoryFilter,
   getDateFilter,
@@ -203,4 +204,6 @@ export function render() {
   // 분석을 열어 둔 채 달이나 사람을 바꿀 수 있다. 같은 자리에서 함께 맞춘다.
   if (!elements.analysisPage.hidden) paintAnalysis();
   if (!elements.trendSheet.hidden) refreshTrend();
+  // 상대가 위시를 담거나 "나도" 를 누르면 구독이 여기까지 데려온다(sync.js → render).
+  if (!elements.wishPage.hidden) paintWishPage();
 }

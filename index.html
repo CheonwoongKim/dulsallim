@@ -63,8 +63,9 @@
           <button class="icon-button" type="button" id="open-analysis" aria-label="분석">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>
           </button>
-          <button class="icon-button" type="button" id="open-profile" aria-label="마이페이지">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+          <!-- 별 꼭짓점은 12,12.3 을 중심으로 반지름 9.3 에서 계산했다. 다른 아이콘처럼 3~4px 안쪽에서 논다. -->
+          <button class="icon-button" type="button" id="open-wish" aria-label="위시리스트">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 14.1 9.4 20.8 9.4 15.4 13.4 17.5 19.8 12 15.9 6.5 19.8 8.6 13.4 3.2 9.4 9.9 9.4Z"/></svg>
           </button>
           <button class="icon-button" type="button" id="open-settings" aria-label="설정">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
@@ -205,8 +206,35 @@
         <small class="field-error" id="profile-error"></small>
 
         <button class="submit-button" type="submit" id="profile-submit"><span>저장</span></button>
-        <button class="ghost-button wide danger-text" type="button" id="sign-out">로그아웃</button>
       </form>
+    </section>
+
+    <section class="page" id="wish-page" aria-labelledby="wish-page-title" hidden>
+      <header class="page-head">
+        <button class="icon-button" type="button" data-close-page aria-label="뒤로">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 id="wish-page-title">위시리스트</h2>
+        <button class="icon-button page-action" type="button" id="add-wish" aria-haspopup="dialog" aria-label="위시 담기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </header>
+
+      <div class="page-body">
+        <!-- 향하는 것은 맨 위에 따로. 동시에 하나뿐이라 없으면 자리도 없다. -->
+        <div id="wish-pursuing" hidden></div>
+
+        <div class="wish-section">
+          <p class="eyebrow">담아 둔 것<span id="wish-count"></span></p>
+          <div id="wish-list" class="wish-list" aria-live="polite"></div>
+        </div>
+
+        <!-- 이룬 것은 아래에 조용히. 날짜만 남긴다. -->
+        <div class="wish-section" id="wish-achieved-section" hidden>
+          <p class="eyebrow">이룬 것</p>
+          <div id="wish-achieved" class="wish-achieved"></div>
+        </div>
+      </div>
     </section>
 
     <section class="page" id="analysis-page" aria-labelledby="analysis-page-title" hidden>
@@ -296,6 +324,18 @@
       </header>
 
       <div class="page-body">
+        <!-- 글자만 있으면 "내 것" 이라는 게 안 읽힌다. 아바타와 이름을 그대로 보여 준다. -->
+        <button class="menu-row" type="button" id="open-profile">
+          <span class="menu-me">
+            <span class="avatar" id="settings-avatar"></span>
+            <span>
+              <strong id="settings-name"></strong>
+              <small>이름 · 아바타 색 · 월 지출 목표</small>
+            </span>
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+
         <button class="menu-row" type="button" id="open-fixed-sheet" aria-haspopup="dialog">
           <span>
             <strong>고정비</strong>
@@ -328,6 +368,13 @@
           </span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
+
+        <!--
+          로그아웃은 마이페이지 안이 아니라 여기 둔다.
+          예전에는 머리 줄 아이콘 한 번이면 닿았다. 마이페이지 안으로 들어가면 세 단계가 되므로
+          설정에 직접 두어 두 번이면 닿게 한다.
+        -->
+        <button class="ghost-button wide danger-text" type="button" id="sign-out">로그아웃</button>
       </div>
     </section>
     <dialog class="sheet" id="entry-sheet" aria-labelledby="form-title" hidden>
@@ -452,6 +499,62 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </form>
+    </dialog>
+
+    <dialog class="sheet" id="wish-sheet" aria-labelledby="wish-sheet-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow">둘이 함께 바라는 것</p>
+          <h2 id="wish-sheet-title">무엇을 담을까요?</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-wish-sheet" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <form class="sheet-scroll" id="wish-form" novalidate>
+        <label class="field-group">
+          <span>무엇을</span>
+          <input type="text" id="wish-name" name="name" maxlength="40" autocomplete="off" placeholder="예: 제주 이 주" />
+          <small class="field-error" id="wish-name-error"></small>
+        </label>
+
+        <label class="field-group">
+          <span>링크</span>
+          <input type="text" id="wish-url" name="url" autocomplete="off" inputmode="url"
+                 autocapitalize="none" spellcheck="false" placeholder="https:// (없어도 됩니다)" />
+          <small class="field-error" id="wish-url-error"></small>
+        </label>
+
+        <label class="field-group amount-field">
+          <span>어림 가격</span>
+          <span class="amount-input-wrap">
+            <input type="text" id="wish-price" name="price" inputmode="numeric" autocomplete="off" placeholder="모르면 비워 두세요" />
+            <b>원</b>
+          </span>
+          <small class="field-error" id="wish-price-error"></small>
+        </label>
+
+        <p class="wish-hint">담으면 내 찬성부터 하나 놓입니다. 상대가 “나도”를 누르면 함께 향하는 것이 돼요.</p>
+
+        <button class="submit-button" type="submit" id="wish-submit"><span>담기</span></button>
+      </form>
+    </dialog>
+
+    <dialog class="sheet" id="wish-achieve-sheet" aria-labelledby="wish-achieve-title" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="eyebrow" id="wish-achieve-eyebrow"></p>
+          <h2 id="wish-achieve-title">어느 지출로 이뤘나요?</h2>
+        </div>
+        <button class="icon-button close-button" type="button" id="close-wish-achieve-sheet" aria-label="닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="sheet-scroll wish-expense-list" id="wish-expense-list" role="group" aria-labelledby="wish-achieve-title"></div>
     </dialog>
 
     <dialog class="sheet" id="trend-sheet" aria-labelledby="trend-sheet-title" hidden>
