@@ -13,14 +13,33 @@ export async function registerPwaUpdater(environment = {}) {
   }
 
   /*
-   * 시트나 전체 화면이 열려 있으면 사람이 무언가 적고 있는 중이다.
-   * 그때 새로고침하면 저장하지 않은 지출이 통째로 사라진다. 닫힐 때까지 미룬다.
+   * 적다 만 것이 있으면 새로고침을 미룬다.
+   *
+   * 시트는 거의 다 적는 곳이라 열려 있으면 무조건 미룬다 — 시트를 열어 둔 채 앱을
+   * 나갔다 돌아오는 사이에 배포가 있으면 적어 둔 지출이 통째로 사라졌다.
+   *
+   * 화면(.page)은 달랐다. 예전에는 열려 있기만 하면 미뤘는데, 위시리스트·분석처럼
+   * 적을 것이 없는 화면에서도 그 조건이 계속 참이라 거기 앉아 있는 동안 새 버전이
+   * 영영 안 들어갔다. 실제로 위시리스트에서 옛 코드가 돌아 지우기 확인 단계가 없었다.
+   * 그래서 화면은 안에 적는 칸이 있을 때만 미룬다.
+   *
+   * 켜고 끄는 것(checkbox·radio)은 세지 않는다. 누르는 즉시 서버로 가 적다 만 것이 없다.
+   * 지금 걸리는 화면은 마이페이지 하나다(이름·아바타 색·목표).
+   *
    * 기본 판정은 DOM 만 본다 — 이 함수는 테스트에서 본문만 떼어 실행되므로
    * 모듈 바깥의 것을 참조하면 안 된다.
    */
+  const UNSAVED_FIELDS =
+    ".page:not([hidden]) textarea, " +
+    ".page:not([hidden]) input:not([type='checkbox']):not([type='radio']):not([type='button'])";
+
   const isBusy =
     environment.isBusy ??
-    (() => Boolean(documentTarget.querySelector?.(".sheet:not([hidden]), .page:not([hidden])")));
+    (() =>
+      Boolean(
+        documentTarget.querySelector?.(".sheet:not([hidden])") ||
+          documentTarget.querySelector?.(UNSAVED_FIELDS),
+      ));
   // 미뤄 둔 새로고침을 얼마나 자주 다시 살필지. 기다리는 동안에만 돈다.
   const idleDelay = environment.idleDelay ?? 2000;
 

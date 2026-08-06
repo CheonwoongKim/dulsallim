@@ -215,3 +215,30 @@ test("앱 셸 자리에는 문서만 넣는다", async () => {
   assert.match(source, /content-type[\s\S]{0,60}text\/html/);
   assert.match(source, /isDocument \? cacheResponse\("\/index\.html", response\) : response/);
 });
+
+test("적을 것 없는 화면은 새 버전을 막지 않는다", async () => {
+  /*
+   * 예전에는 .page 가 열려 있기만 하면 미뤘다. 위시리스트에 앉아 있는 동안 새 버전이
+   * 영영 안 들어가, 격자와 × 는 보이는데 지우기 확인만 없는 상태가 실제로 나왔다.
+   *
+   * 시트는 그대로 미룬다 — 거기는 적는 곳이다.
+   */
+  const 규칙 = appSource.match(/const UNSAVED_FIELDS =[\s\S]*?;/)[0];
+  assert.match(규칙, /\.page:not\(\[hidden\]\) textarea/);
+  assert.match(규칙, /input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\)/, "켜고 끄는 것은 적다 만 것이 아니다");
+  assert.doesNotMatch(appSource, /\.sheet:not\(\[hidden\]\), \.page:not\(\[hidden\]\)/, "화면을 통째로 막던 옛 규칙이 남아 있다");
+  assert.match(appSource, /querySelector\?\.\(".sheet:not\(\[hidden\]\)"\)/, "시트는 그대로 미뤄야 한다");
+
+  // 화면마다 실제로 적는 칸이 있는지. 여기가 바뀌면 위 규칙의 뜻도 바뀐다.
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const 화면 = (id) => {
+    const 시작 = html.indexOf(`<section class="page" id="${id}"`);
+    const 끝 = html.indexOf("<section class=\"page\"", 시작 + 10);
+    return html.slice(시작, 끝 < 0 ? html.indexOf("<dialog", 시작) : 끝);
+  };
+  for (const id of ["wish-page", "analysis-page"]) {
+    assert.doesNotMatch(화면(id), /<(textarea|input(?![^>]*type="(checkbox|radio)"))/, `${id} 에 적는 칸이 생기면 갱신이 막힌다`);
+  }
+  // 마이페이지는 적다 만 것이 남는 화면이라 계속 미뤄야 한다.
+  assert.match(화면("profile-page"), /<input[^>]*type="text"/);
+});
