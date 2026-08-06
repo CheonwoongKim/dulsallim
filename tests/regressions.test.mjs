@@ -2719,3 +2719,38 @@ test("여럿 중 하나 고르는 부품은 같은 모서리 계단을 쓴다", 
    */
   assert.match(규칙(".view-toggle button"), /--pill-height: 30px/);
 });
+
+test("대화 시트의 적는 칸과 보내기도 계단 위에 있다", () => {
+  /*
+   * 알약과 동그란 보내기는 "이건 대화다" 를 말하는 모양이라 남긴다. 다만 크기는
+   * 앱의 적는 칸과 같아야 한다 — 46 은 어느 토큰도 아니었고(표준은 50), 보내기 그림도
+   * 19px · 굵기 2 로 이 파일에만 있는 값이었다(다른 아이콘은 20 · 1.8).
+   */
+  const 규칙 = (선택자) => {
+    const 시작 = css.indexOf(`\n${선택자} {`);
+    assert.ok(시작 >= 0, `${선택자} 규칙이 없다`);
+    return css.slice(시작, css.indexOf("\n}", 시작 + 1));
+  };
+
+  // 적는 칸과 보내기가 같은 높이라야 둘이 한 줄로 읽힌다(계측: 둘 다 밑변 y836).
+  for (const 선택자 of [".note-form input", ".note-send"]) {
+    assert.match(규칙(선택자), /var\(--field-height\)/, `${선택자} 가 제 크기를 따로 적는다`);
+    // 크기를 적는 줄만 본다 — 1px 테두리는 이 앱 어디서나 쓰는 값이다.
+    const 크기줄 = 규칙(선택자)
+      .split("\n")
+      .filter((l) => /^\s*(width|height|padding|border-radius):/.test(l));
+    assert.ok(크기줄.length, `${선택자} 에서 크기를 적는 줄을 못 찾았다`);
+    for (const 줄 of 크기줄) {
+      assert.doesNotMatch(줄, /\d+px/, `${선택자} 에 날 숫자가 남아 있다: ${줄.trim()}`);
+    }
+  }
+  // 그림은 다른 아이콘과 같은 값에서 온다.
+  assert.equal(
+    규칙(".note-send svg").match(/width: (\d+px)/)[1],
+    규칙(".icon-button svg").match(/width: (\d+px)/)[1],
+  );
+  assert.equal(
+    규칙(".note-send svg").match(/stroke-width: ([\d.]+)/)[1],
+    규칙(".icon-button svg").match(/stroke-width: ([\d.]+)/)[1],
+  );
+});

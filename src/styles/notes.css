@@ -82,10 +82,17 @@
   background: var(--white);
 }
 
+/*
+ * 알약과 동그란 보내기는 "이건 대화다" 를 말하는 모양이라 남긴다. 다만 크기는 앱의
+ * 적는 칸과 같아야 한다 — 46 은 어느 토큰도 아니었다(계측: 표준 50, 여기만 46).
+ *
+ * 안쪽 여백은 표준(12)보다 한 칸 넉넉한 16 을 쓴다. 알약은 양 끝이 둥글어 그만큼
+ * 글자가 곡선에 붙는다.
+ */
 .note-form input {
   width: 100%;
   min-width: 0;
-  height: 46px;
+  height: var(--field-height);
   padding: 0 var(--space-4);
   border: 1px solid var(--field-line);
   border-radius: var(--radius-pill);
@@ -94,10 +101,11 @@
   font-size: var(--text-16);
   transition: border-color var(--motion) ease, box-shadow var(--motion) ease;
 }
+/* 적는 칸과 같은 크기라야 둘이 한 줄로 읽힌다. */
 .note-send {
   display: grid;
-  width: 46px;
-  height: 46px;
+  width: var(--field-height);
+  height: var(--field-height);
   flex: 0 0 auto;
   border: 0;
   border-radius: var(--radius-round);
@@ -106,14 +114,15 @@
   place-items: center;
 }
 
+/* 다른 아이콘과 같은 20px · 굵기 1.8. 19 와 2 는 이 파일에만 있던 값이었다. */
 .note-send svg {
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
   fill: none;
   stroke: var(--white);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 1.8;
 }
 
 .note-send:disabled {
