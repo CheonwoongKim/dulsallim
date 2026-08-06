@@ -15,91 +15,28 @@
   margin: 0;
 }
 
-/* ── 함께 바라는 것 ───────────────────────────────────────── */
-
-/* 여럿일 수 있다. 담아 둔 것과 같은 간격으로 세운다. */
-.wish-pursuing-list {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.wish-card {
-  display: grid;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-16);
-  background: var(--white);
-}
-
-/*
- * 그림은 판 끝까지 닿는다. 안쪽 여백은 글에만 준다 — 그림에 여백을 두르면
- * 카드 안에 액자가 하나 더 생겨 무엇이 주인공인지 흐려진다.
- */
-.wish-card-body {
-  display: grid;
-  padding: var(--space-4);
-  gap: var(--space-1);
-}
-
-.wish-card .eyebrow {
-  color: var(--accent-dark);
-}
-
-.wish-card-name {
-  font-size: var(--text-20);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-heading);
-}
-
-.wish-card-actions {
-  display: flex;
-  /* 위 12. 이름·설명이 4px 로 붙어 있으므로 단추 줄만 한 박자 떨어뜨린다. */
-  margin-top: var(--space-3);
-  gap: var(--space-3);
-  align-items: center;
-  justify-content: space-between;
-}
-
-/*
- * 링크 하나뿐일 때도 단추는 오른쪽 끝에 선다.
- *
- * .ghost-button 은 기본이 38 이라 손이 닿는 44 에 모자란다. 다른 화면이 함께 쓰는
- * 부품이라 그쪽을 키우지 않고, 카드 안에서 유일한 동작인 이 자리만 44 로 세운다
- * (자리만 넓히는 ::after 를 쓸 이유가 없다 — 여기는 넓힐 공간이 있다).
- */
-.wish-card-actions .ghost-button {
-  min-height: var(--tap-min);
-  margin-left: auto;
-}
-
 /* ── 담아 둔 것 ───────────────────────────────────────────── */
 
 /*
- * 한 줄에 하나씩.
- *
- * 두 칸으로 놓아 봤더니 그림이 165 밖에 안 됐다. 위시리스트는 훑는 곳이 아니라
- * 들여다보는 곳이라, 폭을 다 주고 그림을 크게 세운다 — 393 에서 361×271.
- * 한 화면에 둘이 들어오고, 그 둘이 제대로 보인다.
+ * 한 줄에 하나씩. 세 자리(함께 바라는 것 · 담아 둔 것 · 이룬 것)가 같은 목록을 쓴다.
  */
 .wish-list {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 /*
- * 그림 · 글 · 단추 세 층.
+ * 왼쪽 절반이 그림, 오른쪽 절반이 글.
  *
- * 가운데만 늘어난다. 옆 칸과 높이는 격자가 맞춰 주는데(같은 줄은 같은 높이),
- * 그냥 두면 글이 짧은 칸의 "나도" 가 카드 한가운데 떠서 두 단추가 어긋난다 —
- * 실제로 44px 차이가 났다. 남는 자리를 글 칸이 먹고 단추는 바닥에 붙는다.
+ * 그림을 위에 얹던 때는 카드 하나가 화면의 절반을 먹어 한 번에 둘밖에 안 보였다.
+ * 반반으로 나누면 그림은 여전히 크고(393 에서 172) 한 화면에 넷이 들어온다.
  */
 .wish-item {
   display: grid;
-  position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-16);
-  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 1fr 1fr;
   background: var(--white);
 }
 
@@ -122,19 +59,42 @@
   font-size: var(--text-34);
   font-weight: var(--weight-black);
   letter-spacing: var(--tracking-title);
+  aspect-ratio: 1;
+  height: 100%;
 }
 
 /*
- * 담아 둔 것은 4:3. 정사각(361)이면 한 화면에 1.6 개밖에 안 들어와 계속 내려야 하고,
- * 16:9 는 위의 향하는 것 카드와 같은 모양이 되어 둘이 구별되지 않는다.
+ * 정사각이 바닥이다. 오른쪽 글이 더 길면 그만큼 늘어나 카드를 다 채운다 —
+ * 글 옆에 흰 자리가 남으면 카드가 반쯤 빈 것처럼 보인다.
  */
-.wish-shot.is-photo {
-  aspect-ratio: 4 / 3;
+
+/* 링크가 걸리면 이 자리가 곧 링크다. 밑줄이나 색은 필요 없다 — 그림이 이미 누를 것으로 보인다. */
+a.wish-shot {
+  color: var(--wish-tile, var(--ink));
+  text-decoration: none;
 }
 
-/* 향하는 것은 더 납작하게. 같은 화면에 서므로 비율이 갈려야 서로 다른 것으로 읽힌다. */
-.wish-shot.is-wide {
-  aspect-ratio: 16 / 9;
+/*
+ * 이룬 것 위에 얹는 표.
+ *
+ * 그림을 어둡게 깔고 그 위에 흰 체크를 놓는다. 표만 얹으면 밝은 사진 위에서 안 보인다.
+ */
+.wish-done {
+  display: grid;
+  position: absolute;
+  inset: 0;
+  place-items: center;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.wish-done svg {
+  width: var(--space-10);
+  height: var(--space-10);
+  fill: none;
+  stroke: var(--white);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /*
@@ -281,13 +241,6 @@
   letter-spacing: var(--tracking-small);
 }
 
-.wish-link {
-  color: var(--ink-soft);
-  font-size: var(--text-12);
-  font-weight: var(--weight-bold);
-  justify-self: start;
-  letter-spacing: var(--tracking-small);
-}
 
 /*
  * "나도" 는 이 화면에서 가장 자주 누르는 곳이다. 카드 맨 아래에 가로로 꽉 차게 둔다 —
@@ -301,8 +254,9 @@
 
   position: relative;
   min-height: var(--agree-height);
-  margin: 0 var(--space-3) var(--space-3);
-  padding: 0 var(--space-3);
+  /* 위 8. 글과 붙지 않게 띄우고, 카드 아래 여백은 .wish-copy 가 낸다. */
+  margin-top: var(--space-2);
+  padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-12);
   color: var(--white);
@@ -327,12 +281,22 @@
   background: var(--ink-soft);
 }
 
+/* 이미 함께 바라는 것에서 누르는 "이뤘어요". 담기보다 조용해야 한다 — 자주 누를 것이 아니다. */
+.wish-agree.is-quiet {
+  color: var(--ink);
+  background: var(--paper-deep);
+}
+
+.wish-agree.is-quiet:active {
+  background: var(--line);
+}
+
 /* 내가 이미 누른 것. 단추 자리를 그대로 물려받아 카드 아래 선이 어긋나지 않는다. */
 .wish-waiting {
   display: grid;
-  min-height: var(--space-10);
-  margin: 0 var(--space-3) var(--space-3);
-  place-items: center;
+  min-height: var(--space-8);
+  margin-top: var(--space-2);
+  place-items: start;
   color: var(--ink-soft);
   font-size: var(--text-12);
   letter-spacing: var(--tracking-small);
@@ -340,33 +304,9 @@
 
 /* ── 이룬 것 ──────────────────────────────────────────────── */
 
-.wish-achieved {
-  display: grid;
-  gap: var(--space-2);
-}
 
-.wish-achieved-row {
-  display: flex;
-  margin: 0;
-  gap: var(--space-3);
-  align-items: baseline;
-  justify-content: space-between;
-  color: var(--ink-soft);
-  font-size: var(--text-13);
-  letter-spacing: var(--tracking-small);
-}
 
-.wish-achieved-row span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
-.wish-achieved-row time {
-  flex: 0 0 auto;
-  font-size: var(--text-12);
-  font-variant-numeric: tabular-nums;
-}
 
 /* ── 빈 자리와 시트 ───────────────────────────────────────── */
 

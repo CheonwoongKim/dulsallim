@@ -221,23 +221,25 @@
       </header>
 
       <div class="page-body">
-        <div class="segmented-control member-tabs" id="wish-members" role="group" aria-label="누구 위시를 볼지"></div>
+        <div class="segmented-control segment-tabs" id="wish-tabs" role="group" aria-label="달성 여부">
+          <button type="button" data-wish-tab="open" aria-pressed="true">미달성</button>
+          <button type="button" data-wish-tab="done" aria-pressed="false">달성</button>
+        </div>
 
         <!-- 함께 바라는 것은 맨 위에 따로. 없으면 이름표까지 통째로 사라진다. -->
         <div class="wish-section" id="wish-pursuing-section" hidden>
           <p class="eyebrow">함께 바라는 것<span id="wish-pursuing-count"></span></p>
-          <div id="wish-pursuing" class="wish-pursuing-list" aria-live="polite"></div>
+          <div id="wish-pursuing" class="wish-list" aria-live="polite"></div>
         </div>
 
-        <div class="wish-section">
+        <div class="wish-section" id="wish-open-section">
           <p class="eyebrow">담아 둔 것<span id="wish-count"></span></p>
           <div id="wish-list" class="wish-list" aria-live="polite"></div>
         </div>
 
-        <!-- 이룬 것은 아래에 조용히. 날짜만 남긴다. -->
         <div class="wish-section" id="wish-achieved-section" hidden>
-          <p class="eyebrow">이룬 것</p>
-          <div id="wish-achieved" class="wish-achieved"></div>
+          <p class="eyebrow">이룬 것<span id="wish-achieved-count"></span></p>
+          <div id="wish-achieved" class="wish-list" aria-live="polite"></div>
         </div>
       </div>
     </section>
@@ -264,7 +266,7 @@
           </button>
         </div>
 
-        <div class="segmented-control member-tabs" id="analysis-members" role="group" aria-label="누구 지출을 볼지"></div>
+        <div class="segmented-control segment-tabs" id="analysis-members" role="group" aria-label="누구 지출을 볼지"></div>
 
         <div class="analysis-total">
           <p class="eyebrow" id="analysis-scope">함께 쓴 금액</p>

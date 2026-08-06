@@ -461,7 +461,7 @@ main {
   font-weight: var(--weight-bold);
 }
 
-/* ── 전체 / 사람 탭 ───────────────────────────────────────── */
+/* ── 탭 줄 ───────────────────────────────────────── */
 
 /*
  * 전체 / 사람 탭. 분석 화면과 위시리스트가 함께 쓴다.
@@ -476,7 +476,7 @@ main {
  * 사람을 바꾸려던 손이 뒤로나 추이를 누르는 것이다. 붙여 두면 어디까지 내려가 있든
  * 그 자리에서 바꿀 수 있다.
  */
-.segmented-control.member-tabs {
+.segmented-control.segment-tabs {
   position: sticky;
   z-index: var(--layer-above);
   top: var(--head-height);
@@ -489,7 +489,7 @@ main {
   box-shadow: 0 0 0 var(--space-4) var(--paper);
 }
 
-.segmented-control.member-tabs button {
+.segmented-control.segment-tabs button {
   display: flex;
   min-height: var(--control-sm);
   min-width: 0;
@@ -506,7 +506,7 @@ main {
   transition: color var(--motion) ease, background var(--motion) ease, box-shadow var(--motion) ease;
 }
 
-.segmented-control.member-tabs button[aria-pressed="true"] {
+.segmented-control.segment-tabs button[aria-pressed="true"] {
   color: var(--ink);
   background: var(--white);
   box-shadow: var(--shadow-raised);

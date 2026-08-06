@@ -148,7 +148,7 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
 
   // 주소는 한 겹 더 받는다 — safeHref 가 먼저 http·https 가 아닌 것을 버린다.
   assert.match(그리기, /const href = safeHref\(wish\.url\);/);
-  assert.match(그리기, /if \(!href\) return "";/, "열 수 없는 주소는 글자로도 내보내지 않는다");
+  assert.match(그리기, /const image = safeHref\(wish\.imageUrl\);/, "그림 주소도 한 겹 더 받는다");
   assert.match(그리기, /rel="noopener noreferrer"/);
 
   /*
@@ -208,7 +208,7 @@ test("향하는 것은 서버가 정한 state 로만 가른다", () => {
    * 합의가 몇 개면 향하는 것이 되는지는 서버가 정한다(migration-wish.sql).
    * 화면이 사람 수를 세어 판정하면 두 폰이 같은 순간에 마지막 표를 던졌을 때 갈라진다.
    */
-  const 기능 = app.slice(app.indexOf("function paintPursuing"), app.indexOf("export function openWishPage"));
+  const 기능 = fn("paintWishPage");
   assert.match(기능, /wish\.state === "pursuing"/);
   assert.match(기능, /wish\.state === "proposed"/);
   assert.match(기능, /wish\.state === "achieved"/);
@@ -231,7 +231,11 @@ test("나도는 보이는 크기보다 넓게 눌린다", () => {
   assert.ok(높이 + (토큰("--tap-min") - 높이) >= 44, "넓히고 나서도 44 에 못 미친다");
 
   // 카드 안 "이뤘어요" 는 넓힐 자리가 있어 그냥 44 로 세운다.
-  assert.match(css, /\.wish-card-actions \.ghost-button \{[^}]*min-height: var\(--tap-min\)/);
+  /*
+   * "이뤘어요" 는 이제 카드 안의 .wish-agree.is-quiet 다. 보이는 높이 38 에 ::after 로
+   * 44 를 채우는 방식은 "나도" 와 같다.
+   */
+  assert.match(css, /\.wish-agree\.is-quiet \{[^}]*background: var\(--paper-deep\)/);
 });
 
 test("위시 화면과 시트는 있는 부품을 다시 쓴다", () => {
@@ -267,35 +271,29 @@ test("상대가 바꾼 위시도 열어 둔 화면에 그대로 온다", () => {
   assert.match(app, /if \(!elements\.wishPage\.hidden\) paintWishPage\(\);/);
 });
 
-test("그림 자리는 너비에 비례하고, 색은 담은 사람에게서 온다", () => {
-  assert.match(app, /class="wish-shot is-\$\{모양\}" style="--wish-tile: \$\{escapeHtml\(getMemberColor\(wish\.createdBy\)\)\}/);
-  assert.match(app, /aria-hidden="true"/, "그림 자리 글자는 읽어 주지 않는다 — 바로 옆에 이름이 있다");
-  // 담아 둔 것은 4:3, 향하는 것은 더 납작한 16:9. 비율이 갈려야 서로 다른 것으로 읽힌다.
-  assert.match(app, /shotMarkup\(wish, "photo"\)/);
-  assert.match(app, /shotMarkup\(wish, "wide"\)/);
+test("그림은 카드 왼쪽 절반이고, 링크가 있으면 그 자리가 곧 링크다", () => {
+  const 그리기 = fn("shotMarkup");
+  assert.match(그리기, /getMemberColor\(wish\.createdBy\)/, "색은 담은 사람에게서 온다");
+  // 주소를 글자로 또 적지 않는다 — 카드 오른쪽이 좁아 도메인 한 줄이 이름을 밀어낸다.
+  assert.match(그리기, /class="wish-shot" \$\{색\} href=/);
+  assert.match(그리기, /rel="noopener noreferrer"/);
+  assert.doesNotMatch(app, /class="wish-link"/, "도메인 글자가 남아 있다");
+  // 링크가 없으면 누를 것이 아니므로 읽어 주지도 않는다.
+  assert.match(그리기, /<span class="wish-shot" \$\{색\} aria-hidden="true">/);
+
+  const 카드 = css.match(/\.wish-item \{[\s\S]*?\n\}/)[0];
+  assert.match(카드, /grid-template-columns: 1fr 1fr/, "왼쪽 절반이 그림이다");
 
   const 자리 = css.match(/\.wish-shot \{[\s\S]*?\n\}/)[0];
   /*
-   * 높이를 px 로 박지 않는다. 393 과 430 에서 칸 너비가 다른데 높이만 고정하면
-   * 한쪽에서 그림이 납작해진다.
+   * 정사각이 바닥이고, 오른쪽 글이 더 길면 그만큼 늘어난다. 글 옆에 흰 자리가 남으면
+   * 카드가 반쯤 빈 것처럼 보인다.
    */
-  assert.doesNotMatch(자리, /height:/, "높이를 박으면 폭에 따라 그림이 찌그러진다");
-  assert.match(css, /\.wish-shot\.is-photo \{[\s\S]*?aspect-ratio: 4 \/ 3/);
-  assert.match(css, /\.wish-shot\.is-wide \{[\s\S]*?aspect-ratio: 16 \/ 9/);
-
-  // 사람 색이 없거나 이상해도 자리가 투명해지지 않아야 한다.
-  assert.match(자리, /var\(--wish-tile, var\(--ink\)\)/);
-  assert.doesNotMatch(자리, /\d+px/, "그림 자리에 날 숫자가 남아 있다");
+  assert.match(자리, /aspect-ratio: 1/);
+  assert.match(자리, /height: 100%/);
+  assert.match(자리, /var\(--wish-tile, var\(--ink\)\)/, "사람 색이 없어도 투명해지지 않는다");
 });
 
-test("링크는 어디로 가는지 미리 말한다", async () => {
-  const { domainOf } = await import("../src/ui/wish-list.js");
-  assert.equal(domainOf("https://www.coupang.com/vp/products/1"), "coupang.com");
-  assert.equal(domainOf("https://airbnb.co.kr/rooms/2"), "airbnb.co.kr");
-  // 여기 올 일이 없지만(safeHref 를 지나온다) 와도 링크 구실은 해야 한다.
-  assert.equal(domainOf("주소가 아님"), "링크 열기");
-  assert.doesNotMatch(app, /">링크 열기<\/a>/, "모든 줄이 같은 말을 하고 있다");
-});
 
 test("그림은 첫 글자 위에 덮이고, 안 오면 그 자리가 드러난다", () => {
   const 그리기 = fn("shotMarkup");
@@ -380,7 +378,7 @@ test("한마디는 담을 때 함께 들어가고, 없으면 자리를 안 만�
   assert.match(fn("noteMarkup"), /return note \? .*wish-note.* : ""/);
 
   // 담아 둔 칸과 향하는 카드가 같은 것을 쓴다.
-  assert.equal((app.match(/\$\{noteMarkup\(wish\)\}/g) || []).length, 2);
+  assert.equal((app.match(/\$\{noteMarkup\(wish\)\}/g) || []).length, 1);
 
   // 길이가 칸마다 다르면 격자 아래 선이 어긋난다. 두 줄에서 자른다.
   assert.match(css, /\.wish-note \{[\s\S]*?-webkit-line-clamp: 2/);
@@ -462,7 +460,10 @@ test("진척 막대는 값을 적은 위시에만 서고, 분석 화면과 같�
   assert.match(그리기, /missingGoal \? " · 월 지출 목표를 정하면 더 정확해요" : ""/);
 
   // 담아 둔 것과 향하는 것 둘 다 같은 막대를 쓴다.
-  assert.equal((app.match(/\$\{progressMarkup\(wish, context\)\}/g) || []).length, 2);
+  // 세 자리가 같은 카드를 쓰므로 한 곳에서만 그린다.
+  assert.equal((app.match(/\$\{progressMarkup\(wish, context\)\}/g) || []).length, 1);
+  // 이룬 것에는 안 그린다 — 다가갈 것이 남지 않았다.
+  assert.match(그리기, /if \(wish\.state === "achieved"\) return "";/);
 
   /*
    * 같은 뜻의 그림이 화면마다 두께가 다르면 서로 다른 것으로 읽힌다.
@@ -475,46 +476,42 @@ test("진척 막대는 값을 적은 위시에만 서고, 분석 화면과 같�
   assert.match(fn("progressContext"), /expenses: getExpenses\(\), members: getMembers\(\)/);
 });
 
-test("사람 탭은 찬성한 사람으로 가르고, 분석의 사람 필터와 따로 논다", () => {
-  assert.match(html, /<div class="segmented-control member-tabs" id="wish-members"/);
+test("탭은 미달성 · 달성 둘이고, 미달성이 기본이다", () => {
+  assert.match(html, /<div class="segmented-control segment-tabs" id="wish-tabs"/);
+  assert.match(html, /data-wish-tab="open" aria-pressed="true">미달성/, "미달성이 기본이다");
+  assert.match(html, /data-wish-tab="done" aria-pressed="false">달성/);
 
-  /*
-   * 담은 사람이 아니라 찬성한 사람으로 가른다. 혼자 담은 것은 담은 사람 탭에만 서고,
-   * 상대가 "나도" 를 누르면 둘 다의 탭에 선다 — 그때부터 둘이 함께 바라는 것이니까.
-   */
-  const 거르기 = fn("그사람것");
-  assert.match(거르기, /wish\.agreementUserIds\.includes\(wishMemberFilter\)/);
-  assert.doesNotMatch(거르기, /createdBy/, "담은 사람으로 가르면 공동 위시가 한쪽에만 선다");
-  assert.match(거르기, /if \(!wishMemberFilter\) return wishes;/, "전체는 거르지 않는다");
-
-  /*
-   * 분석의 사람 필터와 상태를 나눠 둔다. 지출을 볼 때와 갖고 싶은 것을 볼 때 보고 싶은
-   * 사람이 같으리라는 법이 없고, 한쪽에서 고른 것이 다른 쪽을 조용히 바꾸면 놀란다.
-   */
-  assert.match(app, /let wishMemberFilter = null;/);
-  assert.doesNotMatch(fn("setWishMemberFilter"), /setMemberFilter/);
-
-  // 세 덩이 모두 걸러진 목록을 본다. 하나만 안 걸러지면 탭이 반쯤 듣는 것처럼 보인다.
-  assert.match(fn("paintWishPage"), /const wishes = 그사람것\(getWishes\(\)\);/);
+  const 그리기 = fn("paintWishPage");
+  // 미달성에는 함께 바라는 것과 담아 둔 것이, 달성에는 이룬 것이 선다.
+  assert.match(그리기, /elements\.wishOpenSection\.hidden = 달성중/);
+  assert.match(그리기, /elements\.wishAchievedSection\.hidden = !달성중/);
+  assert.match(그리기, /const pursuing = 달성중\s*\?\s*\[\]/, "달성 탭에는 함께 바라는 것이 없다");
+  // 누른 탭 표시는 매번 다시 적는다.
+  assert.match(그리기, /aria-pressed", String\(\(button\.dataset\.wishTab === "done"\) === 달성중\)/);
+  assert.match(app, /let wishTab = "open";/);
 });
 
-test("함께 바라는 것은 여럿이 서고, 이름표는 바깥에 한 번만 있다", () => {
+test("함께 바라는 것은 여럿이 서고, 이룬 것에는 체크가 얹힌다", () => {
   assert.match(html, /<div class="wish-section" id="wish-pursuing-section" hidden>/);
   assert.match(html, /<p class="eyebrow">함께 바라는 것<span id="wish-pursuing-count"><\/span><\/p>/);
 
-  const 그리기 = fn("paintPursuing");
+  const 그리기 = fn("paintWishPage");
   assert.match(그리기, /\.filter\(\(wish\) => wish\.state === "pursuing"\)/);
   // 하나만 찾던 때는 두 번째가 화면에 아예 안 떴다.
   assert.doesNotMatch(그리기, /\.find\(\(wish\) => wish\.state === "pursuing"\)/);
-  assert.match(그리기, /pursuing\.map\(\(wish\) => createPursuingCard\(wish, context\)\)/);
   // 없으면 이름표까지 통째로 사라진다. 빈 이름표만 남으면 자리가 비어 보인다.
   assert.match(그리기, /elements\.wishPursuingSection\.hidden = !pursuing\.length/);
   // 하나뿐이면 개수를 안 적는다 — "함께 바라는 것(1)" 은 군더더기다.
   assert.match(그리기, /pursuing\.length > 1 \? `\(\$\{pursuing\.length\}\)` : ""/);
 
   /*
-   * 무엇인지는 바깥 이름표가 이미 말한다. 카드마다 또 적으면 여럿일 때 같은 말이
-   * 세 번 네 번 반복된다.
+   * 이룬 것은 그림 위 체크로 갈린다. 표만 얹으면 밝은 사진 위에서 안 보이므로
+   * 그림을 어둡게 깔고 그 위에 흰 체크를 놓는다.
    */
-  assert.doesNotMatch(app, /<p class="eyebrow">지금 향하는 것<\/p>/);
+  assert.match(app, /wish\.state === "achieved" \? 이룸표 : ""/);
+  assert.match(css, /\.wish-done \{[\s\S]*?inset: 0/);
+  assert.match(css, /\.wish-done \{[\s\S]*?color-mix\(in srgb, var\(--ink\) 45%, transparent\)/);
+  assert.match(css, /\.wish-done svg \{[\s\S]*?stroke: var\(--white\)/);
+  // 이룬 것에는 고치기·지우기 메뉴를 안 붙인다. 끝난 줄이다.
+  assert.match(app, /wish\.state === "achieved"\s*\?\s*""\s*:\s*`<button class="wish-more"/);
 });

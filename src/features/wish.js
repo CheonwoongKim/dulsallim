@@ -1,6 +1,5 @@
 import { elements } from "../dom.js";
 import { getMembers } from "../members.js";
-import { paintMemberTabs } from "../ui/member-tabs.js";
 import { formatAmountInput, isValidAmount, readAmount } from "../money.js";
 import {
   achieveWish,
@@ -16,12 +15,7 @@ import { safeHref } from "../ui/escape.js";
 import { showPage } from "../ui/page.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
 import { showToast } from "../ui/toast.js";
-import {
-  createAchievedRow,
-  createExpenseChoice,
-  createPursuingCard,
-  createWishRow,
-} from "../ui/wish-list.js";
+import { createExpenseChoice, createWishCard } from "../ui/wish-list.js";
 import { getProfile } from "./auth.js";
 
 /**
@@ -59,31 +53,20 @@ let menuWishId = null;
 /** 담기 시트가 고치는 중이면 그 위시. 새로 담는 중이면 null. */
 let editingWishId = null;
 
-/**
- * 누구 위시를 보는 중인가. null 이면 전체.
- *
- * 분석 화면의 사람 필터와 따로 둔다 — 지출을 볼 때와 갖고 싶은 것을 볼 때 보고 싶은
- * 사람이 같으리라는 법이 없고, 한쪽에서 고른 것이 다른 쪽을 조용히 바꾸면 놀란다.
- */
-let wishMemberFilter = null;
+const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt));
 
-/**
- * 그 사람이 원한다고 한 것.
- *
- * 담은 사람이 아니라 찬성한 사람으로 가른다. 혼자 담은 것은 담은 사람 탭에만 서고,
- * 상대가 "나도" 를 누르면 둘 다의 탭에 선다 — 그때부터 둘이 함께 바라는 것이니까.
- */
-function 그사람것(wishes) {
-  if (!wishMemberFilter) return wishes;
-  return wishes.filter((wish) => wish.agreementUserIds.includes(wishMemberFilter));
-}
+/** 미달성(open) 을 보는 중인가, 달성(done) 을 보는 중인가. 미달성이 기본이다. */
+let wishTab = "open";
 
-export function setWishMemberFilter(member) {
-  wishMemberFilter = member || null;
+export function setWishTab(tab) {
+  wishTab = tab === "done" ? "done" : "open";
   paintWishPage();
 }
 
-const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt));
+/** 진척을 세는 데 필요한 것. 한 번 모아 카드마다 넘긴다 — 줄마다 다시 읽지 않는다. */
+function progressContext() {
+  return { expenses: getExpenses(), members: getMembers() };
+}
 
 /** 내가 이미 찬성했는지. 올린 것도 첫 찬성으로 세므로 내가 올린 것에는 "나도" 가 안 뜬다. */
 const iAgreed = (wish) => wish.agreementUserIds.includes(getProfile()?.id);
@@ -93,71 +76,70 @@ function waitingFor(wish) {
   const names = getMembers()
     .filter((member) => !wish.agreementUserIds.includes(member.id))
     .map((member) => member.name);
-  return names.length ? `${names.join(" · ")} 기다리는 중` : "곧 향합니다";
-}
-
-/** 진척을 세는 데 필요한 것. 한 번 모아 카드마다 넘긴다 — 줄마다 다시 읽지 않는다. */
-function progressContext() {
-  return { expenses: getExpenses(), members: getMembers() };
+  return names.length ? `${names.join(" · ")} 기다리는 중` : "곧 함께 바랍니다";
 }
 
 /**
- * 둘 다 "나도" 를 누른 것들. 여럿이어도 된다.
+ * 미달성 · 달성 두 자리로 나눠 그린다.
  *
- * 하나로 묶어 뒀던 때는 나중에 담은 것이 앞의 것이 끝날 때까지 아무 표시도 못 받았다.
- * 진척이 동기인 화면에서 그건 올려두고 아무것도 안 하는 것과 같다.
+ * 사람으로 가르던 탭을 달성 여부로 바꿨다. 위시는 "다가가는 중" 과 "이룬 것" 의 무게가
+ * 다르고, 누가 담았는지는 카드마다 이름이 이미 말한다.
  */
-function paintPursuing(wishes) {
-  // 함께 하기로 한 순으로. 나중에 정한 것이 위에 온다.
-  const pursuing = wishes
-    .filter((wish) => wish.state === "pursuing")
-    .sort((a, b) => String(b.pursuingAt).localeCompare(String(a.pursuingAt)) || byNewest(a, b));
+export function paintWishPage() {
+  const wishes = getWishes();
+  const 달성중 = wishTab === "done";
+  const context = progressContext();
 
+  [...elements.wishTabs.children].forEach((button) => {
+    button.setAttribute("aria-pressed", String((button.dataset.wishTab === "done") === 달성중));
+  });
+
+  // 함께 바라는 것 — 둘 다 "나도" 를 누른 것. 여럿이어도 된다.
+  const pursuing = 달성중
+    ? []
+    : wishes
+        .filter((wish) => wish.state === "pursuing")
+        .sort((a, b) => String(b.pursuingAt).localeCompare(String(a.pursuingAt)) || byNewest(a, b));
   elements.wishPursuingSection.hidden = !pursuing.length;
   elements.wishPursuingCount.textContent = pursuing.length > 1 ? `(${pursuing.length})` : "";
-
-  const context = progressContext();
   elements.wishPursuing.replaceChildren(
-    ...pursuing.map((wish) => createPursuingCard(wish, context)),
+    ...pursuing.map((wish) => createWishCard(wish, { action: "achieve", context })),
   );
-}
 
-function paintProposed(wishes) {
-  // 올린 순으로 — 새로 담은 것이 위에 온다. 서버도 created_at 내림차순으로 준다.
-  const proposed = wishes.filter((wish) => wish.state === "proposed").sort(byNewest);
+  // 담아 둔 것 — 아직 한 사람만 바라는 것.
+  const proposed = 달성중 ? [] : wishes.filter((wish) => wish.state === "proposed").sort(byNewest);
+  elements.wishOpenSection.hidden = 달성중;
   elements.wishCount.textContent = proposed.length ? `(${proposed.length})` : "";
-
-  if (!proposed.length) {
+  if (!달성중 && !proposed.length && !pursuing.length) {
     elements.wishList.innerHTML = `
       <p class="wish-empty">아직 담아 둔 것이 없어요.<br />둘이 사고 싶은 것을 먼저 적어 두면 아끼는 이유가 생겨요.</p>
     `;
-    return;
+  } else {
+    elements.wishList.replaceChildren(
+      ...proposed.map((wish) =>
+        createWishCard(wish, {
+          action: iAgreed(wish) ? "none" : "agree",
+          waiting: waitingFor(wish),
+          context,
+        }),
+      ),
+    );
   }
 
-  const context = progressContext();
-  elements.wishList.replaceChildren(
-    ...proposed.map((wish) =>
-      createWishRow(wish, { canAgree: !iAgreed(wish), waiting: waitingFor(wish), context }),
-    ),
-  );
-}
-
-function paintAchieved(wishes) {
-  // 이룬 순으로. 날짜가 같으면 나중에 적힌 것이 위다.
-  const achieved = wishes
-    .filter((wish) => wish.state === "achieved")
-    .sort((a, b) => String(b.achievedOn).localeCompare(String(a.achievedOn)) || byNewest(a, b));
-  elements.wishAchievedSection.hidden = !achieved.length;
-  elements.wishAchieved.replaceChildren(...achieved.map(createAchievedRow));
-}
-
-/** 화면에 있는 것을 지금 사본으로 맞춘다. 상대가 바꿔도 render() 를 거쳐 여기로 온다. */
-export function paintWishPage() {
-  const wishes = 그사람것(getWishes());
-  paintMemberTabs(elements.wishMembers, wishMemberFilter);
-  paintPursuing(wishes);
-  paintProposed(wishes);
-  paintAchieved(wishes);
+  // 이룬 것 — 이룬 순으로. 날짜가 같으면 나중에 적힌 것이 위다.
+  const achieved = 달성중
+    ? wishes
+        .filter((wish) => wish.state === "achieved")
+        .sort((a, b) => String(b.achievedOn).localeCompare(String(a.achievedOn)) || byNewest(a, b))
+    : [];
+  elements.wishAchievedSection.hidden = !달성중;
+  elements.wishAchievedCount.textContent = achieved.length ? `(${achieved.length})` : "";
+  elements.wishAchieved.replaceChildren(...achieved.map((wish) => createWishCard(wish, { context })));
+  if (달성중 && !achieved.length) {
+    elements.wishAchieved.innerHTML = `
+      <p class="wish-empty">아직 이룬 것이 없어요.<br />함께 바라는 것을 사고 나면 "이뤘어요" 로 옮겨 주세요.</p>
+    `;
+  }
 }
 
 export function openWishPage() {
