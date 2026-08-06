@@ -159,4 +159,20 @@ test("서버 쪽 울타리가 그대로 서 있다", async () => {
   assert.match(함수, /AbortSignal\.timeout\(기다릴시간\)/);
   // 실패는 "그림이 없는 것" 과 같이 다룬다. 담기는 이미 끝났다.
   assert.match(함수, /catch \{[\s\S]*?Response\.json\(\{ image: null \}/);
+
+  /*
+   * anon 키만으로는 못 부른다.
+   *
+   * Edge Functions 의 JWT 검사는 anon 키도 통과시킨다 — 그 키는 JS 묶음에 공개돼 있으니
+   * 그것만 믿으면 아무나 우리 서버로 남의 사이트를 열 수 있다. 실제로 apikey 만 붙여
+   * 부르니 200 이 나왔다. 토큰 뒤에 진짜 사람이 있는지 한 번 더 본다.
+   */
+  assert.match(함수, /if \(!\(await 사람인가\(req\)\)\) \{[\s\S]*?status: 401/);
+  assert.match(함수, /await db\.auth\.getUser\(\)/);
+  assert.match(함수, /return !error && Boolean\(data\.user\?\.id\)/);
+  // 주소를 열기 전에 본다. 뒤에 두면 거절당할 요청도 이미 나간 뒤다.
+  assert.ok(
+    함수.indexOf("사람인가(req)") < 함수.indexOf("조심해서받기(주소"),
+    "사람인지 보기 전에 남의 사이트를 연다",
+  );
 });

@@ -4,11 +4,19 @@
  * 브라우저는 남의 사이트 HTML 을 못 읽는다(CORS). 그래서 서버가 대신 읽고
  * og:image 만 뽑아 돌려준다. 그림 자체는 나르지 않는다 — 주소만 준다.
  *
- * 보안: 로그인한 사람만 부를 수 있다(Edge Functions 가 JWT 를 먼저 본다).
- * 그것만으로는 모자라다. 이 함수는 "남이 준 주소를 서버가 대신 연다" 는 구조라,
+ * 보안: 로그인한 사람만 부를 수 있다.
+ *
+ * Edge Functions 가 JWT 를 먼저 보지만 그것만으로는 모자라다 — anon 키도 제대로 된
+ * JWT 라서 그 검사를 통과한다. 그 키는 JS 묶음에 공개돼 있으니 아무나 부를 수 있다는 뜻이다.
+ * 실제로 apikey 만 붙여 부르니 200 이 나왔다. 그래서 여기서 한 번 더, 그 토큰 뒤에
+ * 진짜 사람이 있는지 본다.
+ *
+ * 그마저도 모자라다. 이 함수는 "남이 준 주소를 서버가 대신 연다" 는 구조라,
  * 주소를 우리 안쪽 망으로 돌리면 밖에서 못 닿는 곳을 대신 열어 주는 꼴이 된다(SSRF).
  * 그래서 갈 수 있는 곳을 좁히고, 따라가는 자리마다 다시 본다.
  */
+
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { 갈수있나, 그림찾기, 쓸수있는주소 } from "./parse.ts";
 
@@ -84,10 +92,30 @@ async function 앞부분만(답: Response): Promise<string> {
 
 
 
+/**
+ * 토큰 뒤에 진짜 사람이 있는지 본다.
+ *
+ * anon 키를 그대로 들고 오면 getUser 가 사람을 못 찾는다 — 그게 우리가 거르려는 것이다.
+ */
+async function 사람인가(req: Request): Promise<boolean> {
+  const 토큰 = req.headers.get("Authorization") ?? "";
+  if (!토큰.startsWith("Bearer ")) return false;
+
+  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: 토큰 } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await db.auth.getUser();
+  return !error && Boolean(data.user?.id);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: 통신머리 });
   if (req.method !== "POST") {
     return new Response("method not allowed", { status: 405, headers: 통신머리 });
+  }
+  if (!(await 사람인가(req))) {
+    return new Response("로그인이 필요하다", { status: 401, headers: 통신머리 });
   }
 
   let 받은것: { url?: string };
