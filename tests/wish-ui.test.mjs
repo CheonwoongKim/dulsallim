@@ -495,13 +495,22 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
    * 옆의 이뤘어요와 같은 무게가 되어 무엇이 이 시트의 일인지 흐려진다.
    * 모양은 큰 단추에서 오고 색만 물러난다. 링크는 여기서만 밖으로 나간다.
    */
-  assert.match(fn("링크단추"), /class="submit-button quiet wish-detail-square wish-detail-link" href=[\s\S]*?rel="noopener noreferrer" aria-label="링크 열기"/);
-  // 링크 · 고치기 · 이뤘어요 한 줄. 앞의 둘은 같은 정사각이다.
-  assert.match(자세히, /<div class="wish-detail-do">\s*\$\{링크단추\(href\)\}\s*<button class="submit-button quiet wish-detail-square" type="button" data-edit-wish[\s\S]*?<button class="submit-button" type="button" data-achieve-wish/);
+  /*
+   * 그림이 곧 링크다. 옆에 작은 단추를 세워 두던 때는 그 단추가 무엇으로 가는 문인지 그림과
+   * 떨어져 있었다. 물건 사진을 누르면 그 물건을 파는 곳으로 — 짐작대로 움직인다.
+   *
+   * 주소가 없으면 누를 것이 아니므로 <a> 를 안 만든다(계측: <div> 로 온다).
+   */
+  assert.match(자세히, /<a class="wish-detail-shot" href="\$\{escapeHtml\(href\)\}"[\s\S]*?rel="noopener noreferrer" aria-label="링크 열기"/);
+  assert.match(자세히, /<div class="wish-detail-shot">\$\{shotMarkup\(wish\)\}<\/div>/);
+  assert.match(css, /\.wish-detail-shot \{[^}]*text-decoration: none/);
+
+  // 목표 · 고치기 · 이뤘어요 한 줄. 앞의 둘은 같은 정사각이다.
+  assert.match(자세히, /<div class="wish-detail-do">[\s\S]*?data-goal-wish[\s\S]*?data-edit-wish[\s\S]*?data-achieve-wish/);
   assert.match(css, /\.wish-detail-do \.wish-detail-square \{[^}]*flex: 0 0 var\(--control-lg\)/);
-  // 이룬 것에는 이뤘어요가 없어 링크가 홀로 줄을 다 쓴다.
-  assert.match(자세히, /이룸\s*\?\s*링크단추\(href\)/);
   assert.match(css, /\.wish-detail-do \{[^}]*display: flex/);
+  // 이룬 것에는 누를 것이 없다 — 고칠 수도 이룰 수도 없는 줄이다.
+  assert.match(자세히, /이룸\s*\?\s*""/);
   assert.match(css, /\.wish-detail-do \.wish-detail-square \{[^}]*flex: 0 0 var\(--control-lg\)/);
   assert.match(css, /\.wish-detail-do \[data-achieve-wish\] \{[^}]*flex: 1/);
 
@@ -633,24 +642,18 @@ test("지금 목표는 사람마다 하나고, 맨 위에 선다", () => {
   assert.match(fn("무엇을할수있나"), /wish\.createdBy === getProfile\(\)\?\.id\) return "goal"/);
 
   /*
-   * 사진 위 책갈피로 걸고 푼다. 켜지면 안이 채워지고 꺼지면 테두리만 남는다 —
+   * 책갈피 단추로 걸고 푼다. 켜지면 안이 채워지고 꺼지면 테두리만 남는다 —
    * 누르는 자리와 지금 어떤지가 한 곳에 있어야 무엇을 누르는지 헷갈리지 않는다.
    *
-   * 색은 흰색 그대로다. 사진이 무슨 색일지 모르므로 강조색으로 칠하면 어떤 사진에서는 묻힌다.
+   * 사진 위에 얹어 본 적도 있는데, 그 자리는 이제 링크가 쓴다. 단추 줄로 내려오면서
+   * 사진 위에 아무것도 안 얹는다는 규칙이 격자와 자세히 둘 다에서 지켜진다.
    */
-  assert.match(자세히그리기, /action === "goal"[\s\S]*?class="wish-bookmark\$\{wish\.isGoal \? " is-on" : ""\}"[\s\S]*?data-goal-wish/);
+  assert.match(자세히그리기, /action === "goal"[\s\S]*?class="submit-button quiet wish-detail-square\$\{wish\.isGoal \? " is-on" : ""\}"[\s\S]*?data-goal-wish/);
   // 참거짓도 글자로 못 박아 넣는다 — innerHTML 자리에는 서버 값을 통째로 안 끼운다는 규칙이다.
   assert.match(자세히그리기, /aria-pressed="\$\{wish\.isGoal \? "true" : "false"\}"/, "켜짐 여부를 읽어 주지 않는다");
-  assert.match(css, /\.wish-bookmark\.is-on svg \{[^}]*fill: currentColor/);
-  assert.match(css, /\.wish-bookmark \{[\s\S]*?position: absolute/);
-  /*
-   * 그림 자체는 읽어 주지 않는 자리(aria-hidden)라 그 안에 누를 것을 넣을 수 없다.
-   * 밖에서 감싸 겹친다.
-   */
-  assert.match(자세히그리기, /<div class="wish-detail-shot">/);
-  assert.match(css, /\.wish-detail-shot \{[^}]*position: relative/);
-  // 아래 조용한 단추 자리는 "나도" 만 쓴다.
-  assert.doesNotMatch(자세히그리기, /submit-button quiet" type="button" data-goal-wish/, "목표가 아직 글자 단추다");
+  assert.match(css, /\.wish-detail-square\.is-on svg \{[^}]*fill: currentColor/);
+  // 사진 위에는 이제 아무것도 안 얹는다.
+  assert.doesNotMatch(css, /\.wish-bookmark/, "사진 위 책갈피가 남아 있다");
 
   /*
    * 새로 고르면 앞의 것이 저절로 풀려 돌아오는 줄이 둘일 수 있다. 그래서 여기만

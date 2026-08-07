@@ -99,7 +99,6 @@ export function createWishTile(wish) {
  * 다 같은 무게로 읽힌다.
  */
 const 도구그림 = {
-  link: `<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>`,
   edit: `<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm10-13 4 4"/>`,
   // 책갈피. 지금 목표면 안이 채워지고, 아니면 테두리만 남는다.
   mark: `<path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1Z"/>`,
@@ -118,18 +117,6 @@ export function wishPriceLine(wish) {
 }
 
 /**
- * 링크. 이뤘어요 왼쪽에 작은 단추로 선다.
- *
- * 글자를 안 적는다 — "링크 열기" 라고 쓰면 옆의 이뤘어요와 같은 무게가 되어 무엇이 이 시트의
- * 일인지 흐려진다. 모양은 큰 단추와 같은 것에서 오고 색만 물러난다(.submit-button.quiet).
- * 이룬 것에는 이뤘어요가 없으니 이 단추가 줄을 다 쓴다.
- */
-function 링크단추(href) {
-  if (!href) return "";
-  return `<a class="submit-button quiet wish-detail-square wish-detail-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="링크 열기">${도구(도구그림.link)}</a>`;
-}
-
-/**
  * 눌렀을 때 뜨는 자세히. 목록이 그림만 남긴 만큼 여기가 다 말해야 한다.
  *
  * @param {{action: string, waiting: string}} view
@@ -141,22 +128,30 @@ export function createWishDetail(wish, { action = "none" } = {}) {
   const href = safeHref(wish.url);
   const 이룸 = wish.state === "achieved";
 
+  /*
+   * 그림이 곧 링크다. 옆에 작은 단추를 세워 두던 때는 그 단추가 무엇으로 가는 문인지 그림과
+   * 떨어져 있었다. 물건 사진을 누르면 그 물건을 파는 곳으로 — 짐작대로 움직인다.
+   *
+   * 주소가 없으면 누를 것이 아니므로 <a> 를 안 만든다. 읽어 주는 이름은 "링크 열기" 뿐이다 —
+   * 무엇의 링크인지는 시트 제목이 이미 말한다.
+   */
   body.innerHTML = `
-    <div class="wish-detail-shot">
-      ${shotMarkup(wish)}
-      ${
-        action === "goal"
-          ? `<button class="wish-bookmark${wish.isGoal ? " is-on" : ""}" type="button" data-goal-wish="${escapeHtml(wish.id)}" aria-pressed="${wish.isGoal ? "true" : "false"}" aria-label="지금 목표">${도구(도구그림.mark)}</button>`
-          : ""
-      }
-    </div>
+    ${
+      href
+        ? `<a class="wish-detail-shot" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="링크 열기">${shotMarkup(wish)}</a>`
+        : `<div class="wish-detail-shot">${shotMarkup(wish)}</div>`
+    }
     <p class="wish-detail-note">${wish.note ? escapeHtml(wish.note) : ""}</p>
     ${이룸 ? `<p class="wish-detail-by">${escapeHtml(`${formatAchievedOn(wish.achievedOn)} 이룸`)}</p>` : ""}
     ${
       이룸
-        ? 링크단추(href)
+        ? ""
         : `<div class="wish-detail-do">
-             ${링크단추(href)}
+             ${
+               action === "goal"
+                 ? `<button class="submit-button quiet wish-detail-square${wish.isGoal ? " is-on" : ""}" type="button" data-goal-wish="${escapeHtml(wish.id)}" aria-pressed="${wish.isGoal ? "true" : "false"}" aria-label="지금 목표">${도구(도구그림.mark)}</button>`
+                 : ""
+             }
              <button class="submit-button quiet wish-detail-square" type="button" data-edit-wish="${escapeHtml(wish.id)}" aria-label="고치기">${도구(도구그림.edit)}</button>
              <button class="submit-button" type="button" data-achieve-wish="${escapeHtml(wish.id)}">이뤘어요</button>
            </div>`

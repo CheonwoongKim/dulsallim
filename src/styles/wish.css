@@ -188,55 +188,13 @@
 
 /* 그림은 시트 폭을 다 쓴다. 목록에서는 손톱만 했던 것을 여기서 제대로 본다. */
 /*
- * 자세히의 그림과 그 위에 앉는 책갈피를 함께 감싼다. 그림 자체(.wish-shot)는 읽어 주지 않는
- * 자리(aria-hidden)라 그 안에 누를 것을 넣을 수 없다 — 밖에서 겹친다.
+ * 그림이 곧 링크다. 주소가 있으면 <a>, 없으면 <div> 로 온다 — 어느 쪽이든 자리는 같다.
+ * <a> 라 밑줄과 링크색이 따라오므로 지운다.
  */
 .wish-detail-shot {
   display: grid;
-  position: relative;
-}
-
-/*
- * 지금 목표로 삼거나 푼다. 사진 위 오른쪽 위.
- *
- * 격자의 ⋯ 와 같은 짜임인데 여기서는 괜찮다 — 한 화면에 하나뿐이고, 자세히는 그 하나를
- * 보러 연 자리다. 사진도 크다(345 폭에 42 는 12%. 칸에서는 167 에 26 이라 16% 였다).
- *
- * 켜지면 안이 채워지고 꺼지면 테두리만 남는다. 색은 그대로 흰색이다 — 사진이 무슨 색일지
- * 모르므로 강조색으로 칠하면 어떤 사진에서는 묻힌다.
- */
-.wish-bookmark {
-  display: grid;
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  width: var(--control-sm);
-  height: var(--control-sm);
-  border: 0;
-  border-radius: var(--radius-round);
-  color: var(--white);
-  background: color-mix(in srgb, var(--ink) 50%, transparent);
-  cursor: pointer;
-  place-items: center;
-}
-
-.wish-bookmark:active {
-  background: color-mix(in srgb, var(--ink) 65%, transparent);
-}
-
-.wish-bookmark svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.8;
-}
-
-/* 지금 목표. 안을 채워 한눈에 갈린다. */
-.wish-bookmark.is-on svg {
-  fill: currentColor;
+  color: inherit;
+  text-decoration: none;
 }
 
 .wish-detail .wish-shot {
@@ -305,19 +263,15 @@
   flex: 1;
 }
 
-/*
- * 링크와 고치기는 정사각이다. 안에 그림만 있으니 글자 단추의 좌우 여백이 필요 없다.
- * 이룬 것에는 이뤘어요도 고치기도 없어 링크가 홀로 줄을 다 쓴다 — 그때는 이 규칙 밖이다.
- */
+/* 목표와 고치기는 정사각이다. 안에 그림만 있으니 글자 단추의 좌우 여백이 필요 없다. */
 .wish-detail-do .wish-detail-square {
   flex: 0 0 var(--control-lg);
   padding: 0;
 }
 
-/* <a> 라 밑줄과 링크색이 따라온다. 옆의 큰 단추와 같아 보여야 한 줄로 읽힌다. */
-.wish-detail-link {
-  color: var(--ink);
-  text-decoration: none;
+/* 지금 목표. 안을 채워 한눈에 갈린다 — 자리도 그림도 그대로고 속만 찬다. */
+.wish-detail-square.is-on svg {
+  fill: currentColor;
 }
 
 .wish-detail-square svg {
