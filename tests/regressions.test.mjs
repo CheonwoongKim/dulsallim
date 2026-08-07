@@ -2965,7 +2965,14 @@ test("쓰지 않게 된 모양새와 손잡이를 남기지 않는다", () => {
   const 부르는곳 = `${app}\n${html}`
     .replace(/#[a-z][\w-]*/g, " ")
     .replace(/\bid="[^"]*"/g, " ");
-  const 이름들 = [...new Set([...css.matchAll(/\.([a-z][\w-]*)/g)].map((m) => m[1]))];
+  /*
+   * 고르는 자리에서만 찾는다. 주석의 fonts.googleapis.com 이나 url(...) 속 .woff2 까지
+   * 집으면 있지도 않은 이름을 없다고 나무란다 — 글꼴을 우리 자리로 옮기면서 실제로 그랬다.
+   */
+  const 고르는곳 = css
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/url\([^)]*\)/g, " ");
+  const 이름들 = [...new Set([...고르는곳.matchAll(/\.([a-z][\w-]*)/g)].map((m) => m[1]))];
   const 안쓰는것 = 이름들.filter((이름) => !new RegExp(`\\b${이름}\\b`).test(부르는곳));
   assert.deepEqual(안쓰는것, [], "모양새에만 있고 아무 데서도 안 쓰는 이름이 남아 있다");
 
@@ -2978,4 +2985,31 @@ test("쓰지 않게 된 모양새와 손잡이를 남기지 않는다", () => {
     (이름) => [...app.matchAll(new RegExp(`elements\\.${이름}\\b`, "g"))].length === 0,
   );
   assert.deepEqual(안쓰는손잡이, [], "dom.js 가 아무도 안 쓰는 것을 잡고 있다");
+});
+
+test("글꼴은 우리 자리에서 나가고, 두 번째부터는 안 나간다", async () => {
+  /*
+   * 구글 글꼴은 두 번을 잇달아 다녀와야 한다 — googleapis 에서 규칙을 받고, 읽어 본 뒤에야
+   * gstatic 에서 조각을 받는다. 둘 다 남의 도메인이라 서비스 워커가 담지 못하고, 브라우저
+   * 캐시도 요즘은 사이트마다 나뉘어 있어 "다른 데서 이미 받아 뒀겠지" 가 통하지 않는다.
+   * 첫 방문에서 11번을 나갔다(계측).
+   */
+  assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/, "글꼴을 아직 남의 서버에서 받는다");
+  assert.doesNotMatch(css, /url\(https?:\/\//, "글꼴 조각이 아직 밖에 있다");
+  assert.match(css, /@font-face/, "글꼴 규칙이 앱 CSS 안에 없다");
+  assert.match(css, /src: url\(\/fonts\//);
+
+  /*
+   * 이름에 해시가 박혀 있어 내용이 바뀌면 이름도 바뀐다. 담아 둔 것부터 써야 두 번째 방문에
+   * 안 나간다 — 그물로 먼저 가면 매번 다녀온다(계측: 3번째 열기부터 0개).
+   */
+  assert.match(sw, /url\.pathname\.startsWith\("\/assets\/"\) \|\| url\.pathname\.startsWith\("\/fonts\/"\)/);
+  assert.match(sw, /안바뀌는것 \? cacheFirst\(request\) : networkFirst\(request\)/);
+
+  // 조각은 구글이 글자 범위로 잘라 둔 그대로다. 브라우저가 unicode-range 를 보고 쓰는 것만 받는다.
+  assert.match(css, /unicode-range:/);
+  const { readdir } = await import("node:fs/promises");
+  const 조각들 = await readdir(new URL("../public/fonts", import.meta.url));
+  assert.ok(조각들.length > 50, `글꼴 조각이 ${조각들.length}개뿐이다 — 한글이 빠졌을 수 있다`);
+  assert.ok(조각들.every((name) => name.endsWith(".woff2")), "글꼴 자리에 다른 것이 섞였다");
 });

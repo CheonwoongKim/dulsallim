@@ -58,7 +58,7 @@ const SOURCE_FILES = [
 ];
 
 /** 캐스케이드 순서가 특이도 경합을 좌우하므로 순서를 지켜 이어 붙인다. */
-export const STYLE_FILES = ["base", "swipe", "layout", "ledger", "calendar", "page", "sheet", "notes", "analysis", "trend", "wish", "auth", "responsive"];
+export const STYLE_FILES = ["fonts", "base", "swipe", "layout", "ledger", "calendar", "page", "sheet", "notes", "analysis", "trend", "wish", "auth", "responsive"];
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 

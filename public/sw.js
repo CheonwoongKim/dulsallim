@@ -141,8 +141,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  /*
+   * 이름에 해시가 박혀 있어 내용이 바뀌면 이름도 바뀌는 것들. 담아 둔 것이 있으면 그것부터
+   * 쓴다 — 그물로 먼저 가면 두 번째 방문에도 매번 다녀오게 된다.
+   *
+   * /fonts 는 구글이 잘라 둔 글꼴 조각이다. 이름이 곧 판이라 바뀔 일이 없다.
+   */
   const url = new URL(request.url);
-  event.respondWith(url.pathname.startsWith("/assets/") ? cacheFirst(request) : networkFirst(request));
+  const 안바뀌는것 = url.pathname.startsWith("/assets/") || url.pathname.startsWith("/fonts/");
+  event.respondWith(안바뀌는것 ? cacheFirst(request) : networkFirst(request));
 });
 
 /*
