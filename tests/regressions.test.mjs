@@ -229,11 +229,46 @@ test("로그아웃하면 앞사람 기록이 화면에 남지 않는다", () => 
   assert.match(app, /unsubscribe\(channel\)/, "구독을 남기면 남의 가구 변경을 계속 받는다");
 });
 
-test("서비스워커는 성공한 동일 출처 응답만 캐시한다", () => {
+test("서비스워커는 성공한 동일 출처 응답만 캐시한다 — 그림만 빼고", () => {
   assert.match(sw, /origin !== self\.location\.origin/, "외부 CDN 응답까지 캐시하면 안 된다");
   assert.match(sw, /response\.ok/, "4xx·5xx를 캐시하면 오프라인에서 오류가 굳는다");
   assert.match(sw, /response\.type === "basic"/);
   assert.match(sw, /\.catch\(\(\) => \{\}\)/, "cache.put 실패가 unhandled rejection이 되면 안 된다");
+
+  /*
+   * 그림은 어느 서버 것이든 담는다. 위시의 대표 그림이 남의 서버(쇼핑몰 CDN)에 있고,
+   * 그 서버가 캐시를 얼마나 두라고 말해 주는지는 우리가 못 정한다 — 안 알려 주는 곳도 있다.
+   * 담기 전에는 목록을 열 때마다 다시 받아 왔다(계측: 길을 끊으면 그림이 사라졌다).
+   *
+   * 그림 갈래가 출처를 보는 줄보다 먼저 와야 한다. 뒤에 있으면 남의 그림은 거기서 걸러진다.
+   */
+  assert.match(sw, /request\.destination === "image"[\s\S]*?imageFirst\(request\)/);
+  assert.ok(
+    sw.indexOf('request.destination === "image"') < sw.indexOf("origin !== self.location.origin"),
+    "출처를 먼저 보면 남의 그림은 담기지 않는다",
+  );
+
+  /*
+   * 남의 서버 그림은 no-cors 로 와서 status 가 0 이고 속을 볼 수 없다(opaque).
+   * ok 로는 못 가리므로 0 도 성공으로 본다.
+   */
+  assert.match(sw, /response\.status === 0 \|\| response\.ok/);
+
+  /*
+   * 그림 곳간은 앱 판과 묶지 않는다. 코드를 고쳤다고 남의 그림까지 다시 받을 까닭이 없다 —
+   * 그래서 판을 지우는 자리에서 이것만은 빼 둔다.
+   */
+  assert.match(sw, /const IMAGE_CACHE_NAME = "dulsallim-images"/);
+  assert.doesNotMatch(sw, /const IMAGE_CACHE_NAME = `[^`]*\$\{BUILD_VERSION\}/);
+  assert.match(sw, /key !== CACHE_NAME && key !== IMAGE_CACHE_NAME/);
+
+  /*
+   * opaque 응답은 브라우저가 크기를 부풀려 셈한다. 무한정 담으면 저장 공간을 다 쓰고
+   * 앱 셸까지 밀려난다. 넣은 차례로 나오는 열쇠 목록에서 오래된 것부터 버린다.
+   */
+  const 버리기 = sw.match(/async function 넘치면버리기\([\s\S]*?\n\}/)[0];
+  assert.match(버리기, /keys\.length <= IMAGE_LIMIT/);
+  assert.match(버리기, /keys\.slice\(0, keys\.length - IMAGE_LIMIT\)/);
 });
 
 test("닫기 버튼은 완성된 click 하나로만 닫는다", () => {

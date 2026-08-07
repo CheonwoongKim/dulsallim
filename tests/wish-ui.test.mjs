@@ -677,3 +677,23 @@ test("지금 목표는 사람마다 하나고, 맨 위에 선다", () => {
   assert.match(css, /\.wish-goal-tag \{[\s\S]*?background: var\(--accent\)/);
   assert.match(css, /\.wish-tile:has\(\.wish-goal-tag\) \{[\s\S]*?border-color: var\(--accent\)/);
 });
+
+test("달라진 것이 없으면 격자를 다시 안 그린다", () => {
+  /*
+   * 통째로 갈아 끼우면 <img> 도 새로 생긴다. 브라우저는 같은 주소라도 새 요소에는 그림을
+   * 다시 붙이므로, 나갔다 들어올 때마다 첫 글자가 잠깐 보였다가 그림이 뜬다.
+   * 그림을 담아 둬도 그 깜빡임은 남는다 — 요소를 살려 두는 것이 그 답이다.
+   * (계측: 나갔다 들어와도 그림 요청 0건, <img> 요소가 그대로 살아 있다)
+   *
+   * 지문에는 화면에 드러나는 것만 넣는다. 하나라도 빠지면 바뀐 것이 화면에 안 나타난다 —
+   * 담은 사람 색은 마이페이지에서 바꾸면 칸 바탕이 달라지므로 함께 센다.
+   */
+  const 그리기 = fn("paintWishPage");
+  assert.match(그리기, /const 지문 = 목록/);
+  for (const 값 of ["wish.id", "wish.state", "wish.isGoal", "wish.imageUrl", "getMemberColor(wish.createdBy)"]) {
+    assert.ok(그리기.includes(값), `지문에 ${값} 이 빠졌다`);
+  }
+  assert.match(그리기, /if \(지문 !== 그린지문\) \{[\s\S]*?replaceChildren[\s\S]*?그린지문 = 지문/);
+  // 빈 목록으로 갔다가 돌아오면 다시 그려야 한다. 지문을 안 비우면 빈 채로 남는다.
+  assert.match(그리기, /그린지문 = "";[\s\S]{0,120}?wish-empty/);
+});

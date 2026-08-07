@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { getMembers } from "../members.js";
+import { getMemberColor, getMembers } from "../members.js";
 import { formatAmountInput, isValidAmount, readAmount } from "../money.js";
 import {
   achieveWish,
@@ -70,6 +70,9 @@ const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt)
  */
 let wishTab = null;
 
+/** 방금 그린 목록의 지문. 같으면 다시 그리지 않는다 — 그림이 깜빡이지 않게. */
+let 그린지문 = "";
+
 export function setWishTab(memberId) {
   wishTab = memberId || null;
   paintWishPage();
@@ -103,9 +106,26 @@ export function paintWishPage() {
 
   elements.wishCount.textContent = 목록.length ? `(${목록.length})` : "";
   if (목록.length) {
-    elements.wishList.replaceChildren(...목록.map(createWishTile));
+    /*
+     * 달라진 것이 없으면 다시 안 그린다.
+     *
+     * 통째로 갈아 끼우면 <img> 도 새로 생긴다. 브라우저는 같은 주소라도 새 요소에는 그림을
+     * 다시 붙이므로, 나갔다 들어올 때마다 첫 글자가 잠깐 보였다가 그림이 뜬다. 그림을 담아
+     * 둬도 그 깜빡임은 남는다 — 요소를 살려 두는 것이 그 답이다.
+     *
+     * 지문에는 화면에 드러나는 것만 넣는다. 차례·상태·목표·그림 주소, 그리고 담은 사람 색
+     * (마이페이지에서 바꾸면 칸 바탕이 바뀐다).
+     */
+    const 지문 = 목록
+      .map((wish) => [wish.id, wish.state, wish.isGoal, wish.imageUrl ?? "", getMemberColor(wish.createdBy)].join(","))
+      .join("|");
+    if (지문 !== 그린지문) {
+      elements.wishList.replaceChildren(...목록.map(createWishTile));
+      그린지문 = 지문;
+    }
   } else {
     const 나인가 = wishTab === getProfile()?.id;
+    그린지문 = "";
     elements.wishList.innerHTML = 나인가
       ? `<p class="wish-empty">아직 담아 둔 것이 없어요.<br />사고 싶은 것을 적어 두면 아끼는 이유가 생겨요.</p>`
       : `<p class="wish-empty">아직 담아 둔 것이 없어요.</p>`;
