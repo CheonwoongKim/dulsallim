@@ -101,6 +101,8 @@ export function createWishTile(wish) {
 const 도구그림 = {
   link: `<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>`,
   edit: `<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm10-13 4 4"/>`,
+  // 책갈피. 지금 목표면 안이 채워지고, 아니면 테두리만 남는다.
+  mark: `<path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1Z"/>`,
 };
 
 const 도구 = (그림) => `<svg viewBox="0 0 24 24" aria-hidden="true">${그림}</svg>`;
@@ -140,7 +142,14 @@ export function createWishDetail(wish, { action = "none" } = {}) {
   const 이룸 = wish.state === "achieved";
 
   body.innerHTML = `
-    ${shotMarkup(wish)}
+    <div class="wish-detail-shot">
+      ${shotMarkup(wish)}
+      ${
+        action === "goal"
+          ? `<button class="wish-bookmark${wish.isGoal ? " is-on" : ""}" type="button" data-goal-wish="${escapeHtml(wish.id)}" aria-pressed="${wish.isGoal ? "true" : "false"}" aria-label="지금 목표">${도구(도구그림.mark)}</button>`
+          : ""
+      }
+    </div>
     <p class="wish-detail-note">${wish.note ? escapeHtml(wish.note) : ""}</p>
     ${이룸 ? `<p class="wish-detail-by">${escapeHtml(`${formatAchievedOn(wish.achievedOn)} 이룸`)}</p>` : ""}
     ${
@@ -151,13 +160,6 @@ export function createWishDetail(wish, { action = "none" } = {}) {
              <button class="submit-button quiet wish-detail-square" type="button" data-edit-wish="${escapeHtml(wish.id)}" aria-label="고치기">${도구(도구그림.edit)}</button>
              <button class="submit-button" type="button" data-achieve-wish="${escapeHtml(wish.id)}">이뤘어요</button>
            </div>`
-    }
-    ${
-      action === "goal"
-        ? `<button class="submit-button quiet" type="button" data-goal-wish="${escapeHtml(wish.id)}">${
-            wish.isGoal ? "지금 목표 풀기" : "지금 목표로"
-          }</button>`
-        : ""
     }
     ${
       action === "agree"

@@ -631,9 +631,26 @@ test("지금 목표는 사람마다 하나고, 맨 위에 선다", () => {
    */
   const 자세히그리기 = fn("createWishDetail");
   assert.match(fn("무엇을할수있나"), /wish\.createdBy === getProfile\(\)\?\.id\) return "goal"/);
-  assert.match(자세히그리기, /action === "goal"[\s\S]*?data-goal-wish/);
-  // 이미 목표면 푸는 말로 바뀐다. 같은 자리에서 걸고 푼다.
-  assert.match(자세히그리기, /wish\.isGoal \? "지금 목표 풀기" : "지금 목표로"/);
+
+  /*
+   * 사진 위 책갈피로 걸고 푼다. 켜지면 안이 채워지고 꺼지면 테두리만 남는다 —
+   * 누르는 자리와 지금 어떤지가 한 곳에 있어야 무엇을 누르는지 헷갈리지 않는다.
+   *
+   * 색은 흰색 그대로다. 사진이 무슨 색일지 모르므로 강조색으로 칠하면 어떤 사진에서는 묻힌다.
+   */
+  assert.match(자세히그리기, /action === "goal"[\s\S]*?class="wish-bookmark\$\{wish\.isGoal \? " is-on" : ""\}"[\s\S]*?data-goal-wish/);
+  // 참거짓도 글자로 못 박아 넣는다 — innerHTML 자리에는 서버 값을 통째로 안 끼운다는 규칙이다.
+  assert.match(자세히그리기, /aria-pressed="\$\{wish\.isGoal \? "true" : "false"\}"/, "켜짐 여부를 읽어 주지 않는다");
+  assert.match(css, /\.wish-bookmark\.is-on svg \{[^}]*fill: currentColor/);
+  assert.match(css, /\.wish-bookmark \{[\s\S]*?position: absolute/);
+  /*
+   * 그림 자체는 읽어 주지 않는 자리(aria-hidden)라 그 안에 누를 것을 넣을 수 없다.
+   * 밖에서 감싸 겹친다.
+   */
+  assert.match(자세히그리기, /<div class="wish-detail-shot">/);
+  assert.match(css, /\.wish-detail-shot \{[^}]*position: relative/);
+  // 아래 조용한 단추 자리는 "나도" 만 쓴다.
+  assert.doesNotMatch(자세히그리기, /submit-button quiet" type="button" data-goal-wish/, "목표가 아직 글자 단추다");
 
   /*
    * 새로 고르면 앞의 것이 저절로 풀려 돌아오는 줄이 둘일 수 있다. 그래서 여기만

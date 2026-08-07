@@ -187,6 +187,58 @@
 }
 
 /* 그림은 시트 폭을 다 쓴다. 목록에서는 손톱만 했던 것을 여기서 제대로 본다. */
+/*
+ * 자세히의 그림과 그 위에 앉는 책갈피를 함께 감싼다. 그림 자체(.wish-shot)는 읽어 주지 않는
+ * 자리(aria-hidden)라 그 안에 누를 것을 넣을 수 없다 — 밖에서 겹친다.
+ */
+.wish-detail-shot {
+  display: grid;
+  position: relative;
+}
+
+/*
+ * 지금 목표로 삼거나 푼다. 사진 위 오른쪽 위.
+ *
+ * 격자의 ⋯ 와 같은 짜임인데 여기서는 괜찮다 — 한 화면에 하나뿐이고, 자세히는 그 하나를
+ * 보러 연 자리다. 사진도 크다(345 폭에 42 는 12%. 칸에서는 167 에 26 이라 16% 였다).
+ *
+ * 켜지면 안이 채워지고 꺼지면 테두리만 남는다. 색은 그대로 흰색이다 — 사진이 무슨 색일지
+ * 모르므로 강조색으로 칠하면 어떤 사진에서는 묻힌다.
+ */
+.wish-bookmark {
+  display: grid;
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border: 0;
+  border-radius: var(--radius-round);
+  color: var(--white);
+  background: color-mix(in srgb, var(--ink) 50%, transparent);
+  cursor: pointer;
+  place-items: center;
+}
+
+.wish-bookmark:active {
+  background: color-mix(in srgb, var(--ink) 65%, transparent);
+}
+
+.wish-bookmark svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+/* 지금 목표. 안을 채워 한눈에 갈린다. */
+.wish-bookmark.is-on svg {
+  fill: currentColor;
+}
+
 .wish-detail .wish-shot {
   border-radius: var(--radius-16);
   aspect-ratio: 4 / 3;
