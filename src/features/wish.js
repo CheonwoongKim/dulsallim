@@ -9,12 +9,14 @@ import {
   editWish,
   getExpenses,
   getWishes,
+  moveWish,
   removeWish,
 } from "../store.js";
 import { safeHref } from "../ui/escape.js";
 import { showPage } from "../ui/page.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
 import { showToast } from "../ui/toast.js";
+import { paintMemberTabs } from "../ui/member-tabs.js";
 import { createExpenseChoice, createWishDetail, createWishTile } from "../ui/wish-list.js";
 import { getProfile } from "./auth.js";
 
@@ -55,11 +57,16 @@ let editingWishId = null;
 
 const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt));
 
-/** 미달성(open) 을 보는 중인가, 달성(done) 을 보는 중인가. 미달성이 기본이다. */
-let wishTab = "open";
+/**
+ * 지금 누구의 목록을 보는 중인가. null 이면 아직 안 정한 것이고, 처음 그릴 때 나로 잡는다.
+ *
+ * 달성 여부로 가르던 탭을 사람으로 바꿨다. 위시는 각자가 담는 것이고, 둘이 서로 무엇을
+ * 바라는지 보는 것이 이 화면의 일이다. 이룬 것은 목록에서 뺀다 — 바라는 자리다.
+ */
+let wishTab = null;
 
-export function setWishTab(tab) {
-  wishTab = tab === "done" ? "done" : "open";
+export function setWishTab(memberId) {
+  wishTab = memberId || null;
   paintWishPage();
 }
 
@@ -75,59 +82,46 @@ function waitingFor(wish) {
 }
 
 /**
- * 미달성 · 달성 두 자리로 나눠 그린다.
+ * 사람 하나의 목록을 그린다. 우선순위가 높은 것이 위다.
  *
- * 사람으로 가르던 탭을 달성 여부로 바꿨다. 위시는 "다가가는 중" 과 "이룬 것" 의 무게가
- * 다르고, 누가 담았는지는 카드마다 이름이 이미 말한다.
+ * 이룬 것은 안 그린다. 여기는 앞으로 바라는 자리고, 이룬 것은 그 지출에 이미 남아 있다.
+ * 둘 다 "나도" 를 누른 것(pursuing)은 담은 사람 자리에 그대로 두고 표시만 얹는다 —
+ * 누구의 바람이었는지가 지워지면 각자의 목록이라는 뜻이 흐려진다.
  */
 export function paintWishPage() {
   // 열려 있는 자세히도 같은 사본을 봐야 한다. 상대가 바꾼 것이 여기서 들어온다.
   if (!elements.wishDetailSheet.hidden) paintWishDetail();
 
-  const wishes = getWishes();
-  const 달성중 = wishTab === "done";
-
-  [...elements.wishTabs.children].forEach((button) => {
-    button.setAttribute("aria-pressed", String((button.dataset.wishTab === "done") === 달성중));
-  });
-
-  // 함께 바라는 것 — 둘 다 "나도" 를 누른 것. 여럿이어도 된다.
-  const pursuing = 달성중
-    ? []
-    : wishes
-        .filter((wish) => wish.state === "pursuing")
-        .sort((a, b) => String(b.pursuingAt).localeCompare(String(a.pursuingAt)) || byNewest(a, b));
-  elements.wishPursuingSection.hidden = !pursuing.length;
-  elements.wishPursuingCount.textContent = pursuing.length > 1 ? `(${pursuing.length})` : "";
-  elements.wishPursuing.replaceChildren(...pursuing.map(createWishTile));
-
-  // 담아 둔 것 — 아직 한 사람만 바라는 것.
-  const proposed = 달성중 ? [] : wishes.filter((wish) => wish.state === "proposed").sort(byNewest);
-  elements.wishOpenSection.hidden = 달성중;
-  elements.wishCount.textContent = proposed.length ? `(${proposed.length})` : "";
-  if (!달성중 && !proposed.length && !pursuing.length) {
-    elements.wishList.innerHTML = `
-      <p class="wish-empty">아직 담아 둔 것이 없어요.<br />둘이 사고 싶은 것을 먼저 적어 두면 아끼는 이유가 생겨요.</p>
-    `;
-  } else {
-    elements.wishList.replaceChildren(...proposed.map(createWishTile));
+  const 사람들 = getMembers();
+  // 처음 열면 내 목록부터. 명부가 아직 안 왔으면 첫 사람으로 버틴다.
+  if (!wishTab || !사람들.some((member) => member.id === wishTab)) {
+    wishTab = getProfile()?.id ?? 사람들[0]?.id ?? null;
   }
 
-  // 이룬 것 — 이룬 순으로. 날짜가 같으면 나중에 적힌 것이 위다.
-  const achieved = 달성중
-    ? wishes
-        .filter((wish) => wish.state === "achieved")
-        .sort((a, b) => String(b.achievedOn).localeCompare(String(a.achievedOn)) || byNewest(a, b))
-    : [];
-  elements.wishAchievedSection.hidden = !달성중;
-  elements.wishAchievedCount.textContent = achieved.length ? `(${achieved.length})` : "";
-  elements.wishAchieved.replaceChildren(...achieved.map(createWishTile));
-  if (달성중 && !achieved.length) {
-    elements.wishAchieved.innerHTML = `
-      <p class="wish-empty">아직 이룬 것이 없어요.<br />함께 바라는 것을 사고 나면 "이뤘어요" 로 옮겨 주세요.</p>
-    `;
+  paintMemberTabs(elements.wishTabs, wishTab, { 전체: false });
+
+  const 목록 = getWishes()
+    .filter((wish) => wish.createdBy === wishTab && wish.state !== "achieved")
+    .sort(byPriority);
+
+  elements.wishCount.textContent = 목록.length ? `(${목록.length})` : "";
+  if (목록.length) {
+    elements.wishList.replaceChildren(...목록.map(createWishTile));
+  } else {
+    const 나인가 = wishTab === getProfile()?.id;
+    elements.wishList.innerHTML = 나인가
+      ? `<p class="wish-empty">아직 담아 둔 것이 없어요.<br />사고 싶은 것을 적어 두면 아끼는 이유가 생겨요.</p>`
+      : `<p class="wish-empty">아직 담아 둔 것이 없어요.</p>`;
   }
 }
+
+/**
+ * 우선순위가 높은(작은) 것이 위. 같으면 나중에 담은 것이 위다.
+ *
+ * 자리 값이 같을 수 있어서 두 번째 잣대가 있어야 차례가 흔들리지 않는다.
+ * 서버의 move_wish 도 (sort_order, id) 로 이웃을 찾는다 — 두 곳이 같은 규칙을 쓴다.
+ */
+const byPriority = (a, b) => a.sortOrder - b.sortOrder || String(a.id).localeCompare(String(b.id));
 
 export function openWishPage() {
   paintWishPage();
@@ -366,7 +360,28 @@ export function openWishMenu(id) {
 
   menuWishId = id;
   elements.wishMenuName.textContent = wish.name;
+  /*
+   * 자리 옮기기는 내가 담은 것에만 낸다. 남의 목록 순서는 그 사람이 정한다 —
+   * 서버도 created_by 로 막으므로 안 감추면 눌러 놓고 잘못만 보게 된다.
+   */
+  const 내것 = wish.createdBy === getProfile()?.id;
+  for (const 줄 of [elements.wishMenuTop, elements.wishMenuUp, elements.wishMenuDown]) {
+    줄.hidden = !내것;
+  }
+  맨끝인가맞추기();
   showSheet(elements.wishMenuSheet);
+}
+
+/** 맨 위면 위로·맨 위로가, 맨 아래면 아래로가 할 일이 없다. 눌리지 않게 둔다. */
+function 맨끝인가맞추기() {
+  const 목록 = getWishes()
+    .filter((wish) => wish.createdBy === getProfile()?.id && wish.state !== "achieved")
+    .sort(byPriority);
+  const 자리 = 목록.findIndex((wish) => wish.id === menuWishId);
+  if (자리 < 0) return;
+  elements.wishMenuTop.disabled = 자리 === 0;
+  elements.wishMenuUp.disabled = 자리 === 0;
+  elements.wishMenuDown.disabled = 자리 === 목록.length - 1;
 }
 
 export function closeWishMenu() {
@@ -379,6 +394,24 @@ export function closeWishMenu() {
  * 메뉴를 먼저 닫고 다음 시트를 올린다. 겹쳐 뜨면 뒤엣것이 먼저 잡혀 끌어 닫기가 엉킨다.
  * 무엇을 고르는지는 닫기 전에 붙잡아 둔다 — 닫는 사이에 menuWishId 가 비워진다.
  */
+/**
+ * 자리를 옮긴다. 메뉴는 열어 둔 채로 둔다 — 여러 칸 올릴 때 매번 다시 열게 하지 않는다.
+ *
+ * 내가 담은 것만 옮길 수 있다. 서버도 created_by 로 막는다 — 각자의 목록이고
+ * 순서는 담은 사람이 정한다.
+ */
+export async function moveFromMenu(어디로) {
+  if (!menuWishId) return;
+  try {
+    await moveWish(menuWishId, 어디로);
+  } catch (error) {
+    showToast(error.message);
+    return;
+  }
+  paintWishPage();
+  맨끝인가맞추기();
+}
+
 export function editFromMenu() {
   const id = menuWishId;
   closeWishMenu();

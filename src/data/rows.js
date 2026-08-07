@@ -100,6 +100,8 @@ export function toWish(row, agreementUserIds = row.agreement_user_ids || []) {
     expenseId: row.expense_id,
     achievedOn: row.achieved_on,
     achievedAt: row.achieved_at,
+    // 작을수록 위. 담은 사람마다 따로 센다.
+    sortOrder: row.sort_order ?? 0,
     agreementUserIds: [...agreementUserIds],
   };
 }

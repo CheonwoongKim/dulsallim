@@ -10,9 +10,11 @@ import { getMembers } from "../members.js";
  *
  * @param {HTMLElement} picker 버튼들이 들어갈 자리
  * @param {string|null} current 지금 고른 사람. null 이면 전체
+ * @param {{전체?: boolean}} [고르기] 전체 칸을 둘지. 위시는 사람만 고른다 —
+ *   각자의 목록이라 "전체" 라는 자리가 없다.
  */
-export function paintMemberTabs(picker, current) {
-  const options = [{ id: null, name: "전체" }, ...getMembers()];
+export function paintMemberTabs(picker, current, { 전체 = true } = {}) {
+  const options = 전체 ? [{ id: null, name: "전체" }, ...getMembers()] : getMembers();
 
   if (picker.childElementCount !== options.length) {
     picker.replaceChildren(

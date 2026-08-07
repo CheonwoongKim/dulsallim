@@ -12,6 +12,14 @@ import { escapeHtml, safeHref } from "./escape.js";
 const 이룸표 = `<span class="wish-done" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>`;
 
 /**
+ * 둘 다 바라는 것에 얹는 표시.
+ *
+ * 목록은 담은 사람으로 갈리므로 이 칸은 담은 사람 자리에 그대로 있다. 다만 상대도 "나도" 를
+ * 눌렀다는 것은 보여야 한다 — 그걸 모르면 왜 "이뤘어요" 를 서로 미루는지 알 수 없다.
+ */
+const 함께표 = `<span class="wish-together" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4.6-7 9-7 9Z"/></svg></span>`;
+
+/**
  * 그림 한 칸.
  *
  * 그림이 없으면 이름 첫 글자를 담은 사람 아바타 색으로 쥔다 — 새 색 체계를 들이지 않고,
@@ -23,7 +31,7 @@ function shotMarkup(wish) {
   const image = safeHref(wish.imageUrl);
   return `<span class="wish-shot" style="--wish-tile: ${escapeHtml(getMemberColor(wish.createdBy))}" aria-hidden="true">${escapeHtml(letter)}${
     image ? `<img src="${escapeHtml(image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ""
-  }${wish.state === "achieved" ? 이룸표 : ""}</span>`;
+  }${wish.state === "achieved" ? 이룸표 : ""}${wish.state === "pursuing" ? 함께표 : ""}</span>`;
 }
 
 /**
@@ -67,7 +75,10 @@ export function createWishTile(wish) {
    * 이름은 글자로 엮지 않고 넣는다. innerHTML 을 지나면 태그가 될 수 있는데,
    * setAttribute 로 넘기면 브라우저가 글자로만 다룬다.
    */
-  tile.querySelector(".wish-open").setAttribute("aria-label", `${wish.name} 자세히 보기`);
+  tile.querySelector(".wish-open").setAttribute(
+    "aria-label",
+    `${wish.name}${wish.state === "pursuing" ? " · 함께 바라는 것" : ""} 자세히 보기`,
+  );
   tile.querySelector(".wish-more")?.setAttribute("aria-label", `${wish.name} 더 보기`);
   return 그림이깨지면걷어내기(tile);
 }

@@ -24,14 +24,32 @@ function exportedFunction(source, name) {
   return source.slice(start, next < 0 ? source.length : next);
 }
 
-test("schema.sql 과 위시 마이그레이션의 두 표가 같은 구조다", () => {
-  for (const table of ["wish_items", "wish_agreements"]) {
-    const inSchema = tableDefinition(schema, table);
-    const inMigration = tableDefinition(migration, table);
-    assert.ok(inSchema, `schema.sql 에 ${table} 이 없다`);
-    assert.ok(inMigration, `migration-wish.sql 에 ${table} 이 없다`);
-    assert.equal(compact(inSchema), compact(inMigration), `${table} 정의가 서로 다르다`);
-  }
+test("schema.sql 은 처음 표에서 나중 마이그레이션이 더한 것만큼만 다르다", () => {
+  /*
+   * schema.sql 은 새 프로젝트가 한 번에 갖는 마지막 모습이고, migration-wish.sql 은 처음
+   * 모습이다. 나중 마이그레이션이 더한 것만큼 둘이 달라야 하고, 그 밖에는 같아야 한다 —
+   * 다르면 새로 만든 집과 쓰던 집이 서로 다른 표를 갖게 된다.
+   *
+   * 지금까지 더한 것: note · image_url(각각 제 마이그레이션) · sort_order 와 느슨해진
+   * 상태 제약(migration-wish-order.sql).
+   */
+  assert.equal(compact(tableDefinition(schema, "wish_agreements")),
+               compact(tableDefinition(migration, "wish_agreements")),
+               "wish_agreements 는 바뀐 적이 없다");
+
+  const 지금 = compact(tableDefinition(schema, "wish_items"));
+  const 처음 = compact(tableDefinition(migration, "wish_items"));
+  const 뺀다 = (글) => 글
+    .replace(/note text check \(note is null[^)]*\)[^,]*, /, "")
+    .replace(/image_url text check \(image_url is null[^)]*\)[^,]*, /, "")
+    .replace(/sort_order integer not null default 0, /, "")
+    .replace(/constraint wish_items_state_check /, "")
+    .replace(/pursuing_at is not null and achieved_on/, "achieved_on");
+  assert.equal(뺀다(지금), 뺀다(처음), "더한 것 말고도 표가 갈렸다");
+
+  // 나중 마이그레이션이 더한 것은 schema.sql 에 실제로 있어야 한다.
+  assert.match(schema, /sort_order\s+integer not null default 0/);
+  assert.match(schema, /create index if not exists wish_items_order_idx/);
 
   for (const sql of [schema, migration]) {
     assert.match(sql, /estimated_price integer check \(estimated_price is null or estimated_price > 0\)/);
@@ -65,10 +83,8 @@ test("함께 바라는 것은 여럿이어도 된다", () => {
 test("합의는 사람 수가 늘어도 되는 별도 표이고 올린 사람도 첫 합의로 센다", () => {
   for (const sql of [schema, migration]) {
     assert.match(sql, /primary key \(wish_id, user_id\)/);
-    assert.match(
-      sql,
-      /insert into wish_agreements \(wish_id, user_id\)\s+values \(v_wish_id, auth\.uid\(\)\)/,
-    );
+    // 올린 사람이 곧 첫 찬성이다. 변수 이름은 파일마다 다르니 뜻만 본다.
+    assert.match(sql, /insert into wish_agreements \(wish_id, user_id\)\s+values \(v_\w+, (auth\.uid\(\)|v_me)\)/);
     assert.match(
       sql,
       /count\(\*\) from wish_agreements where wish_id = p_wish_id[\s\S]*?count\(\*\) from profiles p where p\.household_id = v_household/,
@@ -138,14 +154,15 @@ test("migration-wish.sql 은 다시 실행해도 충돌하지 않는 형태다",
 });
 
 test("위시 열 목록과 읽기 조합은 remote.js 한 곳에서 관리한다", () => {
-  assert.match(remote, /export const WISH_COLUMNS\s*=\s*\n?\s*"[^"]*estimated_price[^"]*achieved_at"/);
+  assert.match(remote, /export const WISH_COLUMNS\s*=\s*\n?\s*"[^"]*estimated_price[^"]*sort_order"/);
   assert.match(remote, /export const WISH_AGREEMENT_COLUMNS = "wish_id, user_id, agreed_at"/);
   assert.match(remote, /const WISH_RESULT_COLUMNS = `\$\{WISH_COLUMNS\}, agreement_user_ids`/);
   /*
    * 담기·합의·이룸·고치기 넷이 같은 열 목록을 쓴다. 함수마다 적던 때는 한 곳만 빠져도
    * 그 자리만 400 이 났다(image_url 을 더하다 create_wish 가 그랬다). 이제 한 곳뿐이다.
    */
-  assert.equal((remote.match(/\.select\(WISH_RESULT_COLUMNS\)/g) || []).length, 1);
+  // 쓰기 넷은 위시바꾸기 한 곳을 지나고, 자리 옮기기만 따로다(돌아오는 줄이 둘이라 .single() 을 못 쓴다).
+  assert.equal((remote.match(/\.select\(WISH_RESULT_COLUMNS\)/g) || []).length, 2);
   for (const [이름, rpc] of [
     ["insertWish", "create_wish"],
     ["agreeWish", "agree_wish"],
@@ -190,5 +207,36 @@ test("초기 불러오기·다시 읽기·초기화가 위시 사본도 함께 �
   assert.match(store, /function 비우기\(\)[\s\S]*?wishes = \[\]/);
   for (const sql of [schema, migration]) {
     assert.match(sql, /delete from wish_items\s+where household_id = v_household/);
+  }
+});
+
+test("schema.sql 의 위시 함수 몸통은 마지막 마이그레이션과 글자까지 같다", async () => {
+  /*
+   * 반환 모양을 바꾸느라 다섯 함수를 다시 적으면서 몸통까지 손으로 옮겨 적었고, 세 곳이
+   * 조용히 어긋났다 — 사람 수를 없는 표에서 세고("나도" 가 아예 안 눌렸다), 한 사람 가구
+   * 갈래가 없어지고, "이미 이룬 위시입니다" 가 뭉뚱그린 말로 바뀌었다.
+   *
+   * 목 서버에는 제약도 다른 표도 없어 브라우저 시험이 다 통과했다. 그래서 여기서 글자로 센다.
+   */
+  const 짝 = {
+    create_wish: "migration-wish-body-restore.sql",
+    update_wish: "migration-wish-body-restore.sql",
+    agree_wish: "migration-wish-agree-fix.sql",
+    achieve_wish: "migration-wish-achieve-alone.sql",
+    move_wish: "migration-wish-order.sql",
+    wish_snapshot: "migration-wish-order.sql",
+  };
+  const 몸통 = (글, 이름) => {
+    const m = new RegExp(`create or replace function ${이름}\\([\\s\\S]*?\\nas \\$\\$([\\s\\S]*?)\\n\\$\\$;`).exec(글);
+    return m ? m[1].replace(/--[^\n]*/g, "").replace(/\s+/g, " ").trim() : null;
+  };
+
+  for (const [이름, 파일] of Object.entries(짝)) {
+    const 마이그 = await readFile(new URL(`../supabase/${파일}`, import.meta.url), "utf8");
+    const a = 몸통(schema, 이름);
+    const b = 몸통(마이그, 이름);
+    assert.ok(a, `schema.sql 에 ${이름} 이 없다`);
+    assert.ok(b, `${파일} 에 ${이름} 이 없다`);
+    assert.equal(a, b, `${이름} 몸통이 ${파일} 과 다르다 — 옮겨 적지 말고 그대로 복사할 것`);
   }
 });

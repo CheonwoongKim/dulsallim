@@ -141,6 +141,29 @@
   background: color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
+/*
+ * 둘 다 바라는 것. 왼쪽 위에 앉는다 — 오른쪽 위는 ⋯ 자리다.
+ * 사진 위라 ⋯ 와 같은 흐린 먹을 깔고 흰 하트를 채운다.
+ */
+.wish-together {
+  display: grid;
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  place-items: center;
+}
+
+.wish-together svg {
+  width: var(--space-4);
+  height: var(--space-4);
+  fill: var(--white);
+  stroke: none;
+}
+
 .wish-done svg {
   width: var(--space-10);
   height: var(--space-10);

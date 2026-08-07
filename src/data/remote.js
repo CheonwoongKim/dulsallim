@@ -40,7 +40,7 @@ export const MY_PROFILE_COLUMNS = "id, display_name, avatar_color, monthly_goal,
 
 /** 위시 읽기와 RPC 응답이 같은 모양을 쓰도록 열 목록을 한 곳에 둔다. */
 export const WISH_COLUMNS =
-  "id, household_id, name, url, note, estimated_price, image_url, created_by, created_at, state, pursuing_at, expense_id, achieved_on, achieved_at";
+  "id, household_id, name, url, note, estimated_price, image_url, created_by, created_at, state, pursuing_at, expense_id, achieved_on, achieved_at, sort_order";
 export const WISH_AGREEMENT_COLUMNS = "wish_id, user_id, agreed_at";
 const WISH_RESULT_COLUMNS = `${WISH_COLUMNS}, agreement_user_ids`;
 
@@ -313,6 +313,20 @@ export async function achieveWish(id, expenseId) {
 /** 담아 둔 것을 고친다. 링크가 바뀌면 서버가 그림 주소를 비워 다시 찾게 한다. */
 export async function updateWish(id, 값) {
   return 위시바꾸기("위시 수정", "update_wish", { p_wish_id: id, ...위시값(값) });
+}
+
+/**
+ * 자리를 옮긴다. 'top' | 'up' | 'down'.
+ *
+ * 위·아래는 두 줄이 맞바뀌므로 돌아오는 줄이 둘이다. 그래서 여기만 .single() 을 안 쓴다 —
+ * 쓰면 PostgREST 가 "하나가 아니다" 로 406 을 낸다.
+ */
+export async function moveWish(id, where) {
+  const rows = unwrap(
+    "위시 자리 옮기기",
+    await supabase.rpc("move_wish", { p_wish_id: id, p_where: where }).select(WISH_RESULT_COLUMNS),
+  );
+  return (rows ?? []).map((row) => toWish(row));
 }
 
 export async function deleteWish(id) {

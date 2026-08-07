@@ -199,6 +199,19 @@ export async function agreeWish(id) {
   return updated;
 }
 
+/**
+ * 자리를 옮긴다. 서버가 바뀐 줄만 돌려주므로 그것만 갈아 끼운다.
+ *
+ * 위·아래는 두 줄이 맞바뀌어 둘이 온다. 화면은 sortOrder 로 다시 세우므로
+ * 여기서는 값만 맞춰 두면 된다.
+ */
+export async function moveWish(id, where) {
+  const moved = await remote.moveWish(id, where);
+  const 바뀐것 = new Map(moved.map((wish) => [wish.id, wish]));
+  wishes = wishes.map((wish) => 바뀐것.get(wish.id) ?? wish);
+  return moved;
+}
+
 export async function achieveWish(id, expenseId) {
   const updated = await remote.achieveWish(id, expenseId);
   wishes = wishes.map((wish) => (wish.id === id ? updated : wish));

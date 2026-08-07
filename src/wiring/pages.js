@@ -57,6 +57,7 @@ import {
   openWishMenu,
   closeWishMenu,
   editFromMenu,
+  moveFromMenu,
   dropFromMenu,
   openWishPage,
   openWishSheet,
@@ -190,8 +191,9 @@ elements.wishUrl.addEventListener("input", () => {
  * 지우는지 흐려진다. 그래서 이 목록만 스와이프를 쓰지 않는다.
  */
 elements.wishTabs.addEventListener("click", (event) => {
-  const tab = event.target.closest("[data-wish-tab]");
-  if (tab) setWishTab(tab.dataset.wishTab);
+  // paintMemberTabs 가 세우는 단추다. data-member 에 사람 id 가 들어 있다.
+  const tab = event.target.closest("[data-member]");
+  if (tab) setWishTab(tab.dataset.member);
 });
 
 /*
@@ -199,13 +201,11 @@ elements.wishTabs.addEventListener("click", (event) => {
  *
  * ⋯ 를 먼저 본다. 두 단추가 겹쳐 있어 순서를 바꾸면 ⋯ 를 눌러도 자세히가 뜬다.
  */
-[elements.wishPursuing, elements.wishList, elements.wishAchieved].forEach((list) => {
-  list.addEventListener("click", (event) => {
-    const more = event.target.closest("[data-menu-wish]");
-    if (more) return openWishMenu(more.dataset.menuWish);
-    const tile = event.target.closest("[data-open-wish]");
-    if (tile) openWishDetail(tile.dataset.openWish);
-  });
+elements.wishList.addEventListener("click", (event) => {
+  const more = event.target.closest("[data-menu-wish]");
+  if (more) return openWishMenu(more.dataset.menuWish);
+  const tile = event.target.closest("[data-open-wish]");
+  if (tile) openWishDetail(tile.dataset.openWish);
 });
 
 elements.wishDetailBody.addEventListener("click", (event) => {
@@ -217,6 +217,13 @@ elements.wishDetailBody.addEventListener("click", (event) => {
 });
 
 closeOnPress(elements.closeWishMenuSheet, closeWishMenu);
+for (const [단추, 어디로] of [
+  [elements.wishMenuTop, "top"],
+  [elements.wishMenuUp, "up"],
+  [elements.wishMenuDown, "down"],
+]) {
+  단추.addEventListener("click", () => moveFromMenu(어디로));
+}
 elements.wishMenuEdit.addEventListener("click", editFromMenu);
 elements.wishMenuDrop.addEventListener("click", dropFromMenu);
 

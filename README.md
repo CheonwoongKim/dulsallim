@@ -69,6 +69,9 @@
 | 13 | `supabase/migration-wish-edit.sql` | 담아 둔 위시 고치기 |
 | 14 | `supabase/migration-wish-multi.sql` | 함께 바라는 것을 여럿 두기 |
 | 15 | `supabase/migration-wish-achieve-alone.sql` | 혼자 바라는 것도 이룸으로 넘기기 |
+| 16 | `supabase/migration-wish-order.sql` | 위시 우선순위 · 사람별 목록 (15번을 이미 돌렸어도 이것까지) |
+| 17 | `supabase/migration-wish-agree-fix.sql` | 16번이 "나도" 를 깨뜨린 것을 되돌림 (16번을 돌렸다면 반드시) |
+| 18 | `supabase/migration-wish-body-restore.sql` | 16번이 담기·고치기에서 흘린 갈래를 되돌림 (16번을 돌렸다면 반드시) |
 
 ### 알림을 쓰려면
 

@@ -4,6 +4,12 @@ import test from "node:test";
 
 import { css, fn, html, source as app } from "./helpers/source.mjs";
 
+const remote = await readFile(new URL("../src/data/remote.js", import.meta.url), "utf8");
+const store = await readFile(new URL("../src/store.js", import.meta.url), "utf8");
+/** 이름 붙은 export 함수 한 덩이를 떼어 온다. */
+const exportedFunction = (글, 이름) =>
+  글.match(new RegExp(`export (?:async )?function ${이름}\\([\\s\\S]*?\\n\\}`))?.[0] ?? "";
+
 const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migration-wish.sql", import.meta.url), "utf8");
 const editMigration = await readFile(new URL("../supabase/migration-wish-edit.sql", import.meta.url), "utf8");
@@ -130,7 +136,7 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
    * 위시 이름은 innerHTML 을 아예 안 지난다 — 칸의 읽어 주는 이름과 시트 제목 둘 다
    * setAttribute·textContent 로 넣는다. 글자로 들어가지 않으니 태그가 될 일이 없다.
    */
-  assert.match(그리기, /\.setAttribute\("aria-label", `\$\{wish\.name\} 자세히 보기`\)/);
+  assert.match(그리기, /\.setAttribute\(\s*"aria-label",\s*`\$\{wish\.name\}/);
   assert.match(그리기, /\.setAttribute\("aria-label", `\$\{wish\.name\} 더 보기`\)/);
   assert.doesNotMatch(그리기, /\$\{escapeHtml\(wish\.name\)\}/);
   assert.match(app, /elements\.wishDetailName\.textContent = wish\.name;/);
@@ -176,7 +182,7 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
   assert.match(칸, /\$\{shotMarkup\(wish\)\}/, "칸에 그림이 없다");
   assert.doesNotMatch(칸, /wish-detail-price|wish-note|formatMoney/, "칸에 글이 들어 있다");
   // 그림에는 글이 없으므로 읽어 주는 이름은 여기서 낸다.
-  assert.match(칸, /aria-label", `\$\{wish\.name\} 자세히 보기`/);
+  assert.match(칸, /"aria-label",\s*`\$\{wish\.name\}\$\{wish\.state === "pursuing" \? " · 함께 바라는 것" : ""\} 자세히 보기`/);
   assert.match(칸, /data-open-wish="\$\{escapeHtml\(wish\.id\)\}"/);
 
   /*
@@ -192,8 +198,9 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
   const 격자 = css.match(/\.wish-list \{[\s\S]*?\n\}/)[0];
   assert.match(격자, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 
-  // 세 자리가 같은 목록을 쓴다. ⋯ 를 먼저 봐야 겹친 두 단추가 갈린다.
-  assert.match(app, /\[elements\.wishPursuing, elements\.wishList, elements\.wishAchieved\]/);
+  // 자리가 하나로 줄었다 — 탭이 사람으로 갈리므로 한 번에 한 사람의 목록만 있다.
+  assert.match(app, /elements\.wishList\.addEventListener\("click"/);
+  // ⋯ 를 먼저 봐야 겹친 두 단추가 갈린다.
   const 목록누르기 = app.match(/const more = event\.target\.closest\("\[data-menu-wish\]"\);[\s\S]*?openWishDetail\(tile\.dataset\.openWish\)/)[0];
   assert.ok(
     목록누르기.indexOf("data-menu-wish") < 목록누르기.indexOf("data-open-wish"),
@@ -235,11 +242,11 @@ test("향하는 것은 서버가 정한 state 로만 가른다", () => {
    * 합의가 몇 개면 향하는 것이 되는지는 서버가 정한다(migration-wish.sql).
    * 화면이 사람 수를 세어 판정하면 두 폰이 같은 순간에 마지막 표를 던졌을 때 갈라진다.
    */
-  const 기능 = fn("paintWishPage");
-  assert.match(기능, /wish\.state === "pursuing"/);
-  assert.match(기능, /wish\.state === "proposed"/);
-  assert.match(기능, /wish\.state === "achieved"/);
-  assert.doesNotMatch(기능, /agreementUserIds\.length ===/, "화면이 합의 수로 상태를 판정한다");
+  // 화면이 보는 것은 "이뤘나" 하나다. 나머지는 칸의 표시와 자세히 시트가 읽는다.
+  assert.match(fn("paintWishPage"), /wish\.state !== "achieved"/);
+  assert.match(app, /wish\.state === "pursuing" \? 함께표 : ""/);
+  assert.match(fn("무엇을할수있나"), /wish\.state === "proposed" && !iAgreed\(wish\)/);
+  assert.doesNotMatch(app, /agreementUserIds\.length ===/, "화면이 합의 수로 상태를 판정한다");
 });
 
 test("시트는 한 번에 한 장만 열린다", () => {
@@ -537,36 +544,83 @@ test("자세히에는 모은 돈도 퍼센트도 없다", () => {
   assert.doesNotMatch(css, /\.wish-progress/, "진척 막대 모양새가 남아 있다");
 });
 
-test("탭은 미달성 · 달성 둘이고, 미달성이 기본이다", () => {
-  assert.match(html, /<div class="segmented-control segment-tabs" id="wish-tabs"/);
-  assert.match(html, /data-wish-tab="open" aria-pressed="true">미달성/, "미달성이 기본이다");
-  assert.match(html, /data-wish-tab="done" aria-pressed="false">달성/);
+test("탭은 사람이고, 처음 열면 내 목록이다", () => {
+  /*
+   * 달성 여부로 가르던 탭을 사람으로 바꿨다. 위시는 각자가 담는 것이고, 둘이 서로 무엇을
+   * 바라는지 보는 것이 이 화면의 일이다. 이름은 서버에서 오므로 화면에 박지 않는다.
+   */
+  assert.match(html, /<div class="segmented-control segment-tabs" id="wish-tabs" role="group" aria-label="사람"><\/div>/);
+  assert.doesNotMatch(html, /data-wish-tab/, "달성 여부 탭이 남아 있다");
 
   const 그리기 = fn("paintWishPage");
-  // 미달성에는 함께 바라는 것과 담아 둔 것이, 달성에는 이룬 것이 선다.
-  assert.match(그리기, /elements\.wishOpenSection\.hidden = 달성중/);
-  assert.match(그리기, /elements\.wishAchievedSection\.hidden = !달성중/);
-  assert.match(그리기, /const pursuing = 달성중\s*\?\s*\[\]/, "달성 탭에는 함께 바라는 것이 없다");
-  // 누른 탭 표시는 매번 다시 적는다.
-  assert.match(그리기, /aria-pressed", String\(\(button\.dataset\.wishTab === "done"\) === 달성중\)/);
-  assert.match(app, /let wishTab = "open";/);
+  assert.match(그리기, /paintMemberTabs\(elements\.wishTabs, wishTab, \{ 전체: false \}\)/, "분석 화면의 탭 부품을 다시 쓴다");
+  // 처음 열면 내 것부터. 명부가 아직 안 왔으면 첫 사람으로 버틴다.
+  assert.match(그리기, /wishTab = getProfile\(\)\?\.id \?\? 사람들\[0\]\?\.id \?\? null/);
+  assert.match(fn("setWishTab"), /wishTab = memberId \|\| null/);
+  // 누른 단추의 사람 id 는 paintMemberTabs 가 data-member 에 넣는다.
+  assert.match(app, /const tab = event\.target\.closest\("\[data-member\]"\)/);
 });
 
-test("함께 바라는 것은 여럿이 서고, 이룬 것에는 체크가 얹힌다", () => {
-  assert.match(html, /<div class="wish-section" id="wish-pursuing-section" hidden>/);
-
+test("이룬 것은 목록에서 뺀다", () => {
+  /*
+   * 여기는 앞으로 바라는 자리다. 이룬 것은 그 지출에 이미 남아 있고, 목록에 섞이면
+   * 우선순위를 매기는 자리가 흐려진다.
+   */
   const 그리기 = fn("paintWishPage");
-  assert.match(그리기, /\.filter\(\(wish\) => wish\.state === "pursuing"\)/);
-  assert.doesNotMatch(그리기, /\.find\(\(wish\) => wish\.state === "pursuing"\)/);
-  assert.match(그리기, /elements\.wishPursuingSection\.hidden = !pursuing\.length/);
-  assert.match(그리기, /pursuing\.length > 1 \? `\(\$\{pursuing\.length\}\)` : ""/);
+  assert.match(그리기, /wish\.state !== "achieved"/);
+  assert.doesNotMatch(html, /wish-achieved|wish-pursuing-section/, "옛 자리가 화면에 남아 있다");
+});
+
+test("함께 바라는 것은 담은 사람 자리에 표시만 얹는다", () => {
+  /*
+   * 목록은 담은 사람으로 갈린다. 둘 다 "나도" 를 눌러도 자리를 옮기지 않는다 —
+   * 누구의 바람이었는지가 지워지면 각자의 목록이라는 뜻이 흐려진다.
+   */
+  assert.match(app, /wish\.state === "pursuing" \? 함께표 : ""/);
+  assert.match(css, /\.wish-together \{[\s\S]*?position: absolute/);
+  // ⋯ 는 오른쪽 위에 있다. 겹치지 않게 왼쪽 위에 앉는다.
+  assert.match(css, /\.wish-together \{[\s\S]*?left: var\(--space-1\)/);
+  assert.match(css, /\.wish-more \{[\s\S]*?right: var\(--space-1\)/);
+  // 그림은 aria-hidden 이라 소리로는 안 들린다. 읽어 주는 이름에도 알린다.
+  assert.match(app, /\$\{wish\.state === "pursuing" \? " · 함께 바라는 것" : ""\}/);
 
   /*
    * 이룬 것은 그림 위 체크로 갈린다. 표만 얹으면 밝은 사진 위에서 안 보이므로
-   * 그림을 어둡게 깔고 그 위에 흰 체크를 놓는다.
+   * 그림을 어둡게 깔고 그 위에 흰 체크를 놓는다. (자세히에서만 보인다)
    */
   assert.match(app, /wish\.state === "achieved" \? 이룸표 : ""/);
   assert.match(css, /\.wish-done \{[\s\S]*?inset: 0/);
   assert.match(css, /\.wish-done \{[\s\S]*?color-mix\(in srgb, var\(--ink\) 45%, transparent\)/);
   assert.match(css, /\.wish-done svg \{[\s\S]*?stroke: var\(--white\)/);
+});
+
+test("우선순위는 사람마다 따로 세고, ⋯ 메뉴로 옮긴다", () => {
+  /*
+   * 작을수록 위. 자리 값이 같을 수 있어 두 번째 잣대가 있어야 차례가 안 흔들린다 —
+   * 서버의 move_wish 도 (sort_order, id) 로 이웃을 찾는다. 두 곳이 같은 규칙을 쓴다.
+   */
+  assert.match(app, /const byPriority = \(a, b\) => a\.sortOrder - b\.sortOrder \|\| String\(a\.id\)\.localeCompare\(String\(b\.id\)\)/);
+  assert.match(fn("paintWishPage"), /\.sort\(byPriority\)/);
+  assert.match(app, /sortOrder: row\.sort_order \?\? 0/);
+
+  // 메뉴 세 줄. 내가 담은 것에만 낸다 — 남의 목록 순서는 그 사람이 정한다.
+  for (const id of ["wish-menu-top", "wish-menu-up", "wish-menu-down"]) {
+    assert.match(html, new RegExp(`<button class="menu-row" type="button" id="${id}">`));
+  }
+  const 메뉴열기 = fn("openWishMenu");
+  assert.match(메뉴열기, /const 내것 = wish\.createdBy === getProfile\(\)\?\.id/);
+  assert.match(메뉴열기, /줄\.hidden = !내것/);
+  // 맨 위면 위로가, 맨 아래면 아래로가 할 일이 없다.
+  const 끝맞춤 = fn("맨끝인가맞추기");
+  assert.match(끝맞춤, /elements\.wishMenuUp\.disabled = 자리 === 0/);
+  assert.match(끝맞춤, /elements\.wishMenuDown\.disabled = 자리 === 목록\.length - 1/);
+
+  /*
+   * 위·아래는 두 줄이 맞바뀌므로 돌아오는 줄이 둘이다. 여기만 .single() 을 안 쓴다 —
+   * 쓰면 PostgREST 가 "하나가 아니다" 로 406 을 낸다.
+   */
+  const 옮기기 = exportedFunction(remote, "moveWish");
+  assert.doesNotMatch(옮기기, /\.single\(\)/);
+  assert.match(옮기기, /\.select\(WISH_RESULT_COLUMNS\)/);
+  assert.match(exportedFunction(store, "moveWish"), /wishes = wishes\.map\(\(wish\) => 바뀐것\.get\(wish\.id\) \?\? wish\)/);
 });

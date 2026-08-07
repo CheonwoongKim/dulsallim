@@ -223,25 +223,11 @@
       </header>
 
       <div class="page-body">
-        <div class="segmented-control segment-tabs" id="wish-tabs" role="group" aria-label="달성 여부">
-          <button type="button" data-wish-tab="open" aria-pressed="true">미달성</button>
-          <button type="button" data-wish-tab="done" aria-pressed="false">달성</button>
-        </div>
-
-        <!-- 함께 바라는 것은 맨 위에 따로. 없으면 이름표까지 통째로 사라진다. -->
-        <div class="wish-section" id="wish-pursuing-section" hidden>
-          <p class="eyebrow">함께 바라는 것<span id="wish-pursuing-count"></span></p>
-          <div id="wish-pursuing" class="wish-list" aria-live="polite"></div>
-        </div>
+        <div class="segmented-control segment-tabs" id="wish-tabs" role="group" aria-label="사람"></div>
 
         <div class="wish-section" id="wish-open-section">
-          <p class="eyebrow">담아 둔 것<span id="wish-count"></span></p>
+          <p class="eyebrow">바라는 것<span id="wish-count"></span></p>
           <div id="wish-list" class="wish-list" aria-live="polite"></div>
-        </div>
-
-        <div class="wish-section" id="wish-achieved-section" hidden>
-          <p class="eyebrow">이룬 것<span id="wish-achieved-count"></span></p>
-          <div id="wish-achieved" class="wish-list" aria-live="polite"></div>
         </div>
       </div>
     </section>
@@ -586,6 +572,18 @@
       </div>
 
       <div class="sheet-scroll" role="group" aria-labelledby="wish-menu-title">
+        <button class="menu-row" type="button" id="wish-menu-top">
+          <span><strong>맨 위로</strong><small>가장 바라는 것으로</small></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 19V9m-4 4 4-4 4 4"/></svg>
+        </button>
+        <button class="menu-row" type="button" id="wish-menu-up">
+          <span><strong>위로</strong><small>한 자리 올리기</small></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>
+        </button>
+        <button class="menu-row" type="button" id="wish-menu-down">
+          <span><strong>아래로</strong><small>한 자리 내리기</small></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m6-6-6 6-6-6"/></svg>
+        </button>
         <button class="menu-row" type="button" id="wish-menu-edit">
           <span><strong>고치기</strong><small>이름 · 링크 · 값 · 한마디</small></span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
