@@ -1,6 +1,7 @@
 import { toMonthKey } from "./expenses.js";
 import { setMembers } from "./members.js";
 import * as remote from "./data/remote.js";
+import { clearSnapshot, readSnapshot, writeSnapshot } from "./data/snapshot.js";
 
 /**
  * 화면과 서버 사이의 창고.
@@ -47,13 +48,34 @@ export async function loadAll(profile, members) {
   context = session;
   const data = await remote.fetchAll(profile.household_id, members);
   if (context !== session) return;
+  얹기(data);
+  writeSnapshot(profile.id, data);
+}
+
+/** 읽어 온 것을 사본에 얹는다. 서버에서 왔든 폰에 적어 둔 것에서 왔든 같은 자리에 앉는다. */
+function 얹기(data) {
   setMembers(data.members);
   expenses = data.expenses;
   fixedTemplates = data.fixedCosts;
   fixedApplied = data.applied;
   wishes = data.wishes;
-  noteCounts = data.noteCounts;
+  noteCounts = data.noteCounts ?? {};
   countedNoteIds = new Set();
+}
+
+/**
+ * 폰에 적어 둔 것으로 먼저 채운다. 서버에서 온 것이 곧 덮는다.
+ *
+ * 여기서는 context 를 세우지 않는다. 아직 서버에 아무것도 안 물어봤으므로, 이 상태에서
+ * 무엇을 쓰려 하면 막혀야 한다 — 화면은 보되 손은 대지 않는 짧은 사이다.
+ *
+ * @returns {boolean} 적어 둔 것이 있어 채웠나
+ */
+export function hydrateFromSnapshot(profile) {
+  const data = readSnapshot(profile?.id);
+  if (!data) return false;
+  얹기(data);
+  return true;
 }
 
 /** 이름·색을 바꾼 뒤. 지출은 그대로 두고 명부만 다시 읽는다. */
@@ -78,6 +100,8 @@ function 비우기() {
 /** 가구의 모든 기록을 지운다. 되돌릴 수 없다. */
 export async function resetHousehold() {
   await remote.resetHousehold();
+  // 폰에 적어 둔 것도 함께 지운다. 안 그러면 다음에 열 때 지운 기록이 잠깐 되살아난다.
+  clearSnapshot();
   // 지출이 사라지면 달려 있던 대화도 DB에서 함께 지워진다(on delete cascade).
   비우기();
 }
@@ -112,6 +136,7 @@ export async function reloadHousehold() {
 
 /** 로그아웃. 다음 사람이 앞사람 기록을 보지 않도록 사본을 비운다. */
 export function clearData() {
+  clearSnapshot();
   비우기();
   context = null;
   setMembers([]);

@@ -12,7 +12,7 @@ import "./pwa.js";
 import { elements } from "./dom.js";
 
 import { paintMembers, render, resetTotalAnimation } from "./render.js";
-import { clearData, loadAll } from "./store.js";
+import { clearData, hydrateFromSnapshot, loadAll } from "./store.js";
 
 import { openForm } from "./features/expense-form.js";
 import { buildMonthGrid } from "./features/month-picker.js";
@@ -76,6 +76,7 @@ elements.signOut.addEventListener("click", async () => {
   stopSync();
   closePageNow();
   clearData();
+  화면열림 = false;
   // 사본만 비우면 화면에는 앞사람 기록이 그대로 남는다. 지운 상태로 한 번 그려서 흔적을 없앤다.
   resetTotalAnimation();
   render();
@@ -105,18 +106,45 @@ function wireOnce() {
   buildMonthGrid();
 }
 
+/**
+ * 화면을 연다. 두 번 불러도 한 번만 붙는다 — 적어 둔 것으로 먼저 열고 서버가 오면 또 부른다.
+ *
+ * watchHeaderSummary·watchKeyboard 는 듣는 자리를 붙이는 일이라 두 번 부르면 두 번 붙는다.
+ */
+let 화면열림 = false;
+function 화면열기() {
+  if (화면열림) return;
+  화면열림 = true;
+  elements.dataGate.hidden = true;
+  showApp();
+  wireOnce();
+  watchHeaderSummary();
+  watchKeyboard();
+}
+
 async function startApp() {
   const profile = getProfile();
-  showDataGate("기록을 불러오는 중…");
+
+  /*
+   * 폰에 적어 둔 것이 있으면 그것부터 그린다.
+   *
+   * 서버에서 여섯 가지를 읽어 올 때까지 "불러오는 중" 만 보이던 자리다. 셀룰러에서는 그
+   * 시간이 길고, 어제 얼마 썼는지 보러 연 사람에게는 그게 전부다. 잠깐 옛 숫자가 보일 수
+   * 있는데 그 값은 치른다 — 몇백 ms 뒤면 서버에서 온 것으로 덮인다.
+   */
+  const 적어둔것으로 = hydrateFromSnapshot(profile);
+  if (적어둔것으로) {
+    화면열기();
+    paintMembers();
+    render();
+  } else {
+    showDataGate("기록을 불러오는 중…");
+  }
 
   try {
     await loadAll(profile, getLoadedMembers());
 
-    elements.dataGate.hidden = true;
-    showApp();
-    wireOnce();
-    watchHeaderSummary();
-    watchKeyboard();
+    화면열기();
     paintMembers();
 
     /*
@@ -142,7 +170,12 @@ async function startApp() {
      * 이미 숨겨진 로그인 화면의 오류 자리에 글자를 썼다 — 화면은 반쯤 뜬 채,
      * 아무 설명 없는 빈 목록만 남았다. 실제로 그렇게 한 번 놓쳤다.
      */
-    showDataGate(error.message, true);
+    /*
+     * 적어 둔 것으로 이미 화면을 열었으면 그 위에 오류 판을 덮지 않는다. 보이던 것이
+     * 통째로 사라지느니, 조금 옛 기록이라도 두고 무슨 일인지만 알리는 편이 낫다.
+     */
+    if (화면열림) showToast(error.message);
+    else showDataGate(error.message, true);
   }
 }
 
