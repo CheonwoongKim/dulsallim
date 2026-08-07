@@ -176,6 +176,11 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
    * 칸에 이름도 값도 안 적는다 — 두 칸에 늘어놓으면 글자가 들어갈 자리가 손톱만 해서
    * 읽히지도 않으면서 그림을 잘라먹는다.
    */
+  const 규칙 = (선택자) => {
+    const 시작 = css.indexOf(`\n${선택자} {`);
+    assert.ok(시작 >= 0, `${선택자} 규칙이 없다`);
+    return css.slice(시작, css.indexOf("\n}", 시작 + 1));
+  };
   const 칸 = fn("createWishTile");
   assert.match(칸, /\$\{shotMarkup\(wish, \{ 목표: true \}\)\}/, "칸에 그림이 없다");
   assert.doesNotMatch(칸, /wish-detail-price|wish-note|formatMoney/, "칸에 글이 들어 있다");
@@ -207,7 +212,7 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
   assert.doesNotMatch(app, /elements\.wishList\.addEventListener\("pointerdown"/, "이 목록은 밀지 않는다");
 
   /*
-   * 34 는 애플이 말하는 44 에 못 미친다. 동그라미를 키우면 그림을 그만큼 더 가리므로
+   * 보이는 크기는 44 에 못 미친다. 동그라미를 키우면 그림을 그만큼 더 가리므로
    * 누를 자리만 넓힌다 — .icon-button 이 하는 것과 같은 방식이다.
    */
   assert.match(
@@ -215,6 +220,36 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
     /\.wish-more::after \{[^}]*inset: calc\(\(var\(--tap-min\) - var\(--more-size\)\) \/ -2\)/,
     "⋯ 가 보이는 크기만큼만 눌린다",
   );
+
+  /*
+   * ⋯ 는 보러 온 것이 아니다. 34짜리에 2.5 굵기이던 때는 격자에서 점 여덟 개가 먼저 읽혔다.
+   * 동그라미를 줄이고 점을 앱의 다른 아이콘과 같은 굵기로 얇게 해 물러나게 한다.
+   */
+  const 더보기 = 규칙(".wish-more");
+  const 보이는크기 = Number(더보기.match(/--more-size: (\d+)px/)[1]);
+  assert.ok(보이는크기 < 34, `⋯ 가 아직 ${보이는크기}px 이다`);
+  assert.equal(
+    규칙(".wish-more svg").match(/stroke-width: ([\d.]+)/)[1],
+    규칙(".icon-button svg").match(/stroke-width: ([\d.]+)/)[1],
+    "⋯ 점만 굵다",
+  );
+
+  /*
+   * 그렇다고 먹까지 묽히면 안 읽힌다. 흰 점을 밝은 바탕에 얹는 짜임이라 먹이 곧 읽히는
+   * 힘이다 — 사람이 아바타 색을 고를 수 있어 칸이 흰색에 가까울 수 있고, 그때가 가장 나쁘다.
+   */
+  const rgb2 = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const 밝기2 = (색) => 색.map((v) => v / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    .reduce((합, v, i) => 합 + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const 대비2 = (a, b) => { const [밝, 어] = [밝기2(a), 밝기2(b)].sort((x, y) => y - x); return (밝 + 0.05) / (어 + 0.05); };
+  const 색값2 = (이름) => rgb2(css.match(new RegExp(`${이름}: (#[0-9a-f]{6})`))[1]);
+  const 먹비율 = Number(더보기.match(/color-mix\(in srgb, var\(--ink\) (\d+)%/)[1]) / 100;
+  const 흰색 = 색값2("--white");
+  const 잉크색 = 색값2("--ink");
+  const 동그라미 = 잉크색.map((v, i) => v * 먹비율 + 흰색[i] * (1 - 먹비율));
+  const 잰값 = 대비2(흰색, 동그라미);
+  assert.ok(잰값 >= 3, `가장 밝은 칸에서 ⋯ 가 ${잰값.toFixed(2)}:1 — 3:1 에 못 미친다`);
 });
 
 test("화면은 store 만 부른다 — 서버 질의를 새로 짜지 않았다", async () => {

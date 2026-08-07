@@ -58,11 +58,23 @@
 
 /*
  * 오른쪽 위 ⋯. 사진 위에 앉으므로 흐린 먹을 깔고 흰 점을 찍는다 —
- * 사진이 밝든 어둡든 같은 자리에서 읽힌다. 이룸 표시가 쓰는 먹과 같은 값이다.
+ * 사진이 밝든 어둡든 같은 자리에서 읽힌다.
+ *
+ * 눈에 먼저 들어오면 안 되는 자리다. 이 화면에서 보러 온 것은 사진이고, ⋯ 는 손볼 일이
+ * 있을 때만 찾는 것이다. 34짜리 동그라미에 2.5 굵기이던 때는 격자에서 점 여덟 개가 먼저 읽혔다.
+ *
+ * 먹을 묽히는 길은 막혀 있다. 28% 로 내리면 가장 밝은 칸에서 흰 점이 동그라미와 2.23:1 이
+ * 되어 컨트롤 바닥인 3:1 아래로 떨어진다. 흰 점을 밝은 바탕에 얹는 짜임이라 먹이 곧 읽히는
+ * 힘이다. 오히려 옛 45% 도 모자랐다 — 사람이 아바타 색을 고를 수 있어 칸이 흰색에 가까울 수
+ * 있고, 그때가 2.77:1 이다. 50% 라야 어떤 색에서도 3.19:1 로 바닥을 넘는다.
+ *
+ * 그래서 먹은 두고 동그라미를 줄인다. 34 → 26 이면 어두운 자리가 908px² 에서 531px² 로
+ * 41% 줄어드는데 점이 읽히는 힘은 오히려 는다. 점도 앱의 다른 아이콘과 같은 1.8 로 얇게 한다.
+ * 손이 닿는 자리는 ::after 가 44 로 지킨다 — 작아진 것은 보이는 크기뿐이다.
  */
 .wish-more {
   /* 보이는 크기를 한 곳에서 정한다. 아래 ::after 가 44 에서 모자란 만큼을 낸다. */
-  --more-size: 34px;
+  --more-size: 26px;
 
   display: grid;
   position: absolute;
@@ -73,7 +85,7 @@
   border: 0;
   border-radius: var(--radius-round);
   color: var(--white);
-  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  background: color-mix(in srgb, var(--ink) 50%, transparent);
   cursor: pointer;
   place-items: center;
 }
@@ -90,13 +102,14 @@
 }
 
 .wish-more svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.5;
+  /* 앱의 다른 아이콘과 같은 굵기. 2.5 는 이 자리에만 있던 값이었다. */
+  stroke-width: 1.8;
 }
 
 /*
