@@ -65,36 +65,30 @@ export function formatAchievedOn(dateKey) {
 }
 
 /**
- * 목록 한 칸. 그림과 오른쪽 위 ⋯ 뿐이다.
+ * 목록 한 칸. 그림뿐이다.
  *
  * 이름도 값도 안 적는다 — 두 칸으로 늘어놓으면 글자가 들어갈 자리가 손톱만 해서
  * 읽히지도 않으면서 그림을 잘라먹는다. 자세한 것은 눌러서 시트로 본다.
  *
- * 칸을 단추 하나로 두지 않는다. 단추 안에 단추를 넣으면 안 되므로 감싸는 자리를 두고
- * 그림 단추와 ⋯ 단추를 나란히 놓는다. 이룬 것에는 ⋯ 를 안 붙인다 — 끝난 줄이다.
+ * 한동안 오른쪽 위에 ⋯ 를 얹었는데, 사진 위에 무엇을 얹으려면 대비를 위해 어두운 판을
+ * 깔아야 하고 그 판이 격자에서 먼저 읽혔다. 손보는 일은 모두 자세히 시트로 내렸다.
  */
 export function createWishTile(wish) {
-  const tile = document.createElement("div");
+  const tile = document.createElement("button");
+  tile.type = "button";
   tile.className = "wish-tile";
-  tile.innerHTML = `
-    <button class="wish-open" type="button" data-open-wish="${escapeHtml(wish.id)}">${shotMarkup(wish, { 목표: true })}</button>
-    ${
-      wish.state === "achieved"
-        ? ""
-        : `<button class="wish-more" type="button" data-menu-wish="${escapeHtml(wish.id)}" aria-haspopup="dialog">${도구(도구그림.more)}</button>`
-    }
-  `;
+  tile.dataset.openWish = wish.id;
+  tile.innerHTML = shotMarkup(wish, { 목표: true });
   /*
    * 이름은 글자로 엮지 않고 넣는다. innerHTML 을 지나면 태그가 될 수 있는데,
    * setAttribute 로 넘기면 브라우저가 글자로만 다룬다.
    */
-  tile.querySelector(".wish-open").setAttribute(
+  tile.setAttribute(
     "aria-label",
     `${wish.name}${wish.isGoal ? " · 지금 목표" : ""}${
       wish.state === "pursuing" ? " · 함께 바라는 것" : ""
     } 자세히 보기`,
   );
-  tile.querySelector(".wish-more")?.setAttribute("aria-label", `${wish.name} 더 보기`);
   return 그림이깨지면걷어내기(tile);
 }
 
@@ -106,8 +100,7 @@ export function createWishTile(wish) {
  */
 const 도구그림 = {
   link: `<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>`,
-  // 점 셋. 이 앱은 점을 h.01 로 찍는다(목록 아이콘과 같은 방식).
-  more: `<path d="M6 12h.01M12 12h.01M18 12h.01"/>`,
+  edit: `<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm10-13 4 4"/>`,
 };
 
 const 도구 = (그림) => `<svg viewBox="0 0 24 24" aria-hidden="true">${그림}</svg>`;
@@ -131,7 +124,7 @@ export function wishPriceLine(wish) {
  */
 function 링크단추(href) {
   if (!href) return "";
-  return `<a class="submit-button quiet wish-detail-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="링크 열기">${도구(도구그림.link)}</a>`;
+  return `<a class="submit-button quiet wish-detail-square wish-detail-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="링크 열기">${도구(도구그림.link)}</a>`;
 }
 
 /**
@@ -155,8 +148,16 @@ export function createWishDetail(wish, { action = "none" } = {}) {
         ? 링크단추(href)
         : `<div class="wish-detail-do">
              ${링크단추(href)}
+             <button class="submit-button quiet wish-detail-square" type="button" data-edit-wish="${escapeHtml(wish.id)}" aria-label="고치기">${도구(도구그림.edit)}</button>
              <button class="submit-button" type="button" data-achieve-wish="${escapeHtml(wish.id)}">이뤘어요</button>
            </div>`
+    }
+    ${
+      action === "goal"
+        ? `<button class="submit-button quiet" type="button" data-goal-wish="${escapeHtml(wish.id)}">${
+            wish.isGoal ? "지금 목표 풀기" : "지금 목표로"
+          }</button>`
+        : ""
     }
     ${
       action === "agree"

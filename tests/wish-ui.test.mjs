@@ -135,7 +135,6 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
    * setAttribute·textContent 로 넣는다. 글자로 들어가지 않으니 태그가 될 일이 없다.
    */
   assert.match(그리기, /\.setAttribute\(\s*"aria-label",\s*`\$\{wish\.name\}/);
-  assert.match(그리기, /\.setAttribute\("aria-label", `\$\{wish\.name\} 더 보기`\)/);
   assert.doesNotMatch(그리기, /\$\{escapeHtml\(wish\.name\)\}/);
   assert.match(app, /elements\.wishDetailName\.textContent = wish\.name;/);
 
@@ -182,74 +181,32 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
     return css.slice(시작, css.indexOf("\n}", 시작 + 1));
   };
   const 칸 = fn("createWishTile");
-  assert.match(칸, /\$\{shotMarkup\(wish, \{ 목표: true \}\)\}/, "칸에 그림이 없다");
-  assert.doesNotMatch(칸, /wish-detail-price|wish-note|formatMoney/, "칸에 글이 들어 있다");
+  assert.match(칸, /tile\.innerHTML = shotMarkup\(wish, \{ 목표: true \}\)/, "칸에 그림이 없다");
+  assert.doesNotMatch(칸, /wish-detail-price|formatMoney/, "칸에 글이 들어 있다");
   // 그림에는 글이 없으므로 읽어 주는 이름은 여기서 낸다.
   assert.match(칸, /"aria-label",\s*`\$\{wish\.name\}\$\{wish\.isGoal \? " · 지금 목표" : ""\}/);
-  assert.match(칸, /data-open-wish="\$\{escapeHtml\(wish\.id\)\}"/);
+  assert.match(칸, /tile\.dataset\.openWish = wish\.id/);
 
   /*
-   * 칸은 단추가 아니라 감싸는 자리다. 단추 안에 단추를 넣을 수 없어서 그림 단추와
-   * ⋯ 단추를 나란히 놓는다.
+   * 칸은 그림 하나짜리 단추다. 한동안 오른쪽 위에 ⋯ 를 얹었는데, 사진 위에 무엇을 얹으려면
+   * 대비를 위해 어두운 판을 깔아야 하고 그 판이 격자에서 먼저 읽혔다(계측: 26px 로 줄이고
+   * 먹을 50% 로 올려도 그랬다). 손보는 일은 모두 자세히 시트로 내렸다.
    */
-  assert.match(칸, /createElement\("div"\)/, "칸이 아직 단추 하나다");
+  assert.match(칸, /createElement\("button"\)/, "칸이 단추가 아니다");
+  assert.doesNotMatch(app, /wish-more|data-menu-wish/, "격자에 ⋯ 가 남아 있다");
+  assert.doesNotMatch(css, /\.wish-more/, "⋯ 모양새가 남아 있다");
+  assert.doesNotMatch(html, /wish-menu-sheet/, "⋯ 메뉴 시트가 남아 있다");
+  // 안의 표시들이 이것을 기준으로 앉는다.
   assert.match(css, /\.wish-tile \{[^}]*position: relative/);
-  assert.match(css, /\.wish-more \{[\s\S]*?position: absolute/);
-  // 이룬 것에는 ⋯ 를 안 붙인다. 끝난 줄이다.
-  assert.match(칸, /wish\.state === "achieved"\s*\?\s*""/);
 
   const 격자 = css.match(/\.wish-list \{[\s\S]*?\n\}/)[0];
   assert.match(격자, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 
   // 자리가 하나로 줄었다 — 탭이 사람으로 갈리므로 한 번에 한 사람의 목록만 있다.
   assert.match(app, /elements\.wishList\.addEventListener\("click"/);
-  // ⋯ 를 먼저 봐야 겹친 두 단추가 갈린다.
-  const 목록누르기 = app.match(/const more = event\.target\.closest\("\[data-menu-wish\]"\);[\s\S]*?openWishDetail\(tile\.dataset\.openWish\)/)[0];
-  assert.ok(
-    목록누르기.indexOf("data-menu-wish") < 목록누르기.indexOf("data-open-wish"),
-    "그림을 먼저 보면 ⋯ 를 눌러도 자세히가 뜬다",
-  );
+  assert.match(app, /if \(tile\) openWishDetail\(tile\.dataset\.openWish\)/);
   assert.doesNotMatch(app, /elements\.wishList\.addEventListener\("pointerdown"/, "이 목록은 밀지 않는다");
 
-  /*
-   * 보이는 크기는 44 에 못 미친다. 동그라미를 키우면 그림을 그만큼 더 가리므로
-   * 누를 자리만 넓힌다 — .icon-button 이 하는 것과 같은 방식이다.
-   */
-  assert.match(
-    css,
-    /\.wish-more::after \{[^}]*inset: calc\(\(var\(--tap-min\) - var\(--more-size\)\) \/ -2\)/,
-    "⋯ 가 보이는 크기만큼만 눌린다",
-  );
-
-  /*
-   * ⋯ 는 보러 온 것이 아니다. 34짜리에 2.5 굵기이던 때는 격자에서 점 여덟 개가 먼저 읽혔다.
-   * 동그라미를 줄이고 점을 앱의 다른 아이콘과 같은 굵기로 얇게 해 물러나게 한다.
-   */
-  const 더보기 = 규칙(".wish-more");
-  const 보이는크기 = Number(더보기.match(/--more-size: (\d+)px/)[1]);
-  assert.ok(보이는크기 < 34, `⋯ 가 아직 ${보이는크기}px 이다`);
-  assert.equal(
-    규칙(".wish-more svg").match(/stroke-width: ([\d.]+)/)[1],
-    규칙(".icon-button svg").match(/stroke-width: ([\d.]+)/)[1],
-    "⋯ 점만 굵다",
-  );
-
-  /*
-   * 그렇다고 먹까지 묽히면 안 읽힌다. 흰 점을 밝은 바탕에 얹는 짜임이라 먹이 곧 읽히는
-   * 힘이다 — 사람이 아바타 색을 고를 수 있어 칸이 흰색에 가까울 수 있고, 그때가 가장 나쁘다.
-   */
-  const rgb2 = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  const 밝기2 = (색) => 색.map((v) => v / 255)
-    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
-    .reduce((합, v, i) => 합 + v * [0.2126, 0.7152, 0.0722][i], 0);
-  const 대비2 = (a, b) => { const [밝, 어] = [밝기2(a), 밝기2(b)].sort((x, y) => y - x); return (밝 + 0.05) / (어 + 0.05); };
-  const 색값2 = (이름) => rgb2(css.match(new RegExp(`${이름}: (#[0-9a-f]{6})`))[1]);
-  const 먹비율 = Number(더보기.match(/color-mix\(in srgb, var\(--ink\) (\d+)%/)[1]) / 100;
-  const 흰색 = 색값2("--white");
-  const 잉크색 = 색값2("--ink");
-  const 동그라미 = 잉크색.map((v, i) => v * 먹비율 + 흰색[i] * (1 - 먹비율));
-  const 잰값 = 대비2(흰색, 동그라미);
-  assert.ok(잰값 >= 3, `가장 밝은 칸에서 ⋯ 가 ${잰값.toFixed(2)}:1 — 3:1 에 못 미친다`);
 });
 
 test("화면은 store 만 부른다 — 서버 질의를 새로 짜지 않았다", async () => {
@@ -298,10 +255,9 @@ test("시트는 한 번에 한 장만 열린다", () => {
     "닫기보다 올리기가 먼저다",
   );
 
-  // 메뉴에서 넘기는 둘도 같은 줄을 쓴다.
-  for (const 이름 of ["editFromMenu", "dropFromMenu"]) {
-    assert.match(fn(이름), /closeWishMenu\(\);[\s\S]*?MENU_HANDOFF_MS/, `${이름} 이 겹쳐 띄운다`);
-  }
+  // 자세히에서 고치기로, 고치기에서 지우기로 넘길 때도 같은 줄을 쓴다.
+  assert.match(fn("editFromDetail"), /closeWishDetail\(\);[\s\S]*?MENU_HANDOFF_MS/);
+  assert.match(fn("dropFromEdit"), /closeWishSheet\(\);[\s\S]*?MENU_HANDOFF_MS/);
 });
 
 test("위시 화면과 시트는 있는 부품을 다시 쓴다", () => {
@@ -468,12 +424,16 @@ test("지우기는 한 번 묻는다", () => {
   assert.match(html, /<p class="eyebrow" id="wish-drop-name"><\/p>/);
   assert.match(fn("askDropWish"), /elements\.wishDropName\.textContent = wish\.name/);
 
-  // ⋯ 메뉴의 지우기가 묻기만 한다. 실제로 지우는 것은 그다음 시트의 단추다.
-  assert.match(app, /elements\.wishMenuDrop\.addEventListener\("click", dropFromMenu\)/);
-  // 메뉴를 먼저 닫고 다음 시트를 올린다. 닫는 사이에 비워지므로 무엇인지는 미리 붙잡는다.
-  assert.match(fn("dropFromMenu"), /const id = menuWishId;[\s\S]*?closeWishMenu\(\);[\s\S]*?MENU_HANDOFF_MS/);
-  assert.match(fn("editFromMenu"), /const id = menuWishId;[\s\S]*?closeWishMenu\(\);[\s\S]*?MENU_HANDOFF_MS/);
-  assert.match(fn("closeWishMenu"), /menuWishId = null/, "닫고도 무엇을 골랐는지가 남는다");
+  /*
+   * 지우기는 고치는 시트 안에 있다. 담는 중에는 지울 것이 없으니 그때는 감춘다.
+   * 누르면 묻기만 하고, 실제로 지우는 것은 그다음 시트의 단추다.
+   */
+  assert.match(html, /<button class="ghost-button wide danger-text" type="button" id="wish-delete" hidden>/);
+  assert.match(app, /elements\.wishDelete\.addEventListener\("click", dropFromEdit\)/);
+  assert.match(fn("openWishEditSheet"), /elements\.wishDelete\.hidden = false/);
+  assert.match(fn("openWishSheet"), /elements\.wishDelete\.hidden = true/);
+  // 닫는 사이에 비워지므로 무엇을 지울지는 미리 붙잡는다.
+  assert.match(fn("dropFromEdit"), /const id = editingWishId;[\s\S]*?closeWishSheet\(\);[\s\S]*?MENU_HANDOFF_MS/);
   assert.match(app, /elements\.wishDropSubmit\.addEventListener\("click", dropWish\)/);
   assert.doesNotMatch(fn("askDropWish"), /removeWish/, "묻기가 곧바로 지운다");
   assert.match(fn("dropWish"), /if \(!droppingWishId\) return;/, "무엇을 지울지 없이 지운다");
@@ -535,16 +495,18 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
    * 옆의 이뤘어요와 같은 무게가 되어 무엇이 이 시트의 일인지 흐려진다.
    * 모양은 큰 단추에서 오고 색만 물러난다. 링크는 여기서만 밖으로 나간다.
    */
-  assert.match(fn("링크단추"), /class="submit-button quiet wish-detail-link" href=[\s\S]*?rel="noopener noreferrer" aria-label="링크 열기"/);
-  assert.match(자세히, /<div class="wish-detail-do">\s*\$\{링크단추\(href\)\}\s*<button class="submit-button" type="button" data-achieve-wish/);
+  assert.match(fn("링크단추"), /class="submit-button quiet wish-detail-square wish-detail-link" href=[\s\S]*?rel="noopener noreferrer" aria-label="링크 열기"/);
+  // 링크 · 고치기 · 이뤘어요 한 줄. 앞의 둘은 같은 정사각이다.
+  assert.match(자세히, /<div class="wish-detail-do">\s*\$\{링크단추\(href\)\}\s*<button class="submit-button quiet wish-detail-square" type="button" data-edit-wish[\s\S]*?<button class="submit-button" type="button" data-achieve-wish/);
+  assert.match(css, /\.wish-detail-do \.wish-detail-square \{[^}]*flex: 0 0 var\(--control-lg\)/);
   // 이룬 것에는 이뤘어요가 없어 링크가 홀로 줄을 다 쓴다.
   assert.match(자세히, /이룸\s*\?\s*링크단추\(href\)/);
   assert.match(css, /\.wish-detail-do \{[^}]*display: flex/);
-  assert.match(css, /\.wish-detail-do \.wish-detail-link \{[^}]*flex: 0 0 var\(--control-lg\)/);
+  assert.match(css, /\.wish-detail-do \.wish-detail-square \{[^}]*flex: 0 0 var\(--control-lg\)/);
   assert.match(css, /\.wish-detail-do \[data-achieve-wish\] \{[^}]*flex: 1/);
 
-  // 고치기·지우기는 목록 칸의 ⋯ 로 갔다. 여기 남아 있으면 입구가 둘이 된다.
-  assert.doesNotMatch(자세히, /data-edit-wish|data-remove-wish/, "손보는 동작이 자세히에 남아 있다");
+  // 지우기는 고치는 시트 안에 있다. 여기 두면 큰 단추 옆에서 같은 무게로 읽힌다.
+  assert.doesNotMatch(자세히, /data-remove-wish/, "지우기가 자세히에 있다");
 
   // 어느 자리인지 시트가 스스로 말한다. 목록의 이름표는 여기에 없다.
   assert.match(fn("자리이름"), /wish\.state === "pursuing" \? "함께 바라는 것" : "담아 둔 것"/);
@@ -635,9 +597,7 @@ test("함께 바라는 것은 담은 사람 자리에 표시만 얹는다", () =
    */
   assert.match(app, /wish\.state === "pursuing" \? 함께표 : ""/);
   assert.match(css, /\.wish-together \{[\s\S]*?position: absolute/);
-  // ⋯ 는 오른쪽 위에 있다. 겹치지 않게 왼쪽 위에 앉는다.
   assert.match(css, /\.wish-together \{[\s\S]*?left: var\(--space-1\)/);
-  assert.match(css, /\.wish-more \{[\s\S]*?right: var\(--space-1\)/);
   // 그림은 aria-hidden 이라 소리로는 안 들린다. 읽어 주는 이름에도 알린다.
   assert.match(app, /wish\.state === "pursuing" \? " · 함께 바라는 것" : ""/);
 
@@ -664,13 +624,16 @@ test("지금 목표는 사람마다 하나고, 맨 위에 선다", () => {
   assert.doesNotMatch(app, /sortOrder|move_wish/, "줄 세우던 것이 남아 있다");
   assert.doesNotMatch(html, /wish-menu-top|wish-menu-up|wish-menu-down/);
 
-  // 메뉴 한 줄. 내가 담은 것에만 낸다 — 내 목표는 내가 정한다.
-  assert.match(html, /<button class="menu-row" type="button" id="wish-menu-goal">/);
-  const 메뉴열기 = fn("openWishMenu");
-  assert.match(메뉴열기, /const 내것 = wish\.createdBy === getProfile\(\)\?\.id/);
-  assert.match(메뉴열기, /elements\.wishMenuGoal\.hidden = !내것/);
+  /*
+   * 자세히의 조용한 단추 한 줄. 내가 담은 것에만 낸다 — 내 목표는 내가 정한다.
+   * 상대 것에는 대신 "나도" 가 뜬다. 둘은 겹치지 않는다 — 올린 사람은 첫 찬성으로 세므로
+   * 내가 올린 것에 "나도" 가 뜰 일이 없다.
+   */
+  const 자세히그리기 = fn("createWishDetail");
+  assert.match(fn("무엇을할수있나"), /wish\.createdBy === getProfile\(\)\?\.id\) return "goal"/);
+  assert.match(자세히그리기, /action === "goal"[\s\S]*?data-goal-wish/);
   // 이미 목표면 푸는 말로 바뀐다. 같은 자리에서 걸고 푼다.
-  assert.match(메뉴열기, /wish\.isGoal \? "지금 목표 풀기" : "지금 목표로"/);
+  assert.match(자세히그리기, /wish\.isGoal \? "지금 목표 풀기" : "지금 목표로"/);
 
   /*
    * 새로 고르면 앞의 것이 저절로 풀려 돌아오는 줄이 둘일 수 있다. 그래서 여기만

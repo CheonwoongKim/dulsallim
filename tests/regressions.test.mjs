@@ -2711,22 +2711,31 @@ test("시트 바닥의 큰 동작은 모양이 하나다", () => {
   for (const id of ["clear-filters", "cancel-fixed"]) {
     assert.match(html, new RegExp(`class="submit-button quiet"[^>]*id="${id}"`), `${id} 가 다른 부품을 쓴다`);
   }
-  // 위시 자세히의 "나도" 도 같은 부품이다. 링크는 이제 글자 단추가 아니라 그림이다.
+  // 위시 자세히의 "나도"·"지금 목표"도 같은 부품이다. 링크와 고치기는 같은 것에 정사각만 얹었다.
   assert.match(app, /class="submit-button quiet" type="button" data-agree-wish/);
+  assert.match(app, /class="submit-button quiet wish-detail-square" type="button" data-edit-wish/);
 
   // 조용한 변종은 색만 바꾼다. 크기·모서리·글자를 다시 적으면 그때부터 또 갈린다.
   const 조용 = css.match(/\.submit-button\.quiet \{[\s\S]*?\n\}/)[0];
   assert.doesNotMatch(조용, /min-height|border-radius|font-size|padding/);
 
   /*
-   * .ghost-button 은 이제 설정 맨 아래 로그아웃 하나만 쓴다 — 위시 자세히의 고치기·지우기가
-   * 그림 단추로 바뀌면서 마지막 카드 안 쓰임이 없어졌다.
+   * .ghost-button 은 설정 맨 아래 로그아웃과 위시 고치는 시트의 지우기가 쓴다.
+   * 둘 다 .danger-text 로 테두리와 바탕을 지워 단추가 아니라 글자로 읽힌다 —
+   * 자주 누를 것이 아니고, 옆의 큰 단추와 같은 무게로 보이면 안 되는 자리다.
    *
    * 설정 맨 아래 로그아웃은 그대로 둔다 — .danger-text 가 테두리와 바탕을 지워
    * 단추가 아니라 글자로 읽히고, 자주 누를 것이 아니라서 그게 맞다.
    */
+  /*
+   * 시트 바닥의 큰 동작은 .submit-button 하나다. 다만 위시 고치는 시트의 지우기는 예외다 —
+   * .danger-text 가 테두리와 바탕을 지워 단추가 아니라 글자로 읽히고, 큰 단추 옆에서 같은
+   * 무게로 보이면 안 되는 자리라 그게 맞다(설정 맨 아래 로그아웃과 같은 짜임).
+   */
   const 시트들 = html.slice(html.indexOf("<dialog"));
-  assert.doesNotMatch(시트들, /ghost-button wide/, "시트 바닥에 작은 알약을 늘려 쓰고 있다");
+  const 늘린것 = [...시트들.matchAll(/<button class="ghost-button wide[^"]*"[^>]*id="([\w-]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(늘린것, ["wish-delete"], "시트 바닥에 작은 알약을 늘려 쓰고 있다");
+  assert.match(시트들, /id="wish-delete"[^>]*hidden/, "담는 중에도 지우기가 뜬다");
   assert.match(html, /class="ghost-button wide danger-text" type="button" id="sign-out"/);
 });
 

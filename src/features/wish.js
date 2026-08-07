@@ -162,6 +162,8 @@ export function openWishEditSheet(id) {
   editingWishId = id;
   elements.wishSheetTitle.textContent = "무엇을 고칠까요?";
   elements.wishSubmitLabel.textContent = "저장";
+  // 담는 중에는 지울 것이 없다. 고칠 때만 낸다.
+  elements.wishDelete.hidden = false;
   elements.wishName.value = wish.name;
   elements.wishUrl.value = wish.url ?? "";
   elements.wishPrice.value = wish.estimatedPrice ? formatAmountInput(String(wish.estimatedPrice)) : "";
@@ -180,6 +182,7 @@ export function openWishSheet() {
   editingWishId = null;
   elements.wishSheetTitle.textContent = "무엇을 담을까요?";
   elements.wishSubmitLabel.textContent = "담기";
+  elements.wishDelete.hidden = true;
   elements.wishForm.reset();
   잘못표시지우기();
   showSheet(elements.wishSheet);
@@ -321,12 +324,14 @@ function 자리이름(wish) {
 
 function 무엇을할수있나(wish) {
   /*
-   * 이룸은 안 이룬 것이면 언제든 누를 수 있다(서버도 state <> 'achieved' 로 본다).
-   * 상대의 "나도" 는 함께 바라는 것으로 올라가는 조건이지, 내가 산 것을 산 것으로
-   * 적는 조건이 아니다 — 혼자 담아 둔 것을 사고도 이룸으로 넘길 길이 없었다.
+   * 이룸은 안 이룬 것이면 언제든 누를 수 있고 고치기도 그렇다 — 큰 단추와 그림 단추가
+   * 그 둘을 맡는다. 여기서 정하는 것은 그 아래 조용한 단추 하나다.
    *
-   * 그래서 여기서 정하는 것은 "나도" 를 곁들일지뿐이다.
+   * 내 것이면 "지금 목표", 상대 것이면 "나도". 둘은 겹치지 않는다 — 올린 사람은 첫 찬성으로
+   * 세므로 내가 올린 것에는 "나도" 가 뜰 일이 없다.
    */
+  if (wish.state === "achieved") return "none";
+  if (wish.createdBy === getProfile()?.id) return "goal";
   return wish.state === "proposed" && !iAgreed(wish) ? "agree" : "none";
 }
 
@@ -336,55 +341,24 @@ export function closeWishDetail() {
   });
 }
 
-/* ── 칸의 ⋯ 메뉴 ──────────────────────────────────────────── */
-
-/** ⋯ 메뉴가 어느 위시를 위해 열렸나. 닫으면 비운다. */
-let menuWishId = null;
-
-/**
- * 칸 오른쪽 위 ⋯ 가 여는 메뉴.
- *
- * 고치기·지우기를 자세히 시트에서 여기로 옮겼다. 자세히는 무엇을 담았는지 보고 이룸을
- * 누르는 자리고, 손보는 일은 목록에서 바로 하는 편이 걸음이 짧다.
- *
- * 이룬 것에는 ⋯ 를 안 붙이므로 여기도 안 이룬 것만 받는다.
- */
-export function openWishMenu(id) {
-  const wish = getWishes().find((current) => current.id === id && current.state !== "achieved");
-  if (!wish) return;
-
-  menuWishId = id;
-  elements.wishMenuName.textContent = wish.name;
-  /*
-   * 목표 고르기는 내가 담은 것에만 낸다. 남의 목표는 그 사람이 정한다 —
-   * 서버도 created_by 로 막으므로 안 감추면 눌러 놓고 잘못만 보게 된다.
-   */
-  const 내것 = wish.createdBy === getProfile()?.id;
-  elements.wishMenuGoal.hidden = !내것;
-  elements.wishMenuGoalLabel.textContent = wish.isGoal ? "지금 목표 풀기" : "지금 목표로";
-  elements.wishMenuGoalHint.textContent = wish.isGoal
-    ? "맨 위에서 내려와요"
-    : "맨 위에 서고, 하나만 고를 수 있어요";
-  showSheet(elements.wishMenuSheet);
-}
-
-export function closeWishMenu() {
-  hideSheet(elements.wishMenuSheet, () => {
-    menuWishId = null;
-  });
-}
+/* ── 자세히에서 손보기 ────────────────────────────────────── */
 
 /*
- * 메뉴를 먼저 닫고 다음 시트를 올린다. 겹쳐 뜨면 뒤엣것이 먼저 잡혀 끌어 닫기가 엉킨다.
- * 무엇을 고르는지는 닫기 전에 붙잡아 둔다 — 닫는 사이에 menuWishId 가 비워진다.
- */
-/**
- * 지금 목표로 삼거나 푼다. 고르고 나면 메뉴를 닫는다 — 한 번 누르면 끝나는 일이다.
+ * 고치기·목표는 자세히 시트에서 고른다.
  *
- * 내가 담은 것만 고를 수 있다. 서버도 created_by 로 막는다 — 내 목표는 내가 정한다.
+ * 한동안 목록 칸에 ⋯ 를 얹었는데, 사진 위에 무엇을 얹으려면 대비를 위해 어두운 판을
+ * 깔아야 하고 그 판이 격자에서 먼저 읽혔다. 격자는 사진만 남기고 손보는 일은 한 겹 아래로.
+ *
+ * 시트를 먼저 닫고 다음 것을 올린다. 겹쳐 뜨면 뒤엣것이 먼저 잡혀 끌어 닫기가 엉킨다.
  */
-export async function goalFromMenu() {
-  const wish = getWishes().find((current) => current.id === menuWishId);
+export function editFromDetail(id) {
+  closeWishDetail();
+  setTimeout(() => openWishEditSheet(id), MENU_HANDOFF_MS);
+}
+
+/** 지금 목표로 삼거나 푼다. 시트는 열어 둔다 — 바뀐 것이 그 자리에서 바로 보인다. */
+export async function goalFromDetail(id) {
+  const wish = getWishes().find((current) => current.id === id);
   if (!wish) return;
 
   try {
@@ -393,20 +367,14 @@ export async function goalFromMenu() {
     showToast(error.message);
     return;
   }
-  closeWishMenu();
   paintWishPage();
   showToast(wish.isGoal ? "지금 목표에서 풀었어요" : "지금 목표가 됐어요");
 }
 
-export function editFromMenu() {
-  const id = menuWishId;
-  closeWishMenu();
-  if (id) setTimeout(() => openWishEditSheet(id), MENU_HANDOFF_MS);
-}
-
-export function dropFromMenu() {
-  const id = menuWishId;
-  closeWishMenu();
+/** 고치는 시트 안의 지우기. 그 시트를 닫고 묻는 시트를 올린다. */
+export function dropFromEdit() {
+  const id = editingWishId;
+  closeWishSheet();
   if (id) setTimeout(() => askDropWish(id), MENU_HANDOFF_MS);
 }
 
