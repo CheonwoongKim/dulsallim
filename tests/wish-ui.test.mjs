@@ -400,7 +400,7 @@ test("남의 사이트에는 사람이 쓰는 이름표로 묻는다", async () 
   assert.match(함수, /"Accept-Language": "ko-KR/);
 });
 
-test("한마디는 담을 때 함께 들어가고, 없으면 자리를 안 만든다", () => {
+test("한마디는 담을 때 함께 들어가고, 없어도 자리는 남는다", () => {
   // 시트 칸 · DB check · 화면 검사가 같은 길이를 봐야 한다.
   assert.match(html, /id="wish-note" name="note" maxlength="100"/);
   assert.match(app, /const NOTE_LIMIT = 100;/);
@@ -415,14 +415,11 @@ test("한마디는 담을 때 함께 들어가고, 없으면 자리를 안 만�
   assert.match(fn("validateWishInput"), /note\.length > NOTE_LIMIT/);
   assert.match(app, /note: input\.note \|\| null/, "적은 것이 서버로 안 간다");
 
-  // 없으면 빈 줄을 남기지 않는다. 남기면 격자의 카드 높이가 들쭉날쭉해진다.
-
-
-  // 담아 둔 칸과 향하는 카드가 같은 것을 쓴다.
-  assert.match(fn("createWishDetail"), /wish\.note \? `<p class="wish-detail-note">/);
-
-  // 길이가 칸마다 다르면 격자 아래 선이 어긋난다. 두 줄에서 자른다.
-  assert.match(css, /\.wish-note \{[\s\S]*?-webkit-line-clamp: 2/);
+  /*
+   * 자리는 없어도 남긴다 — 자세히 시험이 그 까닭과 값을 지킨다.
+   * 목록 칸에는 글이 아예 없다(그림뿐이라 .wish-note 는 쓸 데가 없어 걷었다).
+   */
+  assert.doesNotMatch(css, /\.wish-note \{/, "쓰지 않는 규칙이 돌아왔다");
 });
 
 test("지우기는 한 번 묻는다", () => {
@@ -457,7 +454,14 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
   assert.match(html, /<dialog class="sheet" id="wish-detail-sheet"/);
   const 자세히 = fn("createWishDetail");
   assert.match(자세히, /\$\{shotMarkup\(wish\)\}/);
-  assert.match(자세히, /wish\.note \?/, "한마디는 있을 때만");
+  /*
+   * 한마디는 없어도 자리를 잡아 둔다. 있을 때만 그리던 때는 그림 밑에서 단추까지가
+   * 44px 이었다가 12px 로 줄어, 짧게 적거나 안 적으면 사진이 단추에 붙어 보였다.
+   * 두 줄만큼 비워 두면 무엇을 열든 68px 로 같다(계측). 더 길면 늘어난다 — 자르지 않는다.
+   */
+  assert.match(자세히, /<p class="wish-detail-note">\$\{wish\.note \? escapeHtml\(wish\.note\) : ""\}<\/p>/);
+  assert.match(css, /\.wish-detail-note \{[^}]*min-height: calc\(var\(--text-15\) \* var\(--leading-text\) \* 2\)/);
+  assert.doesNotMatch(css, /\.wish-detail-note \{[^}]*(-webkit-line-clamp|overflow: hidden)/, "적어 둔 말을 자르고 있다");
   assert.match(자세히, /const href = safeHref\(wish\.url\);/, "주소는 한 겹 더 받는다");
 
   /*

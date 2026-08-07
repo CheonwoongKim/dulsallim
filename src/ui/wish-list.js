@@ -148,7 +148,7 @@ export function createWishDetail(wish, { action = "none" } = {}) {
 
   body.innerHTML = `
     ${shotMarkup(wish)}
-    ${wish.note ? `<p class="wish-detail-note">${escapeHtml(wish.note)}</p>` : ""}
+    <p class="wish-detail-note">${wish.note ? escapeHtml(wish.note) : ""}</p>
     ${이룸 ? `<p class="wish-detail-by">${escapeHtml(`${formatAchievedOn(wish.achievedOn)} 이룸`)}</p>` : ""}
     ${
       이룸
