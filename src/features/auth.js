@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { MY_PROFILE_COLUMNS } from "../data/remote.js";
+import * as remote from "../data/remote.js";
 import { CONFIG_ERROR, isConfigured, supabase } from "../supabase.js";
 
 let profile = null;
@@ -59,13 +59,10 @@ function isOffline(error) {
  * 빈 화면을 보여주느니 여기서 막고 이유를 알린다.
  */
 async function loadProfile(userId) {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(MY_PROFILE_COLUMNS)
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error) {
+  let data;
+  try {
+    data = await remote.fetchHousehold(userId);
+  } catch (error) {
     if (isOffline(error)) {
       const offline = new Error("서버에 연결하지 못했어요. 네트워크를 확인해 주세요.");
       offline.offline = true;
@@ -73,8 +70,21 @@ async function loadProfile(userId) {
     }
     throw new Error(`프로필을 읽지 못했어요: ${error.message}`);
   }
-  if (!data) throw new Error("이 계정은 가구에 연결되어 있지 않아요. seed.sql 을 확인해 주세요.");
-  return data;
+  if (!data.me) throw new Error("이 계정은 가구에 연결되어 있지 않아요. seed.sql 을 확인해 주세요.");
+  /*
+   * 명부는 같은 읽기에서 함께 왔다. 들고 있다가 첫 불러오기에 넘긴다 — 다시 읽으면
+   * 같은 표를 한 번 더 왕복한다.
+   */
+  members = data.members;
+  return data.me;
+}
+
+/** 로그인할 때 함께 읽어 둔 명부. 첫 불러오기가 가져다 쓰고 나면 쓸 일이 없다. */
+let members = [];
+
+/** 로그인 때 함께 읽어 둔 명부. 없으면 빈 배열이라 부르는 쪽이 다시 읽으면 된다. */
+export function getLoadedMembers() {
+  return members;
 }
 
 export async function signIn(email, password) {
@@ -86,6 +96,7 @@ export async function signIn(email, password) {
 
 export async function signOut() {
   profile = null;
+  members = [];
   await supabase.auth.signOut();
 }
 

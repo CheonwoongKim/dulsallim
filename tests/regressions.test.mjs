@@ -1088,7 +1088,12 @@ test("내 프로필을 읽는 열 목록은 한 곳에서 정한다", () => {
   assert.match(app, /export const MY_PROFILE_COLUMNS = "[^"]*avatar_color[^"]*"/);
   const 손으로적은것 = app.match(/\.select\("id, display_name, avatar_color[^"]*nag_enabled[^"]*"\)/g) ?? [];
   assert.deepEqual(손으로적은것, [], "목록을 손으로 다시 적어 두지 않는다");
-  assert.ok((app.match(/\.select\(MY_PROFILE_COLUMNS\)/g) ?? []).length >= 3, "세 곳이 같은 것을 쓴다");
+  /*
+   * 고치는 두 곳은 MY_PROFILE_COLUMNS 를 그대로 쓴다. 읽는 한 곳은 명부에 필요한 created_at
+   * 을 더해 쓰는데, 그것도 손으로 다시 적지 않고 이 목록에서 만든다.
+   */
+  assert.ok((app.match(/\.select\(MY_PROFILE_COLUMNS\)/g) ?? []).length >= 2, "고치는 곳이 같은 것을 쓴다");
+  assert.match(app, /const HOUSEHOLD_PROFILE_COLUMNS = `\$\{MY_PROFILE_COLUMNS\}, created_at`/);
 });
 
 test("프로필 수정 권한은 정해진 열로만 열려 있다", async () => {
@@ -1148,8 +1153,13 @@ test("서버가 준 아바타 색을 그대로 화면에 끼워 넣지 않는다
     assert.equal(toDisplayColor(못된값), PALETTE[0].value, `${못된값} 을 그대로 통과시켰다`);
   }
   assert.equal(toDisplayColor("#12AbEf"), "#12abef");
-  // 색이 만들어지는 자리는 서버에서 읽어 오는 곳 한 군데다.
-  assert.match(fn("fetchMembers"), /color: toDisplayColor\(row\.avatar_color\)/);
+  /*
+   * 색이 만들어지는 자리는 한 군데다. 명부를 만드는 옮김틀(toMember)이 그것이고,
+   * 한 번에 읽는 쪽과 따로 읽는 쪽이 둘 다 그것을 쓴다.
+   */
+  assert.match(app, /const toMember = \(row\) => \(\{[\s\S]*?color: toDisplayColor\(row\.avatar_color\)/);
+  assert.match(fn("fetchMembers"), /return rows\.map\(toMember\)/);
+  assert.match(fn("fetchHousehold"), /\.map\(toMember\)/);
 });
 
 test("아바타는 기본 팔레트와 직접 고른 6자리 HEX를 함께 받는다", async () => {

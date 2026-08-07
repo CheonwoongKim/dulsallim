@@ -10,6 +10,8 @@ const multiMigration = await readFile(
 );
 const remote = await readFile(new URL("../src/data/remote.js", import.meta.url), "utf8");
 const store = await readFile(new URL("../src/store.js", import.meta.url), "utf8");
+const appjs = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
+const syncjs = await readFile(new URL("../src/sync.js", import.meta.url), "utf8");
 
 const compact = (text) => text.replace(/--[^\n]*/g, "").replace(/\s+/g, " ").trim();
 
@@ -202,7 +204,16 @@ test("위시 쓰기는 RPC 성공 뒤에만 메모리 사본을 바꾼다", () =
 });
 
 test("초기 불러오기·다시 읽기·초기화가 위시 사본도 함께 다룬다", () => {
-  assert.match(remote, /fetchWishes\(householdId\)[\s\S]*?return \{ members, expenses, fixedCosts, applied, noteCounts, wishes \}/);
+  assert.match(remote, /fetchWishes\(householdId\)[\s\S]*?return \{ members: 명부, expenses, fixedCosts, applied, noteCounts, wishes \}/);
+  /*
+   * 명부는 받으면 그것을 쓰고 안 받으면 읽는다. 로그인이 내 프로필과 함께 이미 읽어 두므로
+   * 시작할 때는 같은 표를 두 번 왕복하지 않는다(계측: profiles 2번 → 1번).
+   * 앱으로 돌아왔을 때는 안 넘긴다 — 그 사이 상대가 이름을 바꿨을 수 있다.
+   */
+  assert.match(remote, /members\?\.length \? members : fetchMembers\(householdId\)/);
+  assert.match(store, /export async function loadAll\(profile, members\)/);
+  assert.match(appjs, /await loadAll\(profile, getLoadedMembers\(\)\)/);
+  assert.match(syncjs, /await loadAll\(profile\);/, "돌아왔을 때는 명부를 다시 읽어야 한다");
   assert.match(exportedFunction(store, "loadAll"), /wishes = data\.wishes/);
   assert.match(exportedFunction(store, "reloadHousehold"), /remote\.fetchWishes\(session\.householdId\)/);
   assert.match(store, /function 비우기\(\)[\s\S]*?wishes = \[\]/);

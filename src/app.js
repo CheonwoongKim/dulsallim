@@ -27,6 +27,7 @@ import { watchHeaderSummary } from "./ui/header-summary.js";
 import { watchKeyboard } from "./ui/keyboard-inset.js";
 import { showToast } from "./ui/toast.js";
 import {
+  getLoadedMembers,
   getProfile,
   isReady,
   rememberEmail,
@@ -109,7 +110,7 @@ async function startApp() {
   showDataGate("기록을 불러오는 중…");
 
   try {
-    await loadAll(profile);
+    await loadAll(profile, getLoadedMembers());
 
     elements.dataGate.hidden = true;
     showApp();

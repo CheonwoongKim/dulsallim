@@ -36,10 +36,16 @@ let pendingDelete = null;
 
 /* ── 불러오기 ─────────────────────────────────────────────── */
 
-export async function loadAll(profile) {
+/**
+ * 시작할 때 한 번. 명부를 받으면 그것을 쓰고, 안 받으면 읽는다.
+ *
+ * 로그인은 내 프로필을 읽으면서 명부까지 함께 받아 온다. 그것을 넘겨 주면 시작할 때
+ * 같은 표를 두 번 왕복하지 않는다.
+ */
+export async function loadAll(profile, members) {
   const session = { householdId: profile.household_id, userId: profile.id };
   context = session;
-  const data = await remote.fetchAll(profile.household_id);
+  const data = await remote.fetchAll(profile.household_id, members);
   if (context !== session) return;
   setMembers(data.members);
   expenses = data.expenses;

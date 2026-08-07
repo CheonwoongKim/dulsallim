@@ -37,6 +37,16 @@ function unwrap(action, { data, error }) {
  * 그 값이 비어 화면이 조용히 어긋난다(avatar_color 를 더할 때 실제로 셋을 고쳐야 했다).
  */
 export const MY_PROFILE_COLUMNS = "id, display_name, avatar_color, monthly_goal, nag_enabled, household_id";
+/** 한 번에 읽을 때 쓰는 열. 내 프로필에 필요한 것과 명부에 필요한 것을 합친 것이다. */
+const HOUSEHOLD_PROFILE_COLUMNS = `${MY_PROFILE_COLUMNS}, created_at`;
+
+/** 명부 한 줄. 두 곳이 같은 모양을 내야 화면이 어느 쪽에서 왔는지 몰라도 된다. */
+const toMember = (row) => ({
+  id: row.id,
+  name: row.display_name,
+  color: toDisplayColor(row.avatar_color),
+  goal: row.monthly_goal,
+});
 
 /** 위시 읽기와 RPC 응답이 같은 모양을 쓰도록 열 목록을 한 곳에 둔다. */
 export const WISH_COLUMNS =
@@ -47,6 +57,29 @@ const WISH_RESULT_COLUMNS = `${WISH_COLUMNS}, agreement_user_ids`;
 /* ── 읽기 ─────────────────────────────────────────────────── */
 
 /** 가구 구성원. 가입 순서가 화면의 좌우 배치 순서가 된다. */
+/**
+ * 내 프로필과 명부를 한 번에 읽는다.
+ *
+ * 옛날에는 둘을 따로 읽었는데, 명부를 읽으려면 household_id 를 먼저 알아야 해서 왕복이
+ * 순차로 두 번이었다. profiles 의 RLS 가 이미 household_id = current_household_id() 라
+ * 조건 없이 읽어도 내 가구 사람만 온다 — 한 번이면 둘 다 나온다.
+ *
+ * 그래도 household_id 로 한 번 더 거른다. 나중에 RLS 가 넓어져도 화면이 남의 집 사람을
+ * 명부에 얹지 않게.
+ */
+export async function fetchHousehold(userId) {
+  const rows = unwrap(
+    "프로필 불러오기",
+    await supabase.from("profiles").select(HOUSEHOLD_PROFILE_COLUMNS).order("created_at"),
+  );
+  const me = rows.find((row) => row.id === userId) ?? null;
+  if (!me) return { me: null, members: [] };
+  return {
+    me,
+    members: rows.filter((row) => row.household_id === me.household_id).map(toMember),
+  };
+}
+
 export async function fetchMembers(householdId) {
   const rows = unwrap(
     "구성원 불러오기",
@@ -56,12 +89,7 @@ export async function fetchMembers(householdId) {
       .eq("household_id", householdId)
       .order("created_at"),
   );
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.display_name,
-    color: toDisplayColor(row.avatar_color),
-    goal: row.monthly_goal,
-  }));
+  return rows.map(toMember);
 }
 
 /** 잔소리를 잠시 멈추거나 다시 켠다. 심어 둔 문구는 그대로 남는다. */
@@ -155,16 +183,25 @@ export async function fetchWishes(householdId) {
 }
 
 /** 시작에 필요한 것을 한꺼번에 읽는다. 순서대로 기다리면 첫 화면이 그만큼 느려진다. */
-export async function fetchAll(householdId) {
-  const [members, expenses, fixedCosts, applied, noteCounts, wishes] = await Promise.all([
-    fetchMembers(householdId),
+/**
+ * 시작할 때 읽는 것들.
+ *
+ * 명부를 받으면 그것을 쓴다 — 로그인할 때 내 프로필과 함께 이미 읽었다. 여기서 다시 읽으면
+ * 같은 표를 한 번 더, 그것도 household_id 를 알아낸 뒤라 순차로 왕복한다.
+ *
+ * 안 주면 읽는다. 앱으로 돌아왔을 때(catchUp)가 그렇다 — 그 사이에 상대가 이름이나 색을
+ * 바꿨을 수 있으므로 로그인 때 읽어 둔 것을 그대로 쓰면 안 된다.
+ */
+export async function fetchAll(householdId, members) {
+  const [명부, expenses, fixedCosts, applied, noteCounts, wishes] = await Promise.all([
+    members?.length ? members : fetchMembers(householdId),
     fetchExpenses(householdId),
     fetchFixedCosts(householdId),
     fetchApplied(),
     fetchNoteCounts(),
     fetchWishes(householdId),
   ]);
-  return { members, expenses, fixedCosts, applied, noteCounts, wishes };
+  return { members: 명부, expenses, fixedCosts, applied, noteCounts, wishes };
 }
 
 /**
