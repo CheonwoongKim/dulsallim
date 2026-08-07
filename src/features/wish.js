@@ -17,7 +17,12 @@ import { showPage } from "../ui/page.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";
 import { showToast } from "../ui/toast.js";
 import { paintMemberTabs } from "../ui/member-tabs.js";
-import { createExpenseChoice, createWishDetail, createWishTile } from "../ui/wish-list.js";
+import {
+  createExpenseChoice,
+  createWishDetail,
+  createWishTile,
+  wishPriceLine,
+} from "../ui/wish-list.js";
 import { getProfile } from "./auth.js";
 
 /**
@@ -72,14 +77,6 @@ export function setWishTab(memberId) {
 
 /** 내가 이미 찬성했는지. 올린 것도 첫 찬성으로 세므로 내가 올린 것에는 "나도" 가 안 뜬다. */
 const iAgreed = (wish) => wish.agreementUserIds.includes(getProfile()?.id);
-
-/** 아직 안 누른 사람들. 부부라 보통 한 명이지만 사람 수를 굳히지 않는다. */
-function waitingFor(wish) {
-  const names = getMembers()
-    .filter((member) => !wish.agreementUserIds.includes(member.id))
-    .map((member) => member.name);
-  return names.length ? `${names.join(" · ")} 기다리는 중` : "곧 함께 바랍니다";
-}
 
 /**
  * 사람 하나의 목록을 그린다. 우선순위가 높은 것이 위다.
@@ -310,11 +307,9 @@ function paintWishDetail() {
 
   elements.wishDetailState.textContent = 자리이름(wish);
   elements.wishDetailName.textContent = wish.name;
+  elements.wishDetailPrice.textContent = wishPriceLine(wish);
   elements.wishDetailBody.replaceChildren(
-    createWishDetail(wish, {
-      action: 무엇을할수있나(wish),
-      waiting: wish.state === "proposed" ? waitingFor(wish) : "",
-    }),
+    createWishDetail(wish, { action: 무엇을할수있나(wish) }),
   );
 }
 

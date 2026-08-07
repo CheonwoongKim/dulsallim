@@ -230,12 +230,18 @@
   aspect-ratio: 4 / 3;
 }
 
+/*
+ * 값은 이름 바로 밑, 시트 머리 안에 붙는다 — 무엇인지 다음으로 궁금한 것이 얼마짜리인가다.
+ * 그림 밑에 있던 때는 이름과 값 사이에 사진 한 장이 끼어 한눈에 안 읽혔다.
+ *
+ * 위 4. 제목과 붙지 않을 만큼만 띄운다. 시트 머리는 이미 아래 여백을 갖고 있다.
+ */
 .wish-detail-price {
-  margin: var(--space-2) 0 0;
-  font-size: var(--text-20);
+  margin: var(--space-1) 0 0;
+  color: var(--ink-soft);
+  font-size: var(--text-15);
   font-variant-numeric: tabular-nums;
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-heading);
+  letter-spacing: var(--tracking-body);
 }
 
 .wish-detail-note {

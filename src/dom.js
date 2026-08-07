@@ -93,6 +93,7 @@ export const elements = {
   closeWishDetailSheet: document.querySelector("#close-wish-detail-sheet"),
   wishDetailState: document.querySelector("#wish-detail-state"),
   wishDetailName: document.querySelector("#wish-detail-name"),
+  wishDetailPrice: document.querySelector("#wish-detail-price"),
   wishDetailBody: document.querySelector("#wish-detail-body"),
   wishMenuSheet: document.querySelector("#wish-menu-sheet"),
   closeWishMenuSheet: document.querySelector("#close-wish-menu-sheet"),

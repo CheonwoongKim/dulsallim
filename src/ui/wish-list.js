@@ -98,6 +98,16 @@ const 도구그림 = {
 const 도구 = (그림) => `<svg viewBox="0 0 24 24" aria-hidden="true">${그림}</svg>`;
 
 /**
+ * 값 한 줄. 이름 바로 밑에 붙는다 — 얼마짜리인지가 무엇인지 다음으로 궁금하다.
+ *
+ * 시트 머리에 들어가므로 여기서는 글월만 만들고 넣는 것은 화면이 한다(textContent).
+ * 글자로 엮지 않으니 태그가 될 일이 없다.
+ */
+export function wishPriceLine(wish) {
+  return wish.estimatedPrice ? `${formatMoney(wish.estimatedPrice)}원` : "값을 안 적었어요";
+}
+
+/**
  * 링크. 이뤘어요 왼쪽에 작은 단추로 선다.
  *
  * 글자를 안 적는다 — "링크 열기" 라고 쓰면 옆의 이뤘어요와 같은 무게가 되어 무엇이 이 시트의
@@ -115,7 +125,7 @@ function 링크단추(href) {
  * @param {{action: string, waiting: string}} view
  *   action 은 "agree" | "achieve" | "none"
  */
-export function createWishDetail(wish, { action = "none", waiting = "" } = {}) {
+export function createWishDetail(wish, { action = "none" } = {}) {
   const body = document.createElement("div");
   body.className = "wish-detail";
   const href = safeHref(wish.url);
@@ -123,9 +133,8 @@ export function createWishDetail(wish, { action = "none", waiting = "" } = {}) {
 
   body.innerHTML = `
     ${shotMarkup(wish)}
-    <p class="wish-detail-price">${wish.estimatedPrice ? `${formatMoney(wish.estimatedPrice)}원` : "값을 안 적었어요"}</p>
     ${wish.note ? `<p class="wish-detail-note">${escapeHtml(wish.note)}</p>` : ""}
-    <p class="wish-detail-by">${escapeHtml(byLine(wish, waiting))}</p>
+    ${이룸 ? `<p class="wish-detail-by">${escapeHtml(`${formatAchievedOn(wish.achievedOn)} 이룸`)}</p>` : ""}
     ${
       이룸
         ? 링크단추(href)
@@ -141,18 +150,6 @@ export function createWishDetail(wish, { action = "none", waiting = "" } = {}) {
     }
   `;
   return 그림이깨지면걷어내기(body);
-}
-
-/**
- * 누가 담았고, 언제 이뤘고, 누구를 기다리는지. 한 줄로 모은다.
- *
- * 기다린다는 말이 큰 단추 자리를 쓰던 때는 그 자리에 아무것도 누를 것이 없었다.
- * 이제 이룸이 그 자리를 쓰므로 기다림은 담은 사람 옆에 곁들인다.
- */
-function byLine(wish, waiting = "") {
-  const 담은사람 = `${getMemberName(wish.createdBy)} 올림`;
-  if (wish.state === "achieved") return `${담은사람} · ${formatAchievedOn(wish.achievedOn)} 이룸`;
-  return waiting ? `${담은사람} · ${waiting}` : 담은사람;
 }
 
 /** 이룬 것으로 이을 지출 하나. 설정 메뉴와 같은 줄(.menu-row)을 쓴다. */

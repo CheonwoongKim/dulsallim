@@ -121,8 +121,6 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
   // 서버에서 온 글자가 화면에 들어가는 자리는 하나도 빠짐없이 escapeHtml 을 지난다.
   for (const 값 of [
     "wish.id",
-    // 기다리는 사람 이름도 여기로 들어간다 — byLine 이 담은 사람 옆에 붙여 한 줄로 낸다.
-    "byLine(wish, waiting)",
     "wish.note",
     "href",
     "expense.item",
@@ -459,10 +457,30 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
   assert.match(html, /<dialog class="sheet" id="wish-detail-sheet"/);
   const 자세히 = fn("createWishDetail");
   assert.match(자세히, /\$\{shotMarkup\(wish\)\}/);
-  assert.match(자세히, /wish-detail-price/);
   assert.match(자세히, /wish\.note \?/, "한마디는 있을 때만");
-  assert.match(자세히, /wish-detail-by/);
   assert.match(자세히, /const href = safeHref\(wish\.url\);/, "주소는 한 겹 더 받는다");
+
+  /*
+   * 값은 이름 바로 밑, 시트 머리 안이다. 그림 밑에 있던 때는 이름과 값 사이에 사진 한 장이
+   * 끼어 한눈에 안 읽혔다(계측: 이름 y380 · 값 y424 · 그림 y469).
+   *
+   * 글자로 엮지 않고 textContent 로 넣는다 — 태그가 될 일이 없다.
+   */
+  assert.match(html, /<h2 id="wish-detail-name"><\/h2>\s*<p class="wish-detail-price" id="wish-detail-price"><\/p>/);
+  assert.match(app, /elements\.wishDetailPrice\.textContent = wishPriceLine\(wish\)/);
+  assert.match(fn("wishPriceLine"), /wish\.estimatedPrice \? `\$\{formatMoney\(wish\.estimatedPrice\)\}원` : "값을 안 적었어요"/);
+  assert.doesNotMatch(자세히, /wish-detail-price/, "값이 몸통에도 남아 있다");
+
+  /*
+   * 누가 담았는지는 탭이 이미 말한다. "천웅 올림" 도 "주연 기다리는 중" 도 걷었다 —
+   * 목록이 사람으로 갈린 뒤로는 같은 말을 두 번 하는 자리였다.
+   */
+  // "반올림" 같은 말에 걸리지 않게 앞을 묶어 본다.
+  assert.doesNotMatch(app, /\} 올림|기다리는 중/, "담은 사람·기다림이 남아 있다");
+  assert.doesNotMatch(app, /function waitingFor/, "기다림을 세는 함수가 남아 있다");
+  assert.doesNotMatch(자세히, /waiting/, "기다림을 아직 받고 있다");
+  // 이룬 날짜만 남는다.
+  assert.match(자세히, /이룸 \? `<p class="wish-detail-by">\$\{escapeHtml\(`\$\{formatAchievedOn\(wish\.achievedOn\)\} 이룸`\)\}/);
 
   /*
    * 큰 단추는 하나다 — 이뤘어요. 넷이 같은 무게로 늘어서면 이 시트를 무엇을 하러 열었는지가
