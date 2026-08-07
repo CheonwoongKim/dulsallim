@@ -200,16 +200,16 @@ export async function agreeWish(id) {
 }
 
 /**
- * 자리를 옮긴다. 서버가 바뀐 줄만 돌려주므로 그것만 갈아 끼운다.
+ * 지금 목표를 정하거나 푼다. 서버가 바뀐 줄만 돌려주므로 그것만 갈아 끼운다.
  *
- * 위·아래는 두 줄이 맞바뀌어 둘이 온다. 화면은 sortOrder 로 다시 세우므로
- * 여기서는 값만 맞춰 두면 된다.
+ * 새로 고르면 앞의 것이 함께 풀려 둘이 온다 — 둘 다 갈아 끼워야 화면에 목표가 두 개로
+ * 보이지 않는다.
  */
-export async function moveWish(id, where) {
-  const moved = await remote.moveWish(id, where);
-  const 바뀐것 = new Map(moved.map((wish) => [wish.id, wish]));
+export async function setWishGoal(id, on) {
+  const 바뀐 = await remote.setWishGoal(id, on);
+  const 바뀐것 = new Map(바뀐.map((wish) => [wish.id, wish]));
   wishes = wishes.map((wish) => 바뀐것.get(wish.id) ?? wish);
-  return moved;
+  return 바뀐;
 }
 
 export async function achieveWish(id, expenseId) {

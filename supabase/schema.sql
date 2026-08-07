@@ -152,8 +152,8 @@ create table if not exists wish_items (
   expense_id      uuid references expenses(id) on delete set null,
   achieved_on     date,
   achieved_at     timestamptz,
-  -- 작을수록 위. 담은 사람마다 따로 센다 — 각자의 목록이라 남의 순서에 끼지 않는다.
-  sort_order      integer not null default 0,
+  -- 지금 무엇을 향해 아끼고 있나. 사람마다 하나뿐이고, 그것이 목록 맨 위에 선다.
+  is_goal         boolean not null default false,
   constraint wish_items_state_check check (
     (state = 'proposed' and pursuing_at is null
       and expense_id is null and achieved_on is null and achieved_at is null)
@@ -166,8 +166,10 @@ create table if not exists wish_items (
   )
 );
 
-create index if not exists wish_items_order_idx
-  on wish_items (household_id, created_by, sort_order);
+-- 사람마다 하나. 이룬 것은 목표일 수 없다 — 이미 지난 일이다.
+create unique index if not exists wish_items_goal_idx
+  on wish_items (household_id, created_by)
+  where is_goal and state <> 'achieved';
 
 create index if not exists wish_items_household_created_idx
   on wish_items (household_id, created_at desc);
@@ -346,7 +348,7 @@ create type wish_row as (
   expense_id uuid,
   achieved_on date,
   achieved_at timestamptz,
-  sort_order integer,
+  is_goal boolean,
   agreement_user_ids uuid[]
 );
 
@@ -360,7 +362,7 @@ as $$
   select
     w.id, w.household_id, w.name, w.url, w.note, w.estimated_price, w.image_url,
     w.created_by, w.created_at, w.state, w.pursuing_at,
-    w.expense_id, w.achieved_on, w.achieved_at, w.sort_order,
+    w.expense_id, w.achieved_on, w.achieved_at, w.is_goal,
     array(
       select a.user_id
       from wish_agreements a
@@ -371,9 +373,6 @@ as $$
   where w.id = p_wish_id
 $$;
 
-/* ── 4. 쓰기 넷 ──────────────────────────────────────────── */
-
--- 올린다는 것 자체가 첫 찬성이다. 항목과 첫 합의가 한 트랜잭션으로 함께 생긴다.
 create or replace function create_wish(
   p_name text,
   p_url text,
@@ -396,12 +395,9 @@ begin
   -- 같은 집의 합의·이룸 전환과 줄을 세운다. 한 사람 가구도 유니크 제약과 안전하게 맞물린다.
   perform pg_advisory_xact_lock(hashtextextended(v_household::text, 0));
 
-  -- 새로 담은 것이 맨 위다. 방금 적은 것을 찾으러 아래로 내려가게 두지 않는다.
-  insert into wish_items (household_id, name, url, note, estimated_price, created_by, sort_order)
+  insert into wish_items (household_id, name, url, note, estimated_price, created_by)
   values (v_household, trim(p_name), nullif(trim(p_url), ''), nullif(trim(p_note), ''),
-          p_estimated_price, auth.uid(),
-          coalesce((select min(w.sort_order) - 1 from wish_items w
-                    where w.household_id = v_household and w.created_by = auth.uid()), 0))
+          p_estimated_price, auth.uid())
   returning wish_items.id into v_wish_id;
 
   insert into wish_agreements (wish_id, user_id)
@@ -417,7 +413,6 @@ begin
 end;
 $$;
 
--- 합의 기록과 필요하다면 pursuing 전환까지 한 트랜잭션 안에서 끝낸다.
 create or replace function agree_wish(p_wish_id uuid)
 returns setof wish_row
 language plpgsql
@@ -464,7 +459,6 @@ begin
 end;
 $$;
 
--- 지출 날짜 복사와 achieved 전환을 한 요청 안에서 끝낸다.
 create or replace function achieve_wish(p_wish_id uuid, p_expense_id uuid)
 returns setof wish_row
 language plpgsql
@@ -507,7 +501,6 @@ begin
 end;
 $$;
 
--- 담아 둔 것을 고친다. 이룬 것은 못 고친다 — 이미 끝난 줄이다.
 create or replace function update_wish(
   p_wish_id uuid,
   p_name text,
@@ -553,11 +546,13 @@ begin
 end;
 $$;
 
--- 맨 위로 · 위로 · 아래로. 바뀐 줄만 돌려준다 — 위·아래는 두 줄, 맨 위로는 한 줄이다.
+/* ── 3. 지금 목표 ────────────────────────────────────────── */
+
+-- 사람마다 하나. 새로 고르면 앞의 것은 저절로 풀린다.
 --
--- 남의 목록은 못 건드린다. 각자의 목록이고 순서는 담은 사람이 정한다.
--- 이룬 것은 화면에 없으므로 자리 다툼에서도 뺀다.
-create or replace function move_wish(p_wish_id uuid, p_where text)
+-- 바뀐 줄만 돌려준다 — 새로 고른 것과, 있었다면 풀린 것. 화면은 그 둘만 갈아 끼우면 된다.
+-- 남의 것은 못 고른다. 내 목표는 내가 정한다.
+create or replace function set_wish_goal(p_wish_id uuid, p_on boolean)
 returns setof wish_row
 language plpgsql
 security definer
@@ -566,81 +561,46 @@ as $$
 declare
   v_household uuid := current_household_id();
   v_me uuid := auth.uid();
-  v_order integer;
-  v_min integer;
-  v_other_id uuid;
-  v_other_order integer;
+  v_old_id uuid;
 begin
   if v_household is null then
     raise exception '가구를 찾을 수 없습니다';
   end if;
-  if p_where not in ('top', 'up', 'down') then
-    raise exception '어디로 옮길지 알 수 없습니다';
-  end if;
 
+  -- 두 폰이 같은 순간에 고르면 유니크 인덱스에 걸린다. 줄을 세워 그 틈을 없앤다.
   perform pg_advisory_xact_lock(hashtextextended(v_household::text, 0));
 
-  select w.sort_order into v_order
-    from wish_items w
-   where w.id = p_wish_id
-     and w.household_id = v_household
-     and w.created_by = v_me
-     and w.state <> 'achieved';
-  if not found then
-    raise exception '옮길 위시를 찾을 수 없습니다';
+  if not exists (
+    select 1 from wish_items w
+    where w.id = p_wish_id
+      and w.household_id = v_household
+      and w.created_by = v_me
+      and w.state <> 'achieved'
+  ) then
+    raise exception '목표로 삼을 위시를 찾을 수 없습니다';
   end if;
 
-  select min(w.sort_order) into v_min
-    from wish_items w
-   where w.household_id = v_household and w.created_by = v_me and w.state <> 'achieved';
-
-  if p_where = 'top' then
-    -- 이미 맨 위면 그대로 둔다. 안 그러면 누를 때마다 값이 끝없이 작아진다.
-    if v_order > v_min then
-      update wish_items set sort_order = v_min - 1 where wish_items.id = p_wish_id;
-    end if;
-    return query select * from wish_snapshot(p_wish_id);
-    return;
-  end if;
-
-  -- 위로면 바로 위의 것, 아래로면 바로 아래의 것과 맞바꾼다.
-  -- 값이 같을 수 있으므로 id 까지 묶어 견준다 — 화면이 세우는 차례와 같은 규칙이다.
-  if p_where = 'up' then
-    select w.id, w.sort_order into v_other_id, v_other_order
+  -- 거는 것일 때만 앞의 것을 찾는다. 푸는 것이라면 남의 목표를 건드릴 까닭이 없다.
+  if p_on then
+    select w.id into v_old_id
       from wish_items w
-     where w.household_id = v_household and w.created_by = v_me
+     where w.household_id = v_household
+       and w.created_by = v_me
+       and w.is_goal
        and w.state <> 'achieved'
-       and (w.sort_order, w.id) < (v_order, p_wish_id)
-     order by w.sort_order desc, w.id desc
-     limit 1;
-  else
-    select w.id, w.sort_order into v_other_id, v_other_order
-      from wish_items w
-     where w.household_id = v_household and w.created_by = v_me
-       and w.state <> 'achieved'
-       and (w.sort_order, w.id) > (v_order, p_wish_id)
-     order by w.sort_order asc, w.id asc
-     limit 1;
+       and w.id <> p_wish_id;
   end if;
 
-  -- 끝에 있으면 더 갈 곳이 없다. 잘못이 아니라 그냥 그대로다.
-  if v_other_id is null then
-    return query select * from wish_snapshot(p_wish_id);
-    return;
+  -- 먼저 풀고 나서 건다. 반대로 하면 그 사이에 둘이 되어 인덱스에 걸린다.
+  if v_old_id is not null then
+    update wish_items set is_goal = false where wish_items.id = v_old_id;
   end if;
+  update wish_items set is_goal = p_on where wish_items.id = p_wish_id;
 
-  -- 값이 같으면 맞바꿔도 자리가 안 바뀐다. 그때는 한 칸 벌린다.
-  if v_other_order = v_order then
-    v_other_order := case when p_where = 'up' then v_order - 1 else v_order + 1 end;
+  return query select * from wish_snapshot(p_wish_id);
+  if v_old_id is not null then
+    return query select * from wish_snapshot(v_old_id);
   end if;
-
-  update wish_items set sort_order = v_other_order where wish_items.id = p_wish_id;
-  update wish_items set sort_order = v_order where wish_items.id = v_other_id;
-
-  return query
-    select * from wish_snapshot(p_wish_id)
-    union all
-    select * from wish_snapshot(v_other_id);
 end;
 $$;
 
@@ -841,7 +801,7 @@ revoke execute on function wish_snapshot(uuid)                from public, authe
 revoke execute on function create_wish(text, text, integer, text)   from public, anon;
 revoke execute on function agree_wish(uuid)                   from public, anon;
 revoke execute on function achieve_wish(uuid, uuid)           from public, anon;
-revoke execute on function move_wish(uuid, text)              from public, anon;
+revoke execute on function set_wish_goal(uuid, boolean)        from public, anon;
 revoke execute on function update_wish(uuid, text, text, integer, text) from public, anon;
 revoke execute on function delete_wish(uuid)                  from public, anon;
 revoke execute on function set_wish_image(uuid, text)          from public, anon;
@@ -852,7 +812,7 @@ grant execute on function fire_nags(uuid)                      to authenticated;
 grant execute on function create_wish(text, text, integer, text) to authenticated;
 grant execute on function agree_wish(uuid)                     to authenticated;
 grant execute on function achieve_wish(uuid, uuid)             to authenticated;
-grant execute on function move_wish(uuid, text)                to authenticated;
+grant execute on function set_wish_goal(uuid, boolean)          to authenticated;
 grant execute on function update_wish(uuid, text, text, integer, text) to authenticated;
 grant execute on function delete_wish(uuid)                    to authenticated;
 grant execute on function set_wish_image(uuid, text)            to authenticated;

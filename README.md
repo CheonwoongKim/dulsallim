@@ -72,6 +72,7 @@
 | 16 | `supabase/migration-wish-order.sql` | 위시 우선순위 · 사람별 목록 (15번을 이미 돌렸어도 이것까지) |
 | 17 | `supabase/migration-wish-agree-fix.sql` | 16번이 "나도" 를 깨뜨린 것을 되돌림 (16번을 돌렸다면 반드시) |
 | 18 | `supabase/migration-wish-body-restore.sql` | 16번이 담기·고치기에서 흘린 갈래를 되돌림 (16번을 돌렸다면 반드시) |
+| 19 | `supabase/migration-wish-goal.sql` | 위아래 옮기기 대신 "지금 목표" 하나 고르기 |
 
 ### 알림을 쓰려면
 

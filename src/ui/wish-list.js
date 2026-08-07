@@ -20,6 +20,14 @@ const 이룸표 = `<span class="wish-done" aria-hidden="true"><svg viewBox="0 0 
 const 함께표 = `<span class="wish-together" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4.6-7 9-7 9Z"/></svg></span>`;
 
 /**
+ * 지금 향하는 것. 그림 아래에 글로 얹는다.
+ *
+ * 그림만으로는 "하나뿐인 지금 목표" 라는 뜻이 안 산다 — 하트도 체크도 이미 그림이다.
+ * 사람마다 하나뿐이라 한 화면에 한 번만 나오고, 그래서 글이 자리를 차지해도 된다.
+ */
+const 목표표 = `<span class="wish-goal-tag" aria-hidden="true">지금 목표</span>`;
+
+/**
  * 그림 한 칸.
  *
  * 그림이 없으면 이름 첫 글자를 담은 사람 아바타 색으로 쥔다 — 새 색 체계를 들이지 않고,
@@ -31,7 +39,9 @@ function shotMarkup(wish) {
   const image = safeHref(wish.imageUrl);
   return `<span class="wish-shot" style="--wish-tile: ${escapeHtml(getMemberColor(wish.createdBy))}" aria-hidden="true">${escapeHtml(letter)}${
     image ? `<img src="${escapeHtml(image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ""
-  }${wish.state === "achieved" ? 이룸표 : ""}${wish.state === "pursuing" ? 함께표 : ""}</span>`;
+  }${wish.state === "achieved" ? 이룸표 : ""}${wish.state === "pursuing" ? 함께표 : ""}${
+    wish.isGoal && wish.state !== "achieved" ? 목표표 : ""
+  }</span>`;
 }
 
 /**
@@ -77,7 +87,9 @@ export function createWishTile(wish) {
    */
   tile.querySelector(".wish-open").setAttribute(
     "aria-label",
-    `${wish.name}${wish.state === "pursuing" ? " · 함께 바라는 것" : ""} 자세히 보기`,
+    `${wish.name}${wish.isGoal ? " · 지금 목표" : ""}${
+      wish.state === "pursuing" ? " · 함께 바라는 것" : ""
+    } 자세히 보기`,
   );
   tile.querySelector(".wish-more")?.setAttribute("aria-label", `${wish.name} 더 보기`);
   return 그림이깨지면걷어내기(tile);

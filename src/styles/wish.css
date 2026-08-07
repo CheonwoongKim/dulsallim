@@ -142,6 +142,30 @@
 }
 
 /*
+ * 지금 향하는 것. 그림 아래에 글로 얹는다 — 하트도 체크도 이미 그림이라 하나 더 얹으면
+ * 무엇이 무엇인지 안 갈린다. 사람마다 하나뿐이라 한 화면에 한 번만 나온다.
+ */
+.wish-goal-tag {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: var(--space-1) var(--space-2);
+  color: var(--white);
+  background: var(--accent);
+  font-size: var(--text-11);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-small);
+  text-align: center;
+}
+
+/* 칸 자체도 도드라진다. 격자에서 눈이 먼저 가야 하는 자리다. */
+.wish-tile:has(.wish-goal-tag) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/*
  * 둘 다 바라는 것. 왼쪽 위에 앉는다 — 오른쪽 위는 ⋯ 자리다.
  * 사진 위라 ⋯ 와 같은 흐린 먹을 깔고 흰 하트를 채운다.
  */

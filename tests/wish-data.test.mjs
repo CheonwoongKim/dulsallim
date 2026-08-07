@@ -42,14 +42,15 @@ test("schema.sql 은 처음 표에서 나중 마이그레이션이 더한 것만
   const 뺀다 = (글) => 글
     .replace(/note text check \(note is null[^)]*\)[^,]*, /, "")
     .replace(/image_url text check \(image_url is null[^)]*\)[^,]*, /, "")
-    .replace(/sort_order integer not null default 0, /, "")
+    .replace(/is_goal boolean not null default false, /, "")
     .replace(/constraint wish_items_state_check /, "")
     .replace(/pursuing_at is not null and achieved_on/, "achieved_on");
   assert.equal(뺀다(지금), 뺀다(처음), "더한 것 말고도 표가 갈렸다");
 
   // 나중 마이그레이션이 더한 것은 schema.sql 에 실제로 있어야 한다.
-  assert.match(schema, /sort_order\s+integer not null default 0/);
-  assert.match(schema, /create index if not exists wish_items_order_idx/);
+  assert.match(schema, /is_goal\s+boolean not null default false/);
+  // 사람마다 하나뿐이라는 것은 부분 유니크 인덱스가 지킨다 — 화면이 두 번 눌러도 하나다.
+  assert.match(schema, /create unique index if not exists wish_items_goal_idx[\s\S]*?where is_goal and state <> 'achieved'/);
 
   for (const sql of [schema, migration]) {
     assert.match(sql, /estimated_price integer check \(estimated_price is null or estimated_price > 0\)/);
@@ -154,7 +155,7 @@ test("migration-wish.sql 은 다시 실행해도 충돌하지 않는 형태다",
 });
 
 test("위시 열 목록과 읽기 조합은 remote.js 한 곳에서 관리한다", () => {
-  assert.match(remote, /export const WISH_COLUMNS\s*=\s*\n?\s*"[^"]*estimated_price[^"]*sort_order"/);
+  assert.match(remote, /export const WISH_COLUMNS\s*=\s*\n?\s*"[^"]*estimated_price[^"]*is_goal"/);
   assert.match(remote, /export const WISH_AGREEMENT_COLUMNS = "wish_id, user_id, agreed_at"/);
   assert.match(remote, /const WISH_RESULT_COLUMNS = `\$\{WISH_COLUMNS\}, agreement_user_ids`/);
   /*
@@ -218,14 +219,10 @@ test("schema.sql 의 위시 함수 몸통은 마지막 마이그레이션과 글
    *
    * 목 서버에는 제약도 다른 표도 없어 브라우저 시험이 다 통과했다. 그래서 여기서 글자로 센다.
    */
-  const 짝 = {
-    create_wish: "migration-wish-body-restore.sql",
-    update_wish: "migration-wish-body-restore.sql",
-    agree_wish: "migration-wish-agree-fix.sql",
-    achieve_wish: "migration-wish-achieve-alone.sql",
-    move_wish: "migration-wish-order.sql",
-    wish_snapshot: "migration-wish-order.sql",
-  };
+  const 짝 = Object.fromEntries(
+    ["wish_snapshot", "create_wish", "agree_wish", "achieve_wish", "update_wish", "set_wish_goal"]
+      .map((이름) => [이름, "migration-wish-goal.sql"]),
+  );
   const 몸통 = (글, 이름) => {
     const m = new RegExp(`create or replace function ${이름}\\([\\s\\S]*?\\nas \\$\\$([\\s\\S]*?)\\n\\$\\$;`).exec(글);
     return m ? m[1].replace(/--[^\n]*/g, "").replace(/\s+/g, " ").trim() : null;

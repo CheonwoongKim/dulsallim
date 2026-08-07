@@ -57,7 +57,7 @@ import {
   openWishMenu,
   closeWishMenu,
   editFromMenu,
-  moveFromMenu,
+  goalFromMenu,
   dropFromMenu,
   openWishPage,
   openWishSheet,
@@ -217,13 +217,7 @@ elements.wishDetailBody.addEventListener("click", (event) => {
 });
 
 closeOnPress(elements.closeWishMenuSheet, closeWishMenu);
-for (const [단추, 어디로] of [
-  [elements.wishMenuTop, "top"],
-  [elements.wishMenuUp, "up"],
-  [elements.wishMenuDown, "down"],
-]) {
-  단추.addEventListener("click", () => moveFromMenu(어디로));
-}
+elements.wishMenuGoal.addEventListener("click", goalFromMenu);
 elements.wishMenuEdit.addEventListener("click", editFromMenu);
 elements.wishMenuDrop.addEventListener("click", dropFromMenu);
 

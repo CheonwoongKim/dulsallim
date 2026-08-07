@@ -180,7 +180,7 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
   assert.match(칸, /\$\{shotMarkup\(wish\)\}/, "칸에 그림이 없다");
   assert.doesNotMatch(칸, /wish-detail-price|wish-note|formatMoney/, "칸에 글이 들어 있다");
   // 그림에는 글이 없으므로 읽어 주는 이름은 여기서 낸다.
-  assert.match(칸, /"aria-label",\s*`\$\{wish\.name\}\$\{wish\.state === "pursuing" \? " · 함께 바라는 것" : ""\} 자세히 보기`/);
+  assert.match(칸, /"aria-label",\s*`\$\{wish\.name\}\$\{wish\.isGoal \? " · 지금 목표" : ""\}/);
   assert.match(칸, /data-open-wish="\$\{escapeHtml\(wish\.id\)\}"/);
 
   /*
@@ -600,7 +600,7 @@ test("함께 바라는 것은 담은 사람 자리에 표시만 얹는다", () =
   assert.match(css, /\.wish-together \{[\s\S]*?left: var\(--space-1\)/);
   assert.match(css, /\.wish-more \{[\s\S]*?right: var\(--space-1\)/);
   // 그림은 aria-hidden 이라 소리로는 안 들린다. 읽어 주는 이름에도 알린다.
-  assert.match(app, /\$\{wish\.state === "pursuing" \? " · 함께 바라는 것" : ""\}/);
+  assert.match(app, /wish\.state === "pursuing" \? " · 함께 바라는 것" : ""/);
 
   /*
    * 이룬 것은 그림 위 체크로 갈린다. 표만 얹으면 밝은 사진 위에서 안 보이므로
@@ -612,33 +612,39 @@ test("함께 바라는 것은 담은 사람 자리에 표시만 얹는다", () =
   assert.match(css, /\.wish-done svg \{[\s\S]*?stroke: var\(--white\)/);
 });
 
-test("우선순위는 사람마다 따로 세고, ⋯ 메뉴로 옮긴다", () => {
+test("지금 목표는 사람마다 하나고, 맨 위에 선다", () => {
   /*
-   * 작을수록 위. 자리 값이 같을 수 있어 두 번째 잣대가 있어야 차례가 안 흔들린다 —
-   * 서버의 move_wish 도 (sort_order, id) 로 이웃을 찾는다. 두 곳이 같은 규칙을 쓴다.
+   * 자리를 한 칸씩 옮기는 것은 여러 개를 줄 세우는 일이었다. 정작 알고 싶은 것은
+   * "지금 무엇을 향해 아끼고 있나" 하나이고, 나머지의 앞뒤는 굳이 정할 일이 아니었다.
    */
-  assert.match(app, /const byPriority = \(a, b\) => a\.sortOrder - b\.sortOrder \|\| String\(a\.id\)\.localeCompare\(String\(b\.id\)\)/);
-  assert.match(fn("paintWishPage"), /\.sort\(byPriority\)/);
-  assert.match(app, /sortOrder: row\.sort_order \?\? 0/);
+  assert.match(app, /const byGoalThenNewest = \(a, b\) => Number\(b\.isGoal\) - Number\(a\.isGoal\) \|\| byNewest\(a, b\)/);
+  assert.match(fn("paintWishPage"), /\.sort\(byGoalThenNewest\)/);
+  assert.match(app, /isGoal: Boolean\(row\.is_goal\)/);
+  // 줄 세우던 것은 흔적도 안 남긴다.
+  // moveWish 로 찾으면 removeWish 가 걸린다. 서버 이름과 화면 이름으로만 본다.
+  assert.doesNotMatch(app, /sortOrder|move_wish/, "줄 세우던 것이 남아 있다");
+  assert.doesNotMatch(html, /wish-menu-top|wish-menu-up|wish-menu-down/);
 
-  // 메뉴 세 줄. 내가 담은 것에만 낸다 — 남의 목록 순서는 그 사람이 정한다.
-  for (const id of ["wish-menu-top", "wish-menu-up", "wish-menu-down"]) {
-    assert.match(html, new RegExp(`<button class="menu-row" type="button" id="${id}">`));
-  }
+  // 메뉴 한 줄. 내가 담은 것에만 낸다 — 내 목표는 내가 정한다.
+  assert.match(html, /<button class="menu-row" type="button" id="wish-menu-goal">/);
   const 메뉴열기 = fn("openWishMenu");
   assert.match(메뉴열기, /const 내것 = wish\.createdBy === getProfile\(\)\?\.id/);
-  assert.match(메뉴열기, /줄\.hidden = !내것/);
-  // 맨 위면 위로가, 맨 아래면 아래로가 할 일이 없다.
-  const 끝맞춤 = fn("맨끝인가맞추기");
-  assert.match(끝맞춤, /elements\.wishMenuUp\.disabled = 자리 === 0/);
-  assert.match(끝맞춤, /elements\.wishMenuDown\.disabled = 자리 === 목록\.length - 1/);
+  assert.match(메뉴열기, /elements\.wishMenuGoal\.hidden = !내것/);
+  // 이미 목표면 푸는 말로 바뀐다. 같은 자리에서 걸고 푼다.
+  assert.match(메뉴열기, /wish\.isGoal \? "지금 목표 풀기" : "지금 목표로"/);
 
   /*
-   * 위·아래는 두 줄이 맞바뀌므로 돌아오는 줄이 둘이다. 여기만 .single() 을 안 쓴다 —
-   * 쓰면 PostgREST 가 "하나가 아니다" 로 406 을 낸다.
+   * 새로 고르면 앞의 것이 저절로 풀려 돌아오는 줄이 둘일 수 있다. 그래서 여기만
+   * .single() 을 안 쓴다 — 쓰면 PostgREST 가 "하나가 아니다" 로 406 을 낸다.
    */
-  const 옮기기 = exportedFunction(remote, "moveWish");
-  assert.doesNotMatch(옮기기, /\.single\(\)/);
-  assert.match(옮기기, /\.select\(WISH_RESULT_COLUMNS\)/);
-  assert.match(exportedFunction(store, "moveWish"), /wishes = wishes\.map\(\(wish\) => 바뀐것\.get\(wish\.id\) \?\? wish\)/);
+  const 고르기 = exportedFunction(remote, "setWishGoal");
+  assert.doesNotMatch(고르기, /\.single\(\)/);
+  assert.match(고르기, /\.select\(WISH_RESULT_COLUMNS\)/);
+  // 둘 다 갈아 끼워야 화면에 목표가 두 개로 보이지 않는다.
+  assert.match(exportedFunction(store, "setWishGoal"), /wishes = wishes\.map\(\(wish\) => 바뀐것\.get\(wish\.id\) \?\? wish\)/);
+
+  // 칸에는 글로 얹는다 — 하트도 체크도 이미 그림이라 하나 더 얹으면 안 갈린다.
+  assert.match(app, /wish\.isGoal && wish\.state !== "achieved" \? 목표표 : ""/);
+  assert.match(css, /\.wish-goal-tag \{[\s\S]*?background: var\(--accent\)/);
+  assert.match(css, /\.wish-tile:has\(\.wish-goal-tag\) \{[\s\S]*?border-color: var\(--accent\)/);
 });

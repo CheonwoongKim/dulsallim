@@ -9,7 +9,7 @@ import {
   editWish,
   getExpenses,
   getWishes,
-  moveWish,
+  setWishGoal,
   removeWish,
 } from "../store.js";
 import { safeHref } from "../ui/escape.js";
@@ -99,7 +99,7 @@ export function paintWishPage() {
 
   const 목록 = getWishes()
     .filter((wish) => wish.createdBy === wishTab && wish.state !== "achieved")
-    .sort(byPriority);
+    .sort(byGoalThenNewest);
 
   elements.wishCount.textContent = 목록.length ? `(${목록.length})` : "";
   if (목록.length) {
@@ -113,12 +113,12 @@ export function paintWishPage() {
 }
 
 /**
- * 우선순위가 높은(작은) 것이 위. 같으면 나중에 담은 것이 위다.
+ * 지금 목표가 맨 위. 나머지는 나중에 담은 것이 위다.
  *
- * 자리 값이 같을 수 있어서 두 번째 잣대가 있어야 차례가 흔들리지 않는다.
- * 서버의 move_wish 도 (sort_order, id) 로 이웃을 찾는다 — 두 곳이 같은 규칙을 쓴다.
+ * 줄을 세우는 대신 하나만 고른다 — 정작 알고 싶은 것은 "지금 무엇을 향해 아끼고 있나"
+ * 하나이고, 나머지의 앞뒤는 굳이 정할 일이 아니었다.
  */
-const byPriority = (a, b) => a.sortOrder - b.sortOrder || String(a.id).localeCompare(String(b.id));
+const byGoalThenNewest = (a, b) => Number(b.isGoal) - Number(a.isGoal) || byNewest(a, b);
 
 export function openWishPage() {
   paintWishPage();
@@ -356,27 +356,16 @@ export function openWishMenu(id) {
   menuWishId = id;
   elements.wishMenuName.textContent = wish.name;
   /*
-   * 자리 옮기기는 내가 담은 것에만 낸다. 남의 목록 순서는 그 사람이 정한다 —
+   * 목표 고르기는 내가 담은 것에만 낸다. 남의 목표는 그 사람이 정한다 —
    * 서버도 created_by 로 막으므로 안 감추면 눌러 놓고 잘못만 보게 된다.
    */
   const 내것 = wish.createdBy === getProfile()?.id;
-  for (const 줄 of [elements.wishMenuTop, elements.wishMenuUp, elements.wishMenuDown]) {
-    줄.hidden = !내것;
-  }
-  맨끝인가맞추기();
+  elements.wishMenuGoal.hidden = !내것;
+  elements.wishMenuGoalLabel.textContent = wish.isGoal ? "지금 목표 풀기" : "지금 목표로";
+  elements.wishMenuGoalHint.textContent = wish.isGoal
+    ? "맨 위에서 내려와요"
+    : "맨 위에 서고, 하나만 고를 수 있어요";
   showSheet(elements.wishMenuSheet);
-}
-
-/** 맨 위면 위로·맨 위로가, 맨 아래면 아래로가 할 일이 없다. 눌리지 않게 둔다. */
-function 맨끝인가맞추기() {
-  const 목록 = getWishes()
-    .filter((wish) => wish.createdBy === getProfile()?.id && wish.state !== "achieved")
-    .sort(byPriority);
-  const 자리 = 목록.findIndex((wish) => wish.id === menuWishId);
-  if (자리 < 0) return;
-  elements.wishMenuTop.disabled = 자리 === 0;
-  elements.wishMenuUp.disabled = 자리 === 0;
-  elements.wishMenuDown.disabled = 자리 === 목록.length - 1;
 }
 
 export function closeWishMenu() {
@@ -390,21 +379,23 @@ export function closeWishMenu() {
  * 무엇을 고르는지는 닫기 전에 붙잡아 둔다 — 닫는 사이에 menuWishId 가 비워진다.
  */
 /**
- * 자리를 옮긴다. 메뉴는 열어 둔 채로 둔다 — 여러 칸 올릴 때 매번 다시 열게 하지 않는다.
+ * 지금 목표로 삼거나 푼다. 고르고 나면 메뉴를 닫는다 — 한 번 누르면 끝나는 일이다.
  *
- * 내가 담은 것만 옮길 수 있다. 서버도 created_by 로 막는다 — 각자의 목록이고
- * 순서는 담은 사람이 정한다.
+ * 내가 담은 것만 고를 수 있다. 서버도 created_by 로 막는다 — 내 목표는 내가 정한다.
  */
-export async function moveFromMenu(어디로) {
-  if (!menuWishId) return;
+export async function goalFromMenu() {
+  const wish = getWishes().find((current) => current.id === menuWishId);
+  if (!wish) return;
+
   try {
-    await moveWish(menuWishId, 어디로);
+    await setWishGoal(wish.id, !wish.isGoal);
   } catch (error) {
     showToast(error.message);
     return;
   }
+  closeWishMenu();
   paintWishPage();
-  맨끝인가맞추기();
+  showToast(wish.isGoal ? "지금 목표에서 풀었어요" : "지금 목표가 됐어요");
 }
 
 export function editFromMenu() {
