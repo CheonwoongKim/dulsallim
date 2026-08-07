@@ -177,7 +177,7 @@ test("목록은 두 칸 그림만이고, 눌러야 자세히가 뜬다", () => {
    * 읽히지도 않으면서 그림을 잘라먹는다.
    */
   const 칸 = fn("createWishTile");
-  assert.match(칸, /\$\{shotMarkup\(wish\)\}/, "칸에 그림이 없다");
+  assert.match(칸, /\$\{shotMarkup\(wish, \{ 목표: true \}\)\}/, "칸에 그림이 없다");
   assert.doesNotMatch(칸, /wish-detail-price|wish-note|formatMoney/, "칸에 글이 들어 있다");
   // 그림에는 글이 없으므로 읽어 주는 이름은 여기서 낸다.
   assert.match(칸, /"aria-label",\s*`\$\{wish\.name\}\$\{wish\.isGoal \? " · 지금 목표" : ""\}/);
@@ -643,8 +643,15 @@ test("지금 목표는 사람마다 하나고, 맨 위에 선다", () => {
   // 둘 다 갈아 끼워야 화면에 목표가 두 개로 보이지 않는다.
   assert.match(exportedFunction(store, "setWishGoal"), /wishes = wishes\.map\(\(wish\) => 바뀐것\.get\(wish\.id\) \?\? wish\)/);
 
-  // 칸에는 글로 얹는다 — 하트도 체크도 이미 그림이라 하나 더 얹으면 안 갈린다.
-  assert.match(app, /wish\.isGoal && wish\.state !== "achieved" \? 목표표 : ""/);
+  /*
+   * 칸에는 글로 얹는다 — 하트도 체크도 이미 그림이라 하나 더 얹으면 안 갈린다.
+   *
+   * 목록에만 붙인다. 자세히는 그 하나만 보는 자리라 "여럿 가운데 이것" 이라고 말할 까닭이
+   * 없고, 얹으면 사진 아래가 가려지기만 한다(계측: 자세히의 .wish-goal-tag 0개).
+   */
+  assert.match(app, /목표 && wish\.isGoal && wish\.state !== "achieved" \? 목표표 : ""/);
+  assert.match(fn("createWishTile"), /shotMarkup\(wish, \{ 목표: true \}\)/);
+  assert.match(fn("createWishDetail"), /\$\{shotMarkup\(wish\)\}/, "자세히에도 목표가 얹힌다");
   assert.match(css, /\.wish-goal-tag \{[\s\S]*?background: var\(--accent\)/);
   assert.match(css, /\.wish-tile:has\(\.wish-goal-tag\) \{[\s\S]*?border-color: var\(--accent\)/);
 });

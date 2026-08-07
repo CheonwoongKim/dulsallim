@@ -24,6 +24,9 @@ const 함께표 = `<span class="wish-together" aria-hidden="true"><svg viewBox="
  *
  * 그림만으로는 "하나뿐인 지금 목표" 라는 뜻이 안 산다 — 하트도 체크도 이미 그림이다.
  * 사람마다 하나뿐이라 한 화면에 한 번만 나오고, 그래서 글이 자리를 차지해도 된다.
+ *
+ * 목록에만 붙인다. 자세히는 그 하나만 보는 자리라 "여럿 가운데 이것" 이라고 말할 까닭이
+ * 없고, 얹으면 사진 아래가 가려지기만 한다.
  */
 const 목표표 = `<span class="wish-goal-tag" aria-hidden="true">지금 목표</span>`;
 
@@ -34,13 +37,13 @@ const 목표표 = `<span class="wish-goal-tag" aria-hidden="true">지금 목표<
  * 누가 담았는지가 색으로 먼저 읽힌다. 글자는 그림이 있어도 지우지 않고 밑에 깔아 둔다.
  * 남의 서버 그림이라 언제든 사라지는데, 그때 이 자리가 그대로 드러나야 한다.
  */
-function shotMarkup(wish) {
+function shotMarkup(wish, { 목표 = false } = {}) {
   const letter = [...String(wish.name).trim()][0] ?? "";
   const image = safeHref(wish.imageUrl);
   return `<span class="wish-shot" style="--wish-tile: ${escapeHtml(getMemberColor(wish.createdBy))}" aria-hidden="true">${escapeHtml(letter)}${
     image ? `<img src="${escapeHtml(image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ""
   }${wish.state === "achieved" ? 이룸표 : ""}${wish.state === "pursuing" ? 함께표 : ""}${
-    wish.isGoal && wish.state !== "achieved" ? 목표표 : ""
+    목표 && wish.isGoal && wish.state !== "achieved" ? 목표표 : ""
   }</span>`;
 }
 
@@ -74,7 +77,7 @@ export function createWishTile(wish) {
   const tile = document.createElement("div");
   tile.className = "wish-tile";
   tile.innerHTML = `
-    <button class="wish-open" type="button" data-open-wish="${escapeHtml(wish.id)}">${shotMarkup(wish)}</button>
+    <button class="wish-open" type="button" data-open-wish="${escapeHtml(wish.id)}">${shotMarkup(wish, { 목표: true })}</button>
     ${
       wish.state === "achieved"
         ? ""
