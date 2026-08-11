@@ -3051,3 +3051,52 @@ test("src/domain 은 화면도 서버도 모른다", async () => {
   const 겹침 = 파일들.filter((이름) => 위층.includes(이름));
   assert.deepEqual(겹침, [], "domain 과 features 에 같은 이름이 있다");
 });
+
+test("뿌리에 무엇이 왜 있는지 다 설명된다", async () => {
+  /*
+   * 뿌리는 저장소를 처음 여는 사람이 가장 먼저 보는 자리다. 여기에 까닭 모를 것이 있으면
+   * 그것부터 물어보게 된다. 도구가 흘린 것(스크린샷·페이지 덤프)이 실제로 쌓여 있었다.
+   *
+   * 새 것을 뿌리에 두려면 여기 목록에도 적는다. 적을 말이 없으면 뿌리에 둘 것이 아니다.
+   */
+  const { readdir } = await import("node:fs/promises");
+  const 있어야할것 = {
+    "index.html": "Vite 가 여기서 시작한다",
+    "vite.config.js": "빌드 설정",
+    "package.json": "의존성과 명령",
+    "package-lock.json": "의존성 못 박기",
+    src: "앱",
+    public: "그대로 나가는 것 (서비스 워커·아이콘·글꼴)",
+    supabase: "서버 스키마와 마이그레이션",
+    tests: "검사",
+    "README.md": "처음 까는 법",
+    "CLAUDE.md": "이 저장소에서 일하는 법",
+    "DESIGN.md": "디자인 계단",
+    "orca.yaml": "워크트리 설정",
+    ".worktreeinclude": "워크트리마다 복사할 것",
+    ".gitignore": "무시할 것",
+    ".github": "CI",
+    ".env.local.example": "환경 변수 본보기",
+  };
+
+  const 실제 = (await readdir(new URL("../", import.meta.url), { withFileTypes: true }))
+    .map((e) => e.name)
+    .filter((name) => name !== ".git");
+
+  // 저장소에 들어가는 것만 본다. 무시되는 것(node_modules·dist·.vercel…)은 사람마다 다르다.
+  const { execSync } = await import("node:child_process");
+  /*
+   * -z 로 받는다. 그냥 받으면 git 이 한글 이름을 "\353\277\200…" 로 바꿔 내보내서
+   * 실제 이름과 안 맞고, 그러면 한글로 된 것은 이 검사를 그냥 지나간다(재현했다).
+   */
+  const 추적됨 = new Set(
+    execSync("git ls-files -z", { cwd: new URL("../", import.meta.url) })
+      .toString().split("\0").filter(Boolean).map((p) => p.split("/")[0]),
+  );
+
+  const 설명없음 = 실제.filter((name) => 추적됨.has(name) && !(name in 있어야할것));
+  assert.deepEqual(설명없음, [], "뿌리에 까닭이 안 적힌 것이 있다");
+
+  const 없어진것 = Object.keys(있어야할것).filter((name) => !실제.includes(name));
+  assert.deepEqual(없어진것, [], "목록에는 있는데 실제로는 없다");
+});
