@@ -198,11 +198,13 @@ merge 는 곧 배포다 — `main` 에 들어가면 Vercel 이 자동으로 올�
 
 PR 흐름은 **GitHub 에만** 있다. Gitea 는 같은 커밋을 받아 두는 자리다.
 
-**merge 뒤에 Gitea 의 가지도 지운다.** `gh pr merge --delete-branch` 는 GitHub 것만 지우므로
-그대로 두면 Gitea 에 다 끝난 가지가 쌓인다.
+**merge 뒤에 두 가지를 더 한다.** `gh pr merge` 는 GitHub **서버에서** 커밋을 만든다.
+내 손을 안 거치므로 Gitea 는 그대로 뒤처진다 — 실제로 두 커밋을 놓쳤다.
 
 ```bash
-git push gitea --delete <가지 이름>
+git checkout main && git pull        # GitHub 이 만든 merge 커밋을 받아 오고
+git push origin main                 # 두 곳에 올린다 (GitHub 은 이미 최신이라 그냥 넘어간다)
+git push gitea --delete <가지 이름>   # gh 는 GitHub 가지만 지운다
 ```
 
 ---
