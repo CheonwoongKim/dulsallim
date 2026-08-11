@@ -7,7 +7,7 @@ import { closeMonthSheet } from "../features/month-picker.js";
 import { closeNagSheet } from "../features/nag.js";
 import { closeNotes } from "../features/notes.js";
 import { closeResetSheet } from "../features/settings.js";
-import { closeTrendSheet } from "../features/trend.js";
+import { closeTrendSheet } from "../features/trend-sheet.js";
 import { closeAchieveSheet, closeDropSheet, closeWishDetail, closeWishSheet } from "../features/wish.js";
 import { getOpenPage, hidePage } from "../ui/page.js";
 import {

@@ -1,4 +1,4 @@
-import { toMonthKey } from "./expenses.js";
+import { toMonthKey } from "./domain/expenses.js";
 import { setMembers } from "./members.js";
 import * as remote from "./data/remote.js";
 import { clearSnapshot, readSnapshot, writeSnapshot } from "./data/snapshot.js";

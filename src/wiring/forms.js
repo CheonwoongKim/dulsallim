@@ -9,7 +9,7 @@ import {
   showFormView,
   updateFixedHint,
 } from "../features/fixed-sheet.js";
-import { formatAmountInput } from "../money.js";
+import { formatAmountInput } from "../domain/money.js";
 import { closeOnPress } from "../ui/sheet.js";
 import { cancelSwipe, endSwipe, moveSwipe, startSwipe } from "../ui/swipe.js";
 

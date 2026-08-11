@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { formatMoney } from "../src/expenses.js";
-import { describeApplied } from "../src/fixed-costs.js";
-import { MAX_AMOUNT, formatAmountInput, isValidAmount, readAmount } from "../src/money.js";
+import { formatMoney } from "../src/domain/expenses.js";
+import { describeApplied } from "../src/domain/fixed-costs.js";
+import { MAX_AMOUNT, formatAmountInput, isValidAmount, readAmount } from "../src/domain/money.js";
 
 /** 배치 크기는 소스에서 읽는다 — 숫자를 두 곳에 적으면 한쪽만 바뀐다. */
 const APPLY_BATCH_SIZE = Number(/const APPLY_BATCH = (\d+);/.exec(app)[1]);
@@ -1506,7 +1506,7 @@ test("분류 목록은 화면과 DB 두 곳이 정확히 같다", async () => {
   // 한 곳만 늘리면 고를 수는 있는데 저장이 거절되거나(DB 누락),
   // 저장된 값을 화면이 '기타'로 뭉개 버린다(JS 누락).
   const { readFile } = await import("node:fs/promises");
-  const { CATEGORIES } = await import("../src/expenses.js");
+  const { CATEGORIES } = await import("../src/domain/expenses.js");
   const keys = Object.keys(CATEGORIES);
 
   for (const file of ["schema.sql", "migration-categories.sql"]) {
@@ -1533,7 +1533,7 @@ test("분류 목록은 화면과 DB 두 곳이 정확히 같다", async () => {
 test("기타는 언제나 마지막이다", async () => {
   // 목록에서 '기타'가 중간에 끼면 고를 때 눈이 한 번 더 멈춘다.
   // 선택지는 적어 둔 순서 그대로 만들어지므로 순서는 여기서 정해진다.
-  const { CATEGORIES } = await import("../src/expenses.js");
+  const { CATEGORIES } = await import("../src/domain/expenses.js");
   const keys = Object.keys(CATEGORIES);
   assert.equal(keys[keys.length - 1], "etc");
 });
@@ -2048,7 +2048,7 @@ test("세로 축은 언제나 0부터 그린다", () => {
 
 test("추이 금액 단위는 캘린더와 같은 자를 쓴다", () => {
   // 같은 앱에서 한쪽은 46.3만, 다른 쪽은 463,000원이면 크기 비교가 눈으로 안 된다.
-  assert.match(app, /import \{ formatCompactMoney \} from "\.\.\/calendar\.js"/);
+  assert.match(app, /import \{ formatCompactMoney \} from "\.\.\/domain\/calendar\.js"/);
 });
 
 test("추이 그래프의 좌우 여백은 같다", () => {
@@ -3012,4 +3012,35 @@ test("글꼴은 우리 자리에서 나가고, 두 번째부터는 안 나간다
   const 조각들 = await readdir(new URL("../public/fonts", import.meta.url));
   assert.ok(조각들.length > 50, `글꼴 조각이 ${조각들.length}개뿐이다 — 한글이 빠졌을 수 있다`);
   assert.ok(조각들.every((name) => name.endsWith(".woff2")), "글꼴 자리에 다른 것이 섞였다");
+});
+
+test("src/domain 은 화면도 서버도 모른다", async () => {
+  /*
+   * 뿌리에 계산과 앱 뼈대가 섞여 있었다. 그래서 analysis.js 가 둘(뿌리·features)이고
+   * trend.js 도 둘이라, 어느 쪽 이야기인지 파일 이름만 봐서는 몰랐다.
+   *
+   * 계산만 domain 으로 모았다. 이 폴더가 이름표가 아니라 약속이 되려면 규칙이 지켜져야 한다 —
+   * document 도, elements 도, supabase 도 여기서는 부르지 않는다. 그래야 그냥 불러다
+   * 시험할 수 있고, 화면을 갈아엎어도 이 폴더는 안 흔들린다.
+   */
+  const { readdir, readFile } = await import("node:fs/promises");
+  const 파일들 = await readdir(new URL("../src/domain", import.meta.url));
+  assert.ok(파일들.length >= 5, `domain 이 ${파일들.length}개뿐이다`);
+
+  for (const 이름 of 파일들) {
+    const 글 = await readFile(new URL(`../src/domain/${이름}`, import.meta.url), "utf8");
+    // 주석에 적힌 이야기까지 잡으면 설명을 못 쓴다. 코드만 본다.
+    const 본문 = 글.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+    for (const 금지 of ["document.", "window.", "elements.", "localStorage"]) {
+      assert.ok(!본문.includes(금지), `domain/${이름} 이 ${금지} 를 부른다 — 계산만 있어야 한다`);
+    }
+    for (const 금지 of ['from "../supabase.js"', 'from "../data/', 'from "../features/', 'from "../ui/', 'from "../wiring/']) {
+      assert.ok(!본문.includes(금지), `domain/${이름} 이 ${금지} 를 들여온다 — 아래층이 위층을 알면 안 된다`);
+    }
+  }
+
+  // 이름이 겹치던 것들이 갈렸다. 같은 이름이 두 층에 있으면 어느 쪽인지 매번 확인해야 한다.
+  const 위층 = await readdir(new URL("../src/features", import.meta.url));
+  const 겹침 = 파일들.filter((이름) => 위층.includes(이름));
+  assert.deepEqual(겹침, [], "domain 과 features 에 같은 이름이 있다");
 });

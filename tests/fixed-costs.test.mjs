@@ -10,8 +10,8 @@ import {
   nextOccurrenceDate,
   describeApplied,
   resolveOccurrenceDate,
-} from "../src/fixed-costs.js";
-import { shiftMonthKey } from "../src/expenses.js";
+} from "../src/domain/fixed-costs.js";
+import { shiftMonthKey } from "../src/domain/expenses.js";
 
 const template = {
   id: "t1",

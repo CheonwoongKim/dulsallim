@@ -1,6 +1,6 @@
 import { elements } from "../dom.js";
 import { paintMemberTabs } from "../ui/member-tabs.js";
-import { compareCategories, compareMonth, sumByCategory, untilDay } from "../analysis.js";
+import { compareCategories, compareMonth, sumByCategory, untilDay } from "../domain/analysis.js";
 import {
   filterByMember,
   formatMonth,
@@ -9,7 +9,7 @@ import {
   getMonthlyExpenses,
   isValidMonthKey,
   shiftMonthKey,
-} from "../expenses.js";
+} from "../domain/expenses.js";
 import { getMemberName, getMembers } from "../members.js";
 import { getExpenses, getMemberFilter, getSelectedMonth, setSelectedMonth } from "../store.js";
 import { escapeHtml } from "../ui/escape.js";

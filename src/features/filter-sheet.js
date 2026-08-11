@@ -4,7 +4,7 @@ import {
   formatMoney,
   getMonthlyExpenses,
   nextCategoryFilter,
-} from "../expenses.js";
+} from "../domain/expenses.js";
 import { render } from "../render.js";
 import { clearFilters } from "./expense-actions.js";
 import {

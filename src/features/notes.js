@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
+import { CATEGORIES, formatMoney, formatShortDate } from "../domain/expenses.js";
 import { getMemberName } from "../members.js";
 import { addNote, countNote, getExpenses, loadNotes } from "../store.js";
 import { escapeHtml } from "../ui/escape.js";

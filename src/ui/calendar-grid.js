@@ -1,6 +1,6 @@
 import { elements } from "../dom.js";
-import { WEEKDAYS, buildCalendar, formatCompactMoney, sumByDate } from "../calendar.js";
-import { toDateKey } from "../expenses.js";
+import { WEEKDAYS, buildCalendar, formatCompactMoney, sumByDate } from "../domain/calendar.js";
+import { toDateKey } from "../domain/expenses.js";
 
 /**
  * 그 달을 격자로 그린다.

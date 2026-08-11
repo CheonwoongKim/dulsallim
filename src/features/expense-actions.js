@@ -1,6 +1,6 @@
 import {
   nextDateFilter,
-  nextMemberFilter } from "../expenses.js";
+  nextMemberFilter } from "../domain/expenses.js";
 import { openForm } from "./expense-form.js";
 import { render } from "../render.js";
 import {

@@ -1,6 +1,6 @@
 import { elements } from "../dom.js";
 import { getMemberColor, getMembers } from "../members.js";
-import { formatAmountInput, isValidAmount, readAmount } from "../money.js";
+import { formatAmountInput, isValidAmount, readAmount } from "../domain/money.js";
 import {
   achieveWish,
   addWish,

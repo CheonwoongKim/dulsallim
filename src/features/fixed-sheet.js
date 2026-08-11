@@ -1,7 +1,7 @@
 import { elements } from "../dom.js";
-import { CATEGORIES, formatMonth, formatMoney, formatShortDate } from "../expenses.js";
+import { CATEGORIES, formatMonth, formatMoney, formatShortDate } from "../domain/expenses.js";
 import { getMemberName } from "../members.js";
-import { isValidAmount, readAmount } from "../money.js";
+import { isValidAmount, readAmount } from "../domain/money.js";
 import {
   MAX_DAY,
   MIN_DAY,
@@ -10,7 +10,7 @@ import {
   firstApplicableMonth,
   isValidDay,
   nextOccurrenceDate,
-} from "../fixed-costs.js";
+} from "../domain/fixed-costs.js";
 import { render } from "../render.js";
 import {
   applyOccurrences,

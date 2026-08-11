@@ -1,5 +1,5 @@
-import { CATEGORIES } from "../expenses.js";
-import { appliedKey } from "../fixed-costs.js";
+import { CATEGORIES } from "../domain/expenses.js";
+import { appliedKey } from "../domain/fixed-costs.js";
 
 /**
  * DB 행과 화면이 쓰는 객체를 서로 옮긴다.

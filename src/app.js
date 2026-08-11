@@ -17,7 +17,7 @@ import { clearData, hydrateFromSnapshot, loadAll } from "./store.js";
 import { openForm } from "./features/expense-form.js";
 import { buildMonthGrid } from "./features/month-picker.js";
 
-import { describeApplied } from "./fixed-costs.js";
+import { describeApplied } from "./domain/fixed-costs.js";
 
 import { closePageNow } from "./ui/page.js";
 

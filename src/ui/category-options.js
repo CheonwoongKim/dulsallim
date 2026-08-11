@@ -1,4 +1,4 @@
-import { CATEGORIES } from "../expenses.js";
+import { CATEGORIES } from "../domain/expenses.js";
 
 /**
  * 분류 선택지를 CATEGORIES 하나에서 만들어 넣는다.

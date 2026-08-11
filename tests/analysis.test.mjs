@@ -8,7 +8,7 @@ import {
   sumByCategory,
   sumMonth,
   untilDay,
-} from "../src/analysis.js";
+} from "../src/domain/analysis.js";
 
 const 천 = "11111111-1111-1111-1111-111111111111";
 const mk = (date, amount, category = "food") => ({ id: date + amount, date, amount, category, member: 천 });
@@ -111,7 +111,7 @@ test("빈 달은 빈 목록을 준다", () => {
 
 test("분류마다 서로 다른 색이 있다", async () => {
   // 같은 색이 둘이면 막대를 나눠 놓은 뜻이 없다.
-  const { CATEGORIES } = await import("../src/expenses.js");
+  const { CATEGORIES } = await import("../src/domain/expenses.js");
   const colors = Object.values(CATEGORIES).map((c) => c.color);
   assert.equal(colors.filter(Boolean).length, colors.length, "색이 빠진 분류가 있다");
   assert.equal(new Set(colors).size, colors.length, `겹치는 색: ${colors.join(", ")}`);

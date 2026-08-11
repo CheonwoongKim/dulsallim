@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { availableYears, axisTop, buildYearSeries } from "../src/trend.js";
+import { availableYears, axisTop, buildYearSeries } from "../src/domain/trend.js";
 
 const 천웅 = { id: "a", name: "천웅", color: "#20211e", goal: 1800000 };
 const 주연 = { id: "b", name: "주연", color: "#f2674b", goal: 1600000 };

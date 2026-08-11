@@ -1,9 +1,9 @@
 import { elements } from "../dom.js";
-import { formatMoney } from "../expenses.js";
+import { formatMoney } from "../domain/expenses.js";
 import { PALETTE, getMembers, normalizeAvatarColor } from "../members.js";
 import { paintMembers, render } from "../render.js";
 import { updateProfile } from "../data/remote.js";
-import { formatAmountInput, isValidAmount, readAmount } from "../money.js";
+import { formatAmountInput, isValidAmount, readAmount } from "../domain/money.js";
 import { reloadMembers } from "../store.js";
 import { hidePage, showPage } from "../ui/page.js";
 import { showToast } from "../ui/toast.js";

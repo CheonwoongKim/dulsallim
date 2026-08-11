@@ -5,7 +5,7 @@ import {
   shiftAnalysisMonth,
   toggleCategoryDetail,
   toggleCompare,
-} from "../features/analysis.js";
+} from "../features/analysis-page.js";
 import { toggleMemberFilter } from "../features/expense-actions.js";
 import {
   addNag,
@@ -42,7 +42,7 @@ import {
   scrubByKey,
   shiftTrendYear,
   startScrub,
-} from "../features/trend.js";
+} from "../features/trend-sheet.js";
 import {
   agreeOnWish,
   closeAchieveSheet,

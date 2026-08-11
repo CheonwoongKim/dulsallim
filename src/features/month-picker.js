@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { MAX_YEAR, MIN_YEAR, clampYear, isValidMonthKey, shiftMonthKey, toMonthKey } from "../expenses.js";
+import { MAX_YEAR, MIN_YEAR, clampYear, isValidMonthKey, shiftMonthKey, toMonthKey } from "../domain/expenses.js";
 import { render, resetTotalAnimation } from "../render.js";
 import { getSelectedMonth, setSelectedMonth } from "../store.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";

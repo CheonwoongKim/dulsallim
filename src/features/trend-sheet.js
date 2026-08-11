@@ -1,9 +1,9 @@
 import { elements } from "../dom.js";
-import { formatCompactMoney } from "../calendar.js";
-import { formatMonth } from "../expenses.js";
+import { formatCompactMoney } from "../domain/calendar.js";
+import { formatMonth } from "../domain/expenses.js";
 import { getMembers } from "../members.js";
 import { getExpenses, getSelectedMonth, setSelectedMonth } from "../store.js";
-import { availableYears, buildYearSeries } from "../trend.js";
+import { availableYears, buildYearSeries } from "../domain/trend.js";
 import { drawLegend, drawTrend, monthIndexAt, moveScrubLine } from "../ui/trend-chart.js";
 import { escapeHtml } from "../ui/escape.js";
 import { hideSheet, showSheet } from "../ui/sheet.js";

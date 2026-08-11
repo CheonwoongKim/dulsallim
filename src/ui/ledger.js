@@ -1,6 +1,6 @@
 import { elements } from "../dom.js";
 import { escapeHtml } from "./escape.js";
-import { CATEGORIES, formatDayLabel, formatMoney, formatShortDate } from "../expenses.js";
+import { CATEGORIES, formatDayLabel, formatMoney, formatShortDate } from "../domain/expenses.js";
 import { getMemberName } from "../members.js";
 import {
   getDateFilter,

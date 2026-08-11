@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { WEEKDAYS, buildCalendar, formatCompactMoney, sumByDate } from "../src/calendar.js";
+import { WEEKDAYS, buildCalendar, formatCompactMoney, sumByDate } from "../src/domain/calendar.js";
 
 test("격자는 언제나 42칸(6주)이다", () => {
   // 달마다 길이가 달라지면 월을 넘길 때 아래 내용이 위아래로 튄다.

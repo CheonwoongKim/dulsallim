@@ -11,9 +11,9 @@ import {
   summarizeGoal,
   toDateKey,
   toMonthKey,
-} from "../expenses.js";
+} from "../domain/expenses.js";
 import { getMemberGoal } from "../members.js";
-import { isValidAmount, readAmount } from "../money.js";
+import { isValidAmount, readAmount } from "../domain/money.js";
 import { render } from "../render.js";
 import {
   addExpense,

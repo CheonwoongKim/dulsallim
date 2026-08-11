@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { monthElapsed, monthsSince, savedInMonth, wishProgress } from "../src/wish-progress.js";
+import { monthElapsed, monthsSince, savedInMonth, wishProgress } from "../src/domain/wish-progress.js";
 
 /**
  * 진척은 아낀 돈으로 센다 — 월 지출 목표에서 그 달 실제 지출을 뺀 것.

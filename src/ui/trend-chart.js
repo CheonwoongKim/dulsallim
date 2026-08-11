@@ -1,4 +1,4 @@
-import { formatCompactMoney } from "../calendar.js";
+import { formatCompactMoney } from "../domain/calendar.js";
 import { escapeHtml } from "./escape.js";
 
 /**

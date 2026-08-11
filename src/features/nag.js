@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { formatMoney } from "../expenses.js";
+import { formatMoney } from "../domain/expenses.js";
 import { getMembers } from "../members.js";
 import { deleteNag, fetchNags, insertNag, setNagEnabled, updateNag } from "../data/remote.js";
 import { getContext } from "../store.js";

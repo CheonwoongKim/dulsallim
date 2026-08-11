@@ -1,4 +1,4 @@
-import { CATEGORIES, formatMoney, formatShortDate } from "../expenses.js";
+import { CATEGORIES, formatMoney, formatShortDate } from "../domain/expenses.js";
 import { getMemberColor, getMemberName } from "../members.js";
 import { escapeHtml, safeHref } from "./escape.js";
 

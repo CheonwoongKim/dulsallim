@@ -11,11 +11,11 @@ import {
   summarize,
   summarizeGoal,
   toMonthKey,
-} from "./expenses.js";
+} from "./domain/expenses.js";
 import { getMemberGoal, getMemberName, getMembers } from "./members.js";
 import { renderCalendar } from "./ui/calendar-grid.js";
-import { paintAnalysis } from "./features/analysis.js";
-import { refreshTrend } from "./features/trend.js";
+import { paintAnalysis } from "./features/analysis-page.js";
+import { refreshTrend } from "./features/trend-sheet.js";
 import { paintWishPage } from "./features/wish.js";
 import {
   getCategoryFilter,
