@@ -1,9 +1,9 @@
 -- 다시 적다 어긋난 몸통 둘을 옛것으로 되돌린다.
 --
--- migration-wish-order.sql 에서 반환 모양을 wish_row 타입으로 바꾸느라 다섯 함수를 다시
+-- 20260807000000_wish_order.sql 에서 반환 모양을 wish_row 타입으로 바꾸느라 다섯 함수를 다시
 -- 적었는데, 그 김에 몸통까지 손으로 옮겨 적었다. 세 곳이 어긋났다 —
 --
---   agree_wish   사람 수를 없는 표에서 셌다 (migration-wish-agree-fix.sql 이 이미 고침)
+--   agree_wish   사람 수를 없는 표에서 셌다 (20260807010000_wish_agree_fix.sql 이 이미 고침)
 --   create_wish  한 사람 가구면 담자마자 pursuing 으로 올리던 갈래가 없어졌다
 --   update_wish  이룬 것을 고치려 할 때 "이미 이룬 위시입니다" 대신 뭉뚱그린 말이 나왔다
 --

@@ -29,7 +29,7 @@ import { getProfile } from "./auth.js";
  * 사고 싶은 것을 적어 두고, 상대도 "나도" 를 누르면 "함께 바라는 것" 이 된다.
  *
  * 상태를 여기서 판정하지 않는다. 어떤 합의가 몇 개면 pursuing 인지는 서버가 정하고
- * (migration-wish.sql), 화면은 돌아온 state 를 그대로 읽어 세 자리에 나눠 놓을 뿐이다.
+ * (20260101000010_wish.sql), 화면은 돌아온 state 를 그대로 읽어 세 자리에 나눠 놓을 뿐이다.
  * 두 폰이 같은 순간에 마지막 표를 던져도 어긋나지 않는 이유가 그것이다.
  */
 
@@ -457,7 +457,7 @@ export async function dropWish() {
  * 서버가 그 지출의 날짜를 위시에 복사해 둔다. 나중에 지출을 지워도 이룬 날짜는 남는다.
  */
 export function openAchieveSheet(id) {
-  // 아직 안 이룬 것이면 된다. 서버도 같은 조건으로 본다(migration-wish-achieve-alone.sql).
+  // 아직 안 이룬 것이면 된다. 서버도 같은 조건으로 본다(20260806230000_wish_achieve_alone.sql).
   const wish = getWishes().find((current) => current.id === id && current.state !== "achieved");
   if (!wish) return;
 

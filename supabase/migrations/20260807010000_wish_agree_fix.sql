@@ -1,10 +1,10 @@
 -- agree_wish 가 없는 표를 보고 있었다. "나도" 가 아예 안 눌린다.
 --
--- migration-wish-order.sql 에서 다섯 함수의 반환 모양을 wish_row 타입으로 바꾸면서
+-- 20260807000000_wish_order.sql 에서 다섯 함수의 반환 모양을 wish_row 타입으로 바꾸면서
 -- agree_wish 의 몸통을 다시 적었는데, 그때 사람 수를 household_members 에서 세도록
 -- 적었다. 이 스키마에 그런 표는 없다 — 한 집의 사람은 profiles.household_id 로 센다.
 --
--- 목 서버에는 그 구분이 없어 브라우저 시험도 통과했다. 옛 함수(migration-wish-multi.sql)
+-- 목 서버에는 그 구분이 없어 브라우저 시험도 통과했다. 옛 함수(20260101000014_wish_multi.sql)
 -- 의 세는 법을 그대로 되살린다. 바뀌는 것은 세는 자리뿐이고 반환 모양은 그대로다.
 
 create or replace function agree_wish(p_wish_id uuid)

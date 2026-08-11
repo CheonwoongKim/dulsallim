@@ -46,33 +46,33 @@
 | 2 | `supabase/seed.sql` | 가구 생성과 계정 연결 |
 | 3 | `supabase/verify.sql` | 설정 점검. 전 항목이 OK 여야 합니다 |
 
-`migration-*.sql` 은 **이미 쓰고 있는 프로젝트를 따라잡게 하는 파일**입니다.
+`supabase/migrations/` 는 **이미 쓰고 있는 프로젝트를 따라잡게 하는 파일**입니다.
 새 프로젝트에는 실행하지 마세요 — `schema.sql` 에 이미 다 들어 있고,
-`migration-profile.sql` 은 그 시점의 권한만 열어 두므로 나중 것을 도로 닫아 버립니다.
+`20260101000001_profile.sql` 은 그 시점의 권한만 열어 두므로 나중 것을 도로 닫아 버립니다.
 
 이미 쓰고 있는 프로젝트라면 아직 안 돌린 것만 순서대로 실행하고 `verify.sql` 로 확인합니다.
 
 | 순서 | 파일 | 언제 추가됐나 |
 |---|---|---|
-| 1 | `supabase/migration-profile.sql` | 아바타 색상 |
-| 2 | `supabase/migration-goal.sql` | 월 지출 목표 |
-| 3 | `supabase/migration-categories.sql` | 반려견·의료 분류 |
-| 4 | `supabase/migration-nag.sql` | 소비 잔소리 |
-| 5 | `supabase/migration-hardening.sql` | 대화 작성자 검사, 초기화·고정비 반영 트랜잭션 |
-| 6 | `supabase/migration-fixed-sync.sql` | 고정비 변경을 상대 기기에도 바로 반영 |
-| 7 | `supabase/migration-avatar-custom-color.sql` | 아바타 색상 직접 선택 |
-| 8 | `supabase/migration-push.sql` | 알림 받을 곳 저장 |
-| 9 | `supabase/migration-push-triggers.sql` | 알림 보내는 시점 (아래 준비가 먼저 필요) |
-| 10 | `supabase/migration-wish.sql` | 위시·합의·향하는 것·이룸 기록 |
-| 11 | `supabase/migration-wish-image.sql` | 위시 줄에 링크 대표 그림 (10번을 이미 돌렸다면 이것만) |
-| 12 | `supabase/migration-wish-note.sql` | 위시에 "왜 갖고 싶은지" 한 줄 |
-| 13 | `supabase/migration-wish-edit.sql` | 담아 둔 위시 고치기 |
-| 14 | `supabase/migration-wish-multi.sql` | 함께 바라는 것을 여럿 두기 |
-| 15 | `supabase/migration-wish-achieve-alone.sql` | 혼자 바라는 것도 이룸으로 넘기기 |
-| 16 | `supabase/migration-wish-order.sql` | 위시 우선순위 · 사람별 목록 (15번을 이미 돌렸어도 이것까지) |
-| 17 | `supabase/migration-wish-agree-fix.sql` | 16번이 "나도" 를 깨뜨린 것을 되돌림 (16번을 돌렸다면 반드시) |
-| 18 | `supabase/migration-wish-body-restore.sql` | 16번이 담기·고치기에서 흘린 갈래를 되돌림 (16번을 돌렸다면 반드시) |
-| 19 | `supabase/migration-wish-goal.sql` | 위아래 옮기기 대신 "지금 목표" 하나 고르기 |
+| 1 | `supabase/migrations/20260101000001_profile.sql` | 아바타 색상 |
+| 2 | `supabase/migrations/20260101000002_goal.sql` | 월 지출 목표 |
+| 3 | `supabase/migrations/20260101000003_categories.sql` | 반려견·의료 분류 |
+| 4 | `supabase/migrations/20260101000004_nag.sql` | 소비 잔소리 |
+| 5 | `supabase/migrations/20260101000005_hardening.sql` | 대화 작성자 검사, 초기화·고정비 반영 트랜잭션 |
+| 6 | `supabase/migrations/20260101000006_fixed_sync.sql` | 고정비 변경을 상대 기기에도 바로 반영 |
+| 7 | `supabase/migrations/20260101000007_avatar_custom_color.sql` | 아바타 색상 직접 선택 |
+| 8 | `supabase/migrations/20260101000008_push.sql` | 알림 받을 곳 저장 |
+| 9 | `supabase/migrations/20260101000009_push_triggers.sql` | 알림 보내는 시점 (아래 준비가 먼저 필요) |
+| 10 | `supabase/migrations/20260101000010_wish.sql` | 위시·합의·향하는 것·이룸 기록 |
+| 11 | `supabase/migrations/20260101000011_wish_image.sql` | 위시 줄에 링크 대표 그림 (10번을 이미 돌렸다면 이것만) |
+| 12 | `supabase/migrations/20260101000012_wish_note.sql` | 위시에 "왜 갖고 싶은지" 한 줄 |
+| 13 | `supabase/migrations/20260101000013_wish_edit.sql` | 담아 둔 위시 고치기 |
+| 14 | `supabase/migrations/20260101000014_wish_multi.sql` | 함께 바라는 것을 여럿 두기 |
+| 15 | `supabase/migrations/20260806230000_wish_achieve_alone.sql` | 혼자 바라는 것도 이룸으로 넘기기 |
+| 16 | `supabase/migrations/20260807000000_wish_order.sql` | 위시 우선순위 · 사람별 목록 (15번을 이미 돌렸어도 이것까지) |
+| 17 | `supabase/migrations/20260807010000_wish_agree_fix.sql` | 16번이 "나도" 를 깨뜨린 것을 되돌림 (16번을 돌렸다면 반드시) |
+| 18 | `supabase/migrations/20260807020000_wish_body_restore.sql` | 16번이 담기·고치기에서 흘린 갈래를 되돌림 (16번을 돌렸다면 반드시) |
+| 19 | `supabase/migrations/20260807030000_wish_goal.sql` | 위아래 옮기기 대신 "지금 목표" 하나 고르기 |
 
 ### 알림을 쓰려면
 
@@ -92,7 +92,7 @@
    supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:주소
    ```
 
-4. `migration-push.sql` 을 실행한 뒤, `migration-push-triggers.sql` 안의 주석 처리된
+4. `20260101000008_push.sql` 을 실행한 뒤, `20260101000009_push_triggers.sql` 안의 주석 처리된
    두 줄(함수 주소와 service_role 키)을 채워서 실행합니다.
    **service_role 키는 저장소에 적지 마세요.** DB 안에만 두고 앱에서는 읽을 수 없습니다.
 

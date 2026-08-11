@@ -182,7 +182,7 @@ begin
   on conflict do nothing;
 
   -- 주의: 이 줄이 한동안 household_members 를 보고 있었다. 그런 표는 없다 —
-  -- 한 집의 사람은 profiles.household_id 로 센다. migration-wish-agree-fix.sql 이 고친다.
+  -- 한 집의 사람은 profiles.household_id 로 센다. 20260807010000_wish_agree_fix.sql 이 고친다.
   select count(*) into v_all from profiles p where p.household_id = v_household;
   select count(*) into v_agreed from wish_agreements a where a.wish_id = p_wish_id;
 

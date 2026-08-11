@@ -11,8 +11,8 @@ const exportedFunction = (글, 이름) =>
   글.match(new RegExp(`export (?:async )?function ${이름}\\([\\s\\S]*?\\n\\}`))?.[0] ?? "";
 
 const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
-const migration = await readFile(new URL("../supabase/migration-wish.sql", import.meta.url), "utf8");
-const editMigration = await readFile(new URL("../supabase/migration-wish-edit.sql", import.meta.url), "utf8");
+const migration = await readFile(new URL("../supabase/migrations/20260101000010_wish.sql", import.meta.url), "utf8");
+const editMigration = await readFile(new URL("../supabase/migrations/20260101000013_wish_edit.sql", import.meta.url), "utf8");
 
 /**
  * 위시리스트 화면이 지켜야 하는 것들.
@@ -229,7 +229,7 @@ test("화면은 store 만 부른다 — 서버 질의를 새로 짜지 않았다
 
 test("향하는 것은 서버가 정한 state 로만 가른다", () => {
   /*
-   * 합의가 몇 개면 향하는 것이 되는지는 서버가 정한다(migration-wish.sql).
+   * 합의가 몇 개면 향하는 것이 되는지는 서버가 정한다(migrations/20260101000010_wish.sql).
    * 화면이 사람 수를 세어 판정하면 두 폰이 같은 순간에 마지막 표를 던졌을 때 갈라진다.
    */
   // 화면이 보는 것은 "이뤘나" 하나다. 나머지는 칸의 표시와 자세히 시트가 읽는다.

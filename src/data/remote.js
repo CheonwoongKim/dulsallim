@@ -108,7 +108,7 @@ export async function setNagEnabled(userId, enabled) {
 
 /**
  * 내 표시 이름·색·목표를 바꾼다.
- * 어느 행을 고치든 DB는 본인 행만, 그것도 정해진 열만 허용한다(migration-profile.sql).
+ * 어느 행을 고치든 DB는 본인 행만, 그것도 정해진 열만 허용한다(20260101000001_profile.sql).
  */
 export async function updateProfile(userId, { name, color, goal }) {
   const row = unwrap(

@@ -331,7 +331,7 @@ test("고정비는 한 트랜잭션으로 반영해 같은 달이 두 번 들어
   assert.match(fn("applyDueFixedCosts"), /applyOccurrences\(due\)/);
 
   const { readFile } = await import("node:fs/promises");
-  for (const file of ["schema.sql", "migration-hardening.sql"]) {
+  for (const file of ["schema.sql", "migrations/20260101000005_hardening.sql"]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
     const 함수 = sql.match(/create or replace function apply_fixed_cost[\s\S]*?\n\$\$;/)[0];
 
@@ -440,7 +440,7 @@ test("고정비가 자동으로 채워질 때는 알리지 않는다", async () 
    * 알림이 수십 개 쏟아진다. 사람이 직접 적은 것만 알린다.
    */
   const { readFile } = await import("node:fs/promises");
-  const sql = await readFile(new URL("../supabase/migration-push-triggers.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../supabase/migrations/20260101000009_push_triggers.sql", import.meta.url), "utf8");
   assert.match(sql, /if new\.fixed_cost_id is not null then return new; end if;/);
   // 적은 사람 자신에게는 보내지 않는다.
   assert.match(sql, /where household_id = new\.household_id and id <> new\.created_by/);
@@ -1102,7 +1102,7 @@ test("프로필 수정 권한은 정해진 열로만 열려 있다", async () =>
   const { readFile } = await import("node:fs/promises");
   const ALLOWED = ["display_name", "avatar_color", "monthly_goal", "nag_enabled"];
 
-  for (const file of ["schema.sql", "migration-profile.sql", "migration-goal.sql", "migration-nag.sql"]) {
+  for (const file of ["schema.sql", "migrations/20260101000001_profile.sql", "migrations/20260101000002_goal.sql", "migrations/20260101000004_nag.sql"]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
     const grants = [...sql.matchAll(/grant update\s*\(([^)]+)\)\s*on profiles/g)];
     assert.ok(grants.length, `${file}에 열 단위 권한이 없다`);
@@ -1168,7 +1168,7 @@ test("아바타는 기본 팔레트와 직접 고른 6자리 HEX를 함께 받�
   const { PALETTE, normalizeAvatarColor } = await import("../src/members.js");
   const sql = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
   const migration = await readFile(
-    new URL("../supabase/migration-avatar-custom-color.sql", import.meta.url),
+    new URL("../supabase/migrations/20260101000007_avatar_custom_color.sql", import.meta.url),
     "utf8",
   );
 
@@ -1509,7 +1509,7 @@ test("분류 목록은 화면과 DB 두 곳이 정확히 같다", async () => {
   const { CATEGORIES } = await import("../src/domain/expenses.js");
   const keys = Object.keys(CATEGORIES);
 
-  for (const file of ["schema.sql", "migration-categories.sql"]) {
+  for (const file of ["schema.sql", "migrations/20260101000003_categories.sql"]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
     const allowed = sql
       .match(/is_valid_category[\s\S]*?select value in \(([\s\S]*?)\)/)[1]
@@ -1804,7 +1804,7 @@ test("비교를 고를 수 있다는 것이 눈에 보인다", () => {
 test("잔소리 문구는 쓴 사람만 읽을 수 있다", async () => {
   // 대상이 미리 읽으면 잔소리가 아니다. 같은 가구라고 열어 주면 안 된다.
   const { readFile } = await import("node:fs/promises");
-  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../supabase/migrations/20260101000004_nag.sql", import.meta.url), "utf8");
   assert.match(sql, /create policy nags_own on nags\s*\n\s*for all using \(author_id = auth\.uid\(\)\)/);
   assert.doesNotMatch(sql, /on nags[\s\S]*?using \(household_id = current_household_id\(\)\)/,
     "가구 전체에 열면 대상이 읽을 수 있다");
@@ -1813,7 +1813,7 @@ test("잔소리 문구는 쓴 사람만 읽을 수 있다", async () => {
 test("잔소리는 서버가 판단하고 서버가 적는다", async () => {
   // 화면에서 계산하려면 대상의 폰이 문구를 먼저 읽어야 한다. 그 순간 숨긴 뜻이 사라진다.
   const { readFile } = await import("node:fs/promises");
-  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../supabase/migrations/20260101000004_nag.sql", import.meta.url), "utf8");
   assert.match(sql, /create or replace function fire_nags[\s\S]*?security definer/);
   assert.match(sql, /household_id = current_household_id\(\)/, "남의 가구 지출로는 부를 수 없어야 한다");
   assert.match(fn("addExpense"), /remote\.fireNags\(created\.id\)/);
@@ -1822,7 +1822,7 @@ test("잔소리는 서버가 판단하고 서버가 적는다", async () => {
 test("잔소리는 한 달에 구간마다 한 번만 울린다", async () => {
   // 없으면 80%를 넘긴 뒤 지출할 때마다 매번 붙는다.
   const { readFile } = await import("node:fs/promises");
-  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../supabase/migrations/20260101000004_nag.sql", import.meta.url), "utf8");
   assert.match(sql, /primary key \(target_id, month, percent\)/);
   assert.match(sql, /on conflict \(target_id, month, percent\) do nothing/);
   // 40%에서 85%로 뛰면 50·70·80을 모두 지난 것으로 표시하고, 말은 가장 높은 하나만 한다.
@@ -1833,21 +1833,21 @@ test("잔소리는 한 달에 구간마다 한 번만 울린다", async () => {
 
 test("잔소리는 이번 달 지출에만 울린다", async () => {
   const { readFile } = await import("node:fs/promises");
-  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../supabase/migrations/20260101000004_nag.sql", import.meta.url), "utf8");
   assert.match(sql, /if v_month <> date_trunc\('month', current_date\)::date then return; end if;/);
 });
 
 test("울린 기록은 화면이 직접 손댈 수 없다", async () => {
   // 지웠다 다시 울리게 만들 수 있으면 한 번만 울린다는 약속이 깨진다.
   const { readFile } = await import("node:fs/promises");
-  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../supabase/migrations/20260101000004_nag.sql", import.meta.url), "utf8");
   assert.match(sql, /revoke all on nag_fires from authenticated, anon/);
   assert.doesNotMatch(sql, /create policy[^;]*on nag_fires/, "정책을 두면 함수 밖에서도 손댈 수 있다");
 });
 
 test("잔소리는 다섯 개까지, 같은 구간에 둘을 둘 수 없다", async () => {
   const { readFile } = await import("node:fs/promises");
-  const sql = await readFile(new URL("../supabase/migration-nag.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../supabase/migrations/20260101000004_nag.sql", import.meta.url), "utf8");
   assert.match(sql, /unique index[^;]*nags \(author_id, percent\)/);
   assert.match(app, /const MAX_NAGS = 5/);
   assert.match(fn("paintList"), /elements\.addNag\.disabled = full/, "다 찼으면 추가 버튼이 잠겨야 한다");
@@ -1890,18 +1890,25 @@ test("시트 안 항목 간격은 폼마다 따로 정하지 않는다", () => {
 /* ── 코드 리뷰 후속 ───────────────────────────────────────────── */
 
 test("README 는 새 프로젝트에 마이그레이션을 실행하라고 하지 않는다", async () => {
-  // migration-profile.sql 은 그 시점의 권한만 열어 둔다. 새 프로젝트에 나중에 실행하면
+  // migrations/20260101000001_profile.sql 은 그 시점의 권한만 열어 둔다. 새 프로젝트에 나중에 실행하면
   // monthly_goal·nag_enabled 수정 권한이 도로 닫혀 마이페이지 저장과 잔소리 토글이 깨진다.
   const { readFile, readdir } = await import("node:fs/promises");
   const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
   const 신규 = readme.split("이미 쓰고 있는 프로젝트")[0];
 
-  assert.doesNotMatch(신규, /migration-\w+\.sql \|/, "새 프로젝트 표에 마이그레이션이 있으면 안 된다");
+  assert.doesNotMatch(신규, /\d{14}_\w+\.sql \|/, "새 프로젝트 표에 마이그레이션이 있으면 안 된다");
 
-  // 있는 마이그레이션은 하나도 빠짐없이 안내돼야 한다.
-  const files = (await readdir(new URL("../supabase", import.meta.url)))
-    .filter((name) => name.startsWith("migration-"));
+  /*
+   * 있는 마이그레이션은 하나도 빠짐없이 안내돼야 한다.
+   *
+   * 자리는 supabase/migrations/ 다 — supabase CLI 가 보는 곳이다. 뿌리에 흩어 두던 때는
+   * db push 를 쓰려고 임시 폴더를 손으로 만들어야 했다(이번 작업에서만 다섯 번).
+   */
+  const files = await readdir(new URL("../supabase/migrations", import.meta.url));
   assert.ok(files.length, "마이그레이션 파일을 찾지 못했다");
+  for (const file of files) {
+    assert.match(file, /^\d{14}_[a-z0-9_]+\.sql$/, `${file} 이 CLI 가 읽는 이름꼴이 아니다`);
+  }
   for (const file of files) {
     assert.ok(readme.includes(file), `README 에 ${file} 안내가 없다`);
   }
@@ -1933,7 +1940,7 @@ test("verify.sql 의 기대 개수는 schema.sql 의 실제 개수와 같다", a
 test("대화는 반드시 자기 이름으로만 남길 수 있다", async () => {
   // author_id 를 안 보면 API 를 직접 불러 상대 이름으로 메시지를 지어낼 수 있다.
   const { readFile } = await import("node:fs/promises");
-  for (const file of ["schema.sql", "migration-hardening.sql"]) {
+  for (const file of ["schema.sql", "migrations/20260101000005_hardening.sql"]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
     const 정책 = sql.match(/create policy expense_notes_all[\s\S]*?;/)[0];
     const 검사부 = 정책.split("with check")[1];
@@ -1944,7 +1951,7 @@ test("대화는 반드시 자기 이름으로만 남길 수 있다", async () =>
 test("대화를 고치거나 지울 권한은 주지 않는다", async () => {
   // 정책의 using 은 같은 가구면 통과시키므로, 권한을 열어 두면 상대 말을 지울 수 있다.
   const { readFile } = await import("node:fs/promises");
-  for (const file of ["schema.sql", "migration-hardening.sql"]) {
+  for (const file of ["schema.sql", "migrations/20260101000005_hardening.sql"]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
     assert.match(sql, /revoke update, delete on expense_notes from authenticated/, file);
     assert.doesNotMatch(
@@ -1993,7 +2000,7 @@ test("서버 함수는 비로그인이 부를 수 없다", async () => {
   const { readFile } = await import("node:fs/promises");
   const 함수 = ["reset_household", "apply_fixed_cost", "fire_nags"];
 
-  for (const file of ["schema.sql", "migration-hardening.sql", "migration-nag.sql"]) {
+  for (const file of ["schema.sql", "migrations/20260101000005_hardening.sql", "migrations/20260101000004_nag.sql"]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), "utf8");
     for (const name of 함수) {
       if (!sql.includes(`grant execute on function ${name}`)) continue;
@@ -2549,7 +2556,7 @@ test("실시간 대상에 세 표가 모두 들어 있다", async () => {
   const { readFile } = await import("node:fs/promises");
   const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
   const verify = await readFile(new URL("../supabase/verify.sql", import.meta.url), "utf8");
-  const migration = await readFile(new URL("../supabase/migration-fixed-sync.sql", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../supabase/migrations/20260101000006_fixed_sync.sql", import.meta.url), "utf8");
   for (const table of ["expenses", "expense_notes", "fixed_costs"]) {
     assert.match(schema, new RegExp(`add table ${table};`), `schema.sql 에 ${table} 이 빠졌다`);
   }

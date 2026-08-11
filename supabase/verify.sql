@@ -135,7 +135,7 @@ with checks as (
     '서버 함수',
     coalesce(string_agg(proname, ', ' order by proname), '없음'),
     case when count(*) = 7 then 'OK' else 'FAIL' end,
-    'migration-hardening.sql 과 migration-wish.sql 을 실행하세요'
+    '20260101000005_hardening.sql 과 20260101000010_wish.sql 을 실행하세요'
   from pg_proc
   where proname in ('fire_nags', 'reset_household', 'apply_fixed_cost',
                     'create_wish', 'agree_wish', 'achieve_wish', 'delete_wish')
@@ -148,7 +148,7 @@ with checks as (
     '대화 작성자 검사',
     case when count(*) = 1 then '있음' else '없음' end,
     case when count(*) = 1 then 'OK' else 'FAIL' end,
-    'migration-hardening.sql 을 실행하세요'
+    '20260101000005_hardening.sql 을 실행하세요'
   from pg_policies
   where schemaname = 'public'
     and tablename = 'expense_notes'
@@ -162,7 +162,7 @@ with checks as (
     '대화 수정·삭제 차단',
     count(*)::text || ' 건 남음',
     case when count(*) = 0 then 'OK' else 'FAIL' end,
-    'migration-hardening.sql 의 revoke 구문을 다시 실행하세요'
+    '20260101000005_hardening.sql 의 revoke 구문을 다시 실행하세요'
   from information_schema.role_table_grants
   where grantee = 'authenticated'
     and table_schema = 'public'
@@ -178,7 +178,7 @@ with checks as (
     '함수 실행 차단',
     count(*)::text || ' / 7 잠김',
     case when count(*) = 7 then 'OK' else 'FAIL' end,
-    'migration-hardening.sql 과 migration-wish.sql 의 revoke execute 를 실행하세요'
+    '20260101000005_hardening.sql 과 20260101000010_wish.sql 의 revoke execute 를 실행하세요'
   from (values ('reset_household()'), ('apply_fixed_cost(uuid, date, date)'), ('fire_nags(uuid)'),
                ('create_wish(text, text, integer)'), ('agree_wish(uuid)'),
                ('achieve_wish(uuid, uuid)'), ('delete_wish(uuid)')) as f(sig)
@@ -207,7 +207,7 @@ with checks as (
     '실시간 대상',
     count(*)::text || ' / 5 등록',
     case when count(*) = 5 then 'OK' else 'FAIL' end,
-    'migration-fixed-sync.sql 과 migration-wish.sql 을 실행하세요'
+    '20260101000006_fixed_sync.sql 과 20260101000010_wish.sql 을 실행하세요'
   from pg_publication_tables
   where pubname = 'supabase_realtime'
     and schemaname = 'public'
@@ -221,7 +221,7 @@ with checks as (
     '아바타 직접 색상',
     case when count(*) = 1 then '6자리 HEX 허용' else '제약 확인 필요' end,
     case when count(*) = 1 then 'OK' else 'FAIL' end,
-    'migration-avatar-custom-color.sql 을 실행하세요'
+    '20260101000007_avatar_custom_color.sql 을 실행하세요'
   from pg_constraint
   where conrelid = 'profiles'::regclass
     and conname = 'profiles_avatar_color_check'
@@ -235,7 +235,7 @@ with checks as (
     '함께 바라는 것 여럿',
     case when count(*) = 0 then '묶는 제약 없음' else '옛 제약이 남아 있음' end,
     case when count(*) = 0 then 'OK' else 'FAIL' end,
-    'migration-wish-multi.sql 을 실행하세요'
+    '20260101000014_wish_multi.sql 을 실행하세요'
   from pg_indexes
   where schemaname = 'public'
     and tablename = 'wish_items'
@@ -249,7 +249,7 @@ with checks as (
     '위시 상태 전환 보호',
     count(*)::text || ' 건 남음',
     case when count(*) = 0 then 'OK' else 'FAIL' end,
-    'migration-wish.sql 의 revoke/grant 구문을 다시 실행하세요'
+    '20260101000010_wish.sql 의 revoke/grant 구문을 다시 실행하세요'
   from information_schema.role_table_grants
   where grantee in ('authenticated', 'anon')
     and table_schema = 'public'

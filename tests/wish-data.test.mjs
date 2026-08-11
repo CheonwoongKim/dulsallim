@@ -3,9 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const schema = await readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8");
-const migration = await readFile(new URL("../supabase/migration-wish.sql", import.meta.url), "utf8");
+const migration = await readFile(new URL("../supabase/migrations/20260101000010_wish.sql", import.meta.url), "utf8");
 const multiMigration = await readFile(
-  new URL("../supabase/migration-wish-multi.sql", import.meta.url),
+  new URL("../supabase/migrations/20260101000014_wish_multi.sql", import.meta.url),
   "utf8",
 );
 const remote = await readFile(new URL("../src/data/remote.js", import.meta.url), "utf8");
@@ -28,12 +28,12 @@ function exportedFunction(source, name) {
 
 test("schema.sql 은 처음 표에서 나중 마이그레이션이 더한 것만큼만 다르다", () => {
   /*
-   * schema.sql 은 새 프로젝트가 한 번에 갖는 마지막 모습이고, migration-wish.sql 은 처음
+   * schema.sql 은 새 프로젝트가 한 번에 갖는 마지막 모습이고, migrations/20260101000010_wish.sql 은 처음
    * 모습이다. 나중 마이그레이션이 더한 것만큼 둘이 달라야 하고, 그 밖에는 같아야 한다 —
    * 다르면 새로 만든 집과 쓰던 집이 서로 다른 표를 갖게 된다.
    *
    * 지금까지 더한 것: note · image_url(각각 제 마이그레이션) · sort_order 와 느슨해진
-   * 상태 제약(migration-wish-order.sql).
+   * 상태 제약(migrations/20260807000000_wish_order.sql).
    */
   assert.equal(compact(tableDefinition(schema, "wish_agreements")),
                compact(tableDefinition(migration, "wish_agreements")),
@@ -145,7 +145,7 @@ test("합의와 이룸 전환은 같은 집 요청을 잠그고 가구 범위를
   }
 });
 
-test("migration-wish.sql 은 다시 실행해도 충돌하지 않는 형태다", () => {
+test("migrations/20260101000010_wish.sql 은 다시 실행해도 충돌하지 않는 형태다", () => {
   assert.equal((migration.match(/create table if not exists wish_/g) || []).length, 2);
   // 표마다 하나씩. 향하는 것을 묶던 유니크 인덱스는 걷었다.
   assert.equal((migration.match(/create (?:unique )?index if not exists wish_/g) || []).length, 1);
@@ -232,7 +232,7 @@ test("schema.sql 의 위시 함수 몸통은 마지막 마이그레이션과 글
    */
   const 짝 = Object.fromEntries(
     ["wish_snapshot", "create_wish", "agree_wish", "achieve_wish", "update_wish", "set_wish_goal"]
-      .map((이름) => [이름, "migration-wish-goal.sql"]),
+      .map((이름) => [이름, "migrations/20260807030000_wish_goal.sql"]),
   );
   const 몸통 = (글, 이름) => {
     const m = new RegExp(`create or replace function ${이름}\\([\\s\\S]*?\\nas \\$\\$([\\s\\S]*?)\\n\\$\\$;`).exec(글);
