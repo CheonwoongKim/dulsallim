@@ -187,6 +187,24 @@ orca worktree rm --worktree <선택자> --force --json
 
 merge 는 곧 배포다 — `main` 에 들어가면 Vercel 이 자동으로 올린다.
 
+### 올릴 곳이 둘이다
+
+`origin` 하나에 push 주소를 둘 달아 뒀다. `git push` 한 번이면 두 곳에 다 간다.
+
+| | 어디 | 무엇을 하나 |
+|---|---|---|
+| GitHub | `github.com/CheonwoongKim/dulsallim` | PR·리뷰·merge, 그리고 Vercel 배포가 여기를 본다 |
+| Gitea | `개인서버/cheonwoongkim/budget_book` | 개인 서버 사본 |
+
+PR 흐름은 **GitHub 에만** 있다. Gitea 는 같은 커밋을 받아 두는 자리다.
+
+**merge 뒤에 Gitea 의 가지도 지운다.** `gh pr merge --delete-branch` 는 GitHub 것만 지우므로
+그대로 두면 Gitea 에 다 끝난 가지가 쌓인다.
+
+```bash
+git push gitea --delete <가지 이름>
+```
+
 ---
 
 ## 5. 갈래 쪼개는 법
