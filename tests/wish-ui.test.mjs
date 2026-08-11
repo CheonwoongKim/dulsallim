@@ -562,13 +562,12 @@ test("자세히에는 모은 돈도 퍼센트도 없다", () => {
    * 위시는 사고 싶은 것을 적어 두는 자리다. 얼마를 모았는지는 목표에서 지출을 뺀 어림이라
    * 볼 때마다 달라지는데, 그것이 물건 사진 밑에 붙어 있으니 무엇을 보는 시트인지 흐려졌다.
    *
-   * 세는 쪽(src/domain/wish-progress.js)은 남겨 둔다. 계산은 그대로 맞고, 나중에 다른 자리에서
-   * 쓸 수 있다. 여기서는 그리지 않는다는 것만 지킨다.
+   * 세던 쪽(wish-progress.js)도 걷었다. "나중에 쓸 수 있다" 로 남겨 뒀는데 아무도 안 썼고,
+   * 죽은 코드를 지키는 검사 여덟 건이 함께 남아 있었다. 다시 필요하면 git 에서 꺼내면 된다.
    */
   const 그리기 = fn("createWishDetail");
   assert.doesNotMatch(그리기, /progress|percent|모음/, "자세히에 진척이 돌아왔다");
-  // 부르는 곳이 없어야 한다. 세는 쪽은 남아 있으므로 이름만 찾으면 제 정의가 걸린다.
-  assert.doesNotMatch(app, /from "[./]*wish-progress\.js"/, "화면이 다시 진척을 세고 있다");
+  assert.doesNotMatch(app, /wish-progress/, "진척을 세는 쪽이 돌아왔다");
   assert.doesNotMatch(css, /\.wish-progress/, "진척 막대 모양새가 남아 있다");
 });
 
