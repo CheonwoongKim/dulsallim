@@ -194,7 +194,7 @@ merge 는 곧 배포다 — `main` 에 들어가면 Vercel 이 자동으로 올�
 | | 어디 | 무엇을 하나 |
 |---|---|---|
 | GitHub | `github.com/CheonwoongKim/dulsallim` | PR·리뷰·merge, 그리고 Vercel 배포가 여기를 본다 |
-| Gitea | `개인서버/cheonwoongkim/budget_book` | 개인 서버 사본 |
+| Gitea | 개인 서버 (주소는 `git remote -v` 로 확인) | 사본을 받아 두는 자리 |
 
 PR 흐름은 **GitHub 에만** 있다. Gitea 는 같은 커밋을 받아 두는 자리다.
 
