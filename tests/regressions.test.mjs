@@ -2531,6 +2531,39 @@ test("고정비를 채우기 전에 구독을 건다", () => {
   );
 });
 
+test("앱으로 돌아왔을 때도 밀린 고정비를 채운다", () => {
+  /*
+   * 설치한 앱은 좀처럼 완전히 꺼지지 않는다 — 잠들었다 그대로 깨어난다.
+   * 냉시작에서만 채우면 반영일이 지난 뒤 열어도 그날 고정비가 목록에 없고,
+   * 폰이 앱을 메모리에서 밀어낼 때에야 뒤늦게 들어온다.
+   */
+  const catchUp = fn("catchUp");
+  // await 를 빼면 이 고침이 통째로 되돌아간다 — 행이 생기기 전에 그리고,
+  // describeApplied 가 promise 를 받아 늘 null 이라 알림도 안 뜬다. 그래서 await 까지 본다.
+  assert.match(catchUp, /await applyDueFixedCosts\(\)/);
+  // 그린 뒤에 채우면 그 달 고정비가 한 번 더 그릴 때까지 화면에 없다.
+  assert.ok(
+    catchUp.indexOf("applyDueFixedCosts") < catchUp.indexOf("repaintAfterSync"),
+    "반영이 다시 그리기보다 뒤에 있다",
+  );
+  /*
+   * 잠금이 서버 쓰기까지 덮어야 한다.
+   *
+   * 읽기만 잠그면, 반영이 도는 몇 초 사이에 화면이 한 번 더 깨어났을 때 두 번째
+   * catchUp 이 그대로 들어온다. 통째로 읽어 온 사본과 방금 만든 지출이 겹쳐
+   * 같은 지출이 두 번 들어가거나 새로 만든 것이 사라진다.
+   */
+  assert.equal(
+    catchUp.match(/catchingUp = false/g).length,
+    1,
+    "잠금을 푸는 자리는 finally 하나여야 한다",
+  );
+  assert.ok(
+    catchUp.indexOf("applyDueFixedCosts") < catchUp.indexOf("catchingUp = false"),
+    "반영이 catchingUp 잠금 밖에 있다",
+  );
+});
+
 test("상대가 초기화하면 내 고정비 목록도 비워진다", () => {
   /*
    * reset_household() 는 fixed_costs 와 expenses 를 함께 지운다.
@@ -2622,8 +2655,14 @@ test("돌아왔는데 못 읽어도 보던 화면은 지키다", () => {
   const catchUp = fn("catchUp");
   // 로그아웃하면 profile 이 빈다. 로그인 화면에서 돌아온 것과 구분된다.
   assert.match(catchUp, /if \(!profile \|\| catchingUp\) return/);
-  // 돌아오자마자 오류 화면을 띄우지 않는다.
-  assert.match(catchUp, /catch \{[\s\S]{0,140}?return;\n\s*\} finally \{[\s\S]{0,60}catchingUp = false/);
+  /*
+   * 돌아오자마자 오류 화면을 띄우지 않는다. 어디서 터지든 잠금은 반드시 풀린다.
+   *
+   * 예전에는 catch 가 return 으로 빠졌다 — 읽기만 try 안에 있어서 그 뒤를 건너뛰려면
+   * 그래야 했다. 지금은 반영과 다시 그리기까지 try 안이라 catch 가 함수의 끝이고,
+   * return 은 필요 없다. 지키는 것은 그대로다: 오류 판을 안 띄우고, finally 가 잠금을 푼다.
+   */
+  assert.match(catchUp, /\} catch \{[\s\S]{0,160}\} finally \{[\s\S]{0,60}catchingUp = false/);
   assert.doesNotMatch(catchUp, /showDataGate/);
 });
 

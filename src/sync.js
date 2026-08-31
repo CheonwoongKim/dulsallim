@@ -1,9 +1,11 @@
 import { subscribeHousehold, subscribeNotes, unsubscribe } from "./data/remote.js";
+import { describeApplied } from "./domain/fixed-costs.js";
 import { getProfile } from "./features/auth.js";
-import { refreshFixedSheet } from "./features/fixed-sheet.js";
+import { applyDueFixedCosts, refreshFixedSheet } from "./features/fixed-sheet.js";
 import { flushPendingNotes, receiveNote } from "./features/notes.js";
 import { paintMembers, render } from "./render.js";
 import { loadAll, reloadHousehold } from "./store.js";
+import { showToast } from "./ui/toast.js";
 
 /**
  * 상대 폰에서 일어난 일을 내 화면에 맞춘다.
@@ -65,17 +67,40 @@ async function catchUp() {
   // 로그아웃하면 profile 이 비므로, 로그인 화면에서 돌아온 것과 구분된다.
   if (!profile || catchingUp) return;
 
+  /*
+   * 마칠 때까지 문을 걸어 둔다.
+   *
+   * 예전에는 읽기(loadAll)만 잠갔다. 그 뒤에 남은 것이 다시 그리기뿐이라 순식간이었다.
+   * 지금은 그 자리에 서버 쓰기가 있다 — 한 번에 여섯 건씩(store.js 의 APPLY_BATCH),
+   * 열두 달이 밀렸으면 왕복이 스무 번이다. 그사이 화면이 한 번 더 깨어나면 두 번째
+   * catchUp 이 그대로 들어와, 통째로 읽어 온 사본과 방금 만든 지출이 겹친다.
+   * 서버는 유니크 제약이 막아 주지만 손안의 사본은 같은 지출을 두 번 들거나
+   * 새로 만든 것을 잃는다.
+   */
   catchingUp = true;
   try {
     await loadAll(profile);
+    paintMembers();
+
+    /*
+     * 자는 사이 반영일이 지났을 수 있다.
+     *
+     * 설치한 앱은 좀처럼 완전히 꺼지지 않는다 — 홈 버튼으로 잠들었다 그대로 깨어난다.
+     * 그래서 냉시작(startApp)에서만 채우면, 5일이 지나 앱을 열어도 그날 고정비가 없다.
+     * 폰이 앱을 메모리에서 밀어낼 때에야 뒤늦게 한꺼번에 들어와, 어떤 달은 되고
+     * 어떤 달은 안 되는 것처럼 보였다.
+     */
+    const applied = await applyDueFixedCosts();
+    repaintAfterSync();
+
+    // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
+    const notice = describeApplied(applied);
+    if (notice) showToast(notice);
   } catch {
     // 돌아오자마자 오류 화면을 띄우지 않는다. 보던 것을 그대로 두고 다음 기회에 맞춘다.
-    return;
   } finally {
     catchingUp = false;
   }
-  paintMembers();
-  repaintAfterSync();
 }
 
 /** 로그아웃하면 남의 집 소식을 계속 듣고 있을 이유가 없다. */
