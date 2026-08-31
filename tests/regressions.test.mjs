@@ -2702,6 +2702,26 @@ test("돌아왔는데 못 읽어도 보던 화면은 지키다", () => {
   assert.doesNotMatch(catchUp, /showDataGate/);
 });
 
+test("켜 둔 채 자정을 넘겨도 그날 고정비가 들어온다", () => {
+  /*
+   * 깨어나는 길(catchUp)은 visibilitychange 나 pageshow 가 울려야 돈다.
+   * 앱을 계속 앞에 두고 있으면 둘 다 안 울려, 침대맡에 켜 두면 5일이 되어도
+   * 그날 고정비가 화면에 없었다. 구독은 상대 폰의 변경만 알 뿐 날이 바뀐 것은 모른다.
+   */
+  const 날보기 = fn("watchForNewDay");
+  assert.match(날보기, /catchUp\(\)/);
+  // 자정에 깬 뒤 다음 자정을 다시 잡는다. 안 그러면 하루만 돌고 만다.
+  assert.match(날보기, /watchForNewDay\(\);\n\s*\}, msUntilNextDay\(now\)\)/);
+  // 날이 정말 바뀐 것만 친다 — 폰이 자느라 늦게 울리거나 시계가 뒤로 갈 수 있다.
+  assert.match(날보기, /toDateKey\(new Date\(\)\) !== toDateKey\(now\)/);
+  // 1분마다 날짜를 보면 하루에 천사백 번 깨운다. 자정 한 번만 깨운다.
+  assert.doesNotMatch(app, /setInterval\([\s\S]{0,200}toDateKey/);
+
+  // 구독을 걸 때 함께 걸리고, 로그아웃하면 함께 풀린다.
+  assert.match(fn("watchForChanges"), /watchForNewDay\(\)/);
+  assert.match(fn("stopSync"), /clearTimeout\(dayTimer\)/);
+});
+
 test("무엇을 그리든 머리 상태는 건드리지 않는다", () => {
   /*
    * 예전에는 캘린더로 바꾸면 문서가 짧아져 브라우저가 스크롤을 0 으로 되감았고,

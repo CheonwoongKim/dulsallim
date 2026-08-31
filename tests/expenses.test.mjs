@@ -5,6 +5,7 @@ import {
   CATEGORIES,
   MAX_YEAR,
   MIN_YEAR,
+  msUntilNextDay,
   clampYear,
   filterByMember,
   formatMonth,
@@ -241,4 +242,37 @@ test("summarizeGoal은 목표를 정확히 다 썼을 때 초과가 아니다", 
   assert.equal(result.over, false);
   assert.equal(result.remaining, 0);
   assert.equal(result.percent, 0);
+});
+
+/* ── 다음 자정까지 ─────────────────────────────────────────── */
+
+test("다음 자정까지 남은 시간을 잰다", () => {
+  // 자정 1초 뒤에 깨운다. 딱 맞춰 깨우면 아직 어제인 채로 일어날 수 있다.
+  const 밤11시 = new Date(2026, 7, 31, 23, 0, 0);
+  assert.equal(msUntilNextDay(밤11시), 60 * 60 * 1000 + 1000);
+
+  // 하루의 첫 순간에는 꼬박 하루가 남는다.
+  assert.equal(msUntilNextDay(new Date(2026, 7, 31, 0, 0, 0)), 24 * 60 * 60 * 1000 + 1000);
+});
+
+test("자정을 넘길 때 달과 해도 함께 넘긴다", () => {
+  // 말일 밤이면 다음 자정은 다음 달 1일이다.
+  const 팔월말 = new Date(2026, 7, 31, 23, 59, 0);
+  assert.equal(new Date(+팔월말 + msUntilNextDay(팔월말) - 1000).getMonth(), 8);
+
+  // 섣달그믐이면 해가 넘어간다.
+  const 섣달그믐 = new Date(2026, 11, 31, 23, 59, 0);
+  assert.equal(new Date(+섣달그믐 + msUntilNextDay(섣달그믐) - 1000).getFullYear(), 2027);
+
+  // 윤년 2월 28일 다음은 29일이다.
+  const 윤년이월 = new Date(2028, 1, 28, 12, 0, 0);
+  assert.equal(new Date(+윤년이월 + msUntilNextDay(윤년이월) - 1000).getDate(), 29);
+});
+
+test("언제 재도 하루를 넘지 않는다", () => {
+  // 음수나 하루 넘는 값이 나오면 타이머가 영영 안 울리거나 곧바로 울린다.
+  for (let hour = 0; hour < 24; hour += 1) {
+    const ms = msUntilNextDay(new Date(2026, 7, 15, hour, 30, 0));
+    assert.ok(ms > 0 && ms <= 24 * 60 * 60 * 1000 + 1000, `${hour}시에 ${ms}ms`);
+  }
 });

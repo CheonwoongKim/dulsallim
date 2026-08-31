@@ -1,4 +1,5 @@
 import { subscribeHousehold, subscribeNotes, unsubscribe } from "./data/remote.js";
+import { msUntilNextDay, toDateKey } from "./domain/expenses.js";
 import { describeApplied } from "./domain/fixed-costs.js";
 import { getProfile } from "./features/auth.js";
 import { applyDueFixedCosts, refreshFixedSheet } from "./features/fixed-sheet.js";
@@ -20,6 +21,7 @@ const SYNC_DEBOUNCE_MS = 400;
 let channel = null;
 let noteChannel = null;
 let syncTimer = null;
+let dayTimer = null;
 
 /** 다시 읽은 뒤 화면을 맞춘다. 실시간 변경과 화면 복귀가 같은 마무리를 쓴다. */
 function repaintAfterSync() {
@@ -36,6 +38,7 @@ export function watchForChanges(householdId) {
   unsubscribe(noteChannel);
   // 상대가 남긴 말은 목록의 개수와 열려 있는 대화 양쪽에 바로 반영된다.
   noteChannel = subscribeNotes(receiveNote);
+  watchForNewDay();
   channel = subscribeHousehold(householdId, () => {
     clearTimeout(syncTimer);
     syncTimer = setTimeout(async () => {
@@ -103,13 +106,35 @@ async function catchUp() {
   }
 }
 
+/**
+ * 켜 둔 채 자정을 넘겨도 그날 고정비가 들어오게 한다.
+ *
+ * 깨어나는 길(catchUp)은 visibilitychange 나 pageshow 가 울려야 도는데, 앱을 계속 앞에
+ * 두고 있으면 둘 다 안 울린다. 침대맡에 켜 두거나 낮 내내 띄워 두면 5일이 되어도 그날
+ * 고정비가 화면에 없다. 구독은 상대 폰의 변경만 알려 줄 뿐 날이 바뀐 것은 모른다.
+ *
+ * 1분마다 날짜를 보는 대신 자정 한 번만 깨운다 — 하루에 천사백 번 깨우면 배터리를 먹는다.
+ * 깬 뒤에 다음 자정을 다시 잡으므로, 폰이 자느라 늦게 울려도 그다음이 어긋나지 않는다.
+ */
+function watchForNewDay() {
+  clearTimeout(dayTimer);
+  const now = new Date();
+  dayTimer = setTimeout(() => {
+    // 폰이 자느라 늦게 울렸을 수도, 시계가 뒤로 갔을 수도 있다. 날이 정말 바뀐 것만 친다.
+    if (toDateKey(new Date()) !== toDateKey(now)) catchUp();
+    watchForNewDay();
+  }, msUntilNextDay(now));
+}
+
 /** 로그아웃하면 남의 집 소식을 계속 듣고 있을 이유가 없다. */
 export function stopSync() {
   unsubscribe(channel);
   unsubscribe(noteChannel);
   clearTimeout(syncTimer);
+  clearTimeout(dayTimer);
   channel = null;
   noteChannel = null;
+  dayTimer = null;
 }
 
 document.addEventListener("visibilitychange", () => {
