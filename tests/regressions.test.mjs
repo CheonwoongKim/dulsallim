@@ -2531,6 +2531,21 @@ test("고정비를 채우기 전에 구독을 건다", () => {
   );
 });
 
+test("앱으로 돌아왔을 때도 밀린 고정비를 채운다", () => {
+  /*
+   * 설치한 앱은 좀처럼 완전히 꺼지지 않는다 — 잠들었다 그대로 깨어난다.
+   * 냉시작에서만 채우면 반영일이 지난 뒤 열어도 그날 고정비가 목록에 없고,
+   * 폰이 앱을 메모리에서 밀어낼 때에야 뒤늦게 들어온다.
+   */
+  const catchUp = fn("catchUp");
+  assert.match(catchUp, /applyDueFixedCosts\(\)/);
+  // 그린 뒤에 채우면 그 달 고정비가 한 번 더 그릴 때까지 화면에 없다.
+  assert.ok(
+    catchUp.indexOf("applyDueFixedCosts") < catchUp.indexOf("repaintAfterSync"),
+    "반영이 다시 그리기보다 뒤에 있다",
+  );
+});
+
 test("상대가 초기화하면 내 고정비 목록도 비워진다", () => {
   /*
    * reset_household() 는 fixed_costs 와 expenses 를 함께 지운다.

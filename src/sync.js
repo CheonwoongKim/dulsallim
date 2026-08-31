@@ -1,9 +1,11 @@
 import { subscribeHousehold, subscribeNotes, unsubscribe } from "./data/remote.js";
+import { describeApplied } from "./domain/fixed-costs.js";
 import { getProfile } from "./features/auth.js";
-import { refreshFixedSheet } from "./features/fixed-sheet.js";
+import { applyDueFixedCosts, refreshFixedSheet } from "./features/fixed-sheet.js";
 import { flushPendingNotes, receiveNote } from "./features/notes.js";
 import { paintMembers, render } from "./render.js";
 import { loadAll, reloadHousehold } from "./store.js";
+import { showToast } from "./ui/toast.js";
 
 /**
  * 상대 폰에서 일어난 일을 내 화면에 맞춘다.
@@ -75,7 +77,21 @@ async function catchUp() {
     catchingUp = false;
   }
   paintMembers();
+
+  /*
+   * 자는 사이 반영일이 지났을 수 있다.
+   *
+   * 설치한 앱은 좀처럼 완전히 꺼지지 않는다 — 홈 버튼으로 잠들었다 그대로 깨어난다.
+   * 그래서 냉시작(startApp)에서만 채우면, 5일이 지나 앱을 열어도 그날 고정비가 없다.
+   * 폰이 앱을 메모리에서 밀어낼 때에야 뒤늦게 한꺼번에 들어와, 어떤 달은 되고
+   * 어떤 달은 안 되는 것처럼 보였다.
+   */
+  const applied = await applyDueFixedCosts();
   repaintAfterSync();
+
+  // 조용히 넘어가면 이번 달 고정비가 통째로 빠진 걸 모른 채 지나간다.
+  const notice = describeApplied(applied);
+  if (notice) showToast(notice);
 }
 
 /** 로그아웃하면 남의 집 소식을 계속 듣고 있을 이유가 없다. */
