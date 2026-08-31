@@ -69,7 +69,7 @@ Vite + Supabase 로 만든 PWA 입니다. 실제로 쓰려고 만든 개인 프�
 | 실시간 | Supabase Realtime (`postgres_changes`) |
 | 서버 로직 | Postgres 함수 13개 (`security definer` RPC) |
 | Edge Function | `send-push` (웹 푸시 발송), `link-preview` (위시 링크 대표 이미지) |
-| 테스트 | `node:test` 410건, Playwright (WebKit) |
+| 테스트 | `node:test` 417건, Playwright (WebKit) |
 | 배포 | Vercel |
 
 프레임워크를 쓰지 않았습니다. 상태를 바꾸고 다시 그리는 단순한 흐름이고, 접근 통제와
@@ -163,7 +163,7 @@ publishable key 는 브라우저에 공개되는 값이며, 실제 접근 통제
 ```bash
 npm install
 npm run dev          # 개발 서버
-npm test             # 테스트 410건
+npm test             # 테스트 417건
 npm run build        # 프로덕션 빌드
 npm run preview      # 빌드 결과 확인 (같은 네트워크의 폰에서도 접속 가능)
 ```
