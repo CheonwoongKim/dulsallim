@@ -45,6 +45,18 @@ export function toDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * 다음 자정까지 남은 밀리초.
+ *
+ * 자정을 1초 지나서 깨운다 — 딱 맞춰 깨우면 반올림이 어느 쪽으로 튀느냐에 따라
+ * 아직 어제인 채로 깨어나, 오늘 것을 못 보고 그냥 지나간다.
+ * 달·해 넘김은 Date 가 알아서 한다.
+ */
+export function msUntilNextDay(now = new Date()) {
+  const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return nextMidnight - now + 1000;
+}
+
 /** `YYYY-MM-DD` 형식이면서 실제로 존재하는 날짜인지 확인한다. */
 export function isValidDateKey(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;

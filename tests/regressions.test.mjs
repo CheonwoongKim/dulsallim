@@ -2702,6 +2702,50 @@ test("돌아왔는데 못 읽어도 보던 화면은 지키다", () => {
   assert.doesNotMatch(catchUp, /showDataGate/);
 });
 
+test("켜 둔 채 자정을 넘겨도 그날 고정비가 들어온다", () => {
+  /*
+   * 깨어나는 길(catchUp)은 visibilitychange 나 pageshow 가 울려야 돈다.
+   * 앱을 계속 앞에 두고 있으면 둘 다 안 울려, 침대맡에 켜 두면 5일이 되어도
+   * 그날 고정비가 화면에 없었다. 구독은 상대 폰의 변경만 알 뿐 날이 바뀐 것은 모른다.
+   */
+  const 날보기 = fn("watchForNewDay");
+  assert.match(날보기, /catchUp\(\)/);
+  // 자정에 깬 뒤 다음 자정을 다시 잡는다. 안 그러면 하루만 돌고 만다.
+  assert.match(날보기, /watchForNewDay\(\);[\s\S]{0,40}msUntilNextDay\(now\)/);
+  // 걸기 전에 먼저 푼다. 두 번 걸리면 하루에 두 번 울고 앞의 것은 놓아줄 길이 없다.
+  assert.match(날보기, /^\s*clearTimeout\(dayTimer\);/m);
+  // 날이 정말 바뀐 것만 친다 — 폰이 자느라 늦게 울리거나 시계가 뒤로 갈 수 있다.
+  assert.match(날보기, /toDateKey\(new Date\(\)\) !== toDateKey\(now\)/);
+  // 1분마다 날짜를 보면 하루에 천사백 번 깨운다. 자정 한 번만 깨운다.
+  assert.doesNotMatch(app, /setInterval\([\s\S]{0,200}toDateKey/);
+
+  // 구독을 걸 때 함께 걸리고, 로그아웃하면 함께 풀린다.
+  assert.match(fn("watchForChanges"), /watchForNewDay\(\)/);
+  assert.match(fn("stopSync"), /clearTimeout\(dayTimer\)/);
+});
+
+test("달까지 넘어가면 보고 있던 달도 함께 굴린다", () => {
+  /*
+   * 고정비는 1일이 가장 흔하다 — 월세도 구독도 그렇다. 자정에 지출만 만들고 보던 달을
+   * 그대로 두면, 9월 1일 월세를 넣어 놓고 화면은 8월을 그린다. 데이터는 왔는데 사람은
+   * 아무것도 못 본다. 캘린더의 오늘 표시도 그려진 격자에 없는 날을 가리킨다.
+   */
+  const 굴리기 = fn("보던달도굴리기");
+  assert.match(굴리기, /setSelectedMonth\(이번달\)/);
+  // 달을 손으로 넘길 때와 같이 총액을 처음부터 센다.
+  assert.match(굴리기, /resetTotalAnimation\(\)/);
+  /*
+   * 지난 달을 일부러 펴 두고 보던 중이면 건드리지 않는다.
+   * 넘기 전 달을 보고 있었을 때만 따라 굴린다 — 남의 손에서 화면을 뺏지 않는다.
+   */
+  assert.match(굴리기, /getSelectedMonth\(\) !== 지난달\) return/);
+  // 날은 바뀌었어도 달은 그대로일 때가 훨씬 많다. 그때는 아무것도 하지 않는다.
+  assert.match(굴리기, /이번달 === 지난달/);
+  // 자정 경로에서만 부른다. 깨어나는 길은 보던 달을 그대로 두는 것이 맞다.
+  assert.match(fn("watchForNewDay"), /보던달도굴리기\(now\)/);
+  assert.doesNotMatch(fn("catchUp"), /보던달도굴리기/);
+});
+
 test("무엇을 그리든 머리 상태는 건드리지 않는다", () => {
   /*
    * 예전에는 캘린더로 바꾸면 문서가 짧아져 브라우저가 스크롤을 0 으로 되감았고,
