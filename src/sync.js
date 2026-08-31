@@ -1,11 +1,11 @@
 import { subscribeHousehold, subscribeNotes, unsubscribe } from "./data/remote.js";
-import { msUntilNextDay, toDateKey } from "./domain/expenses.js";
+import { msUntilNextDay, toDateKey, toMonthKey } from "./domain/expenses.js";
 import { describeApplied } from "./domain/fixed-costs.js";
 import { getProfile } from "./features/auth.js";
 import { applyDueFixedCosts, refreshFixedSheet } from "./features/fixed-sheet.js";
 import { flushPendingNotes, receiveNote } from "./features/notes.js";
-import { paintMembers, render } from "./render.js";
-import { loadAll, reloadHousehold } from "./store.js";
+import { paintMembers, render, resetTotalAnimation } from "./render.js";
+import { getSelectedMonth, loadAll, reloadHousehold, setSelectedMonth } from "./store.js";
 import { showToast } from "./ui/toast.js";
 
 /**
@@ -121,9 +121,31 @@ function watchForNewDay() {
   const now = new Date();
   dayTimer = setTimeout(() => {
     // 폰이 자느라 늦게 울렸을 수도, 시계가 뒤로 갔을 수도 있다. 날이 정말 바뀐 것만 친다.
-    if (toDateKey(new Date()) !== toDateKey(now)) catchUp();
+    if (toDateKey(new Date()) !== toDateKey(now)) {
+      보던달도굴리기(now);
+      catchUp();
+    }
     watchForNewDay();
   }, msUntilNextDay(now));
+}
+
+/**
+ * 달까지 넘어갔으면 보고 있던 달도 함께 굴린다.
+ *
+ * 고정비는 1일이 가장 흔하다 — 월세도 구독도 그렇다. 그런데 자정에 지출만 만들고 보던
+ * 달을 그대로 두면, 9월 1일 월세를 넣어 놓고 화면은 8월을 그린다. 데이터는 왔는데
+ * 사람은 아무것도 못 본다. 캘린더의 오늘 표시도 그려진 격자에 없는 날을 가리킨다.
+ *
+ * 지난 달을 일부러 펴 두고 보던 중이면 건드리지 않는다. 넘기 전 달을 보고 있었을 때만
+ * 따라 굴린다 — 남의 손에서 화면을 뺏지 않는다.
+ */
+function 보던달도굴리기(before) {
+  const 지난달 = toMonthKey(before);
+  const 이번달 = toMonthKey(new Date());
+  if (이번달 === 지난달 || getSelectedMonth() !== 지난달) return;
+  setSelectedMonth(이번달);
+  // 달을 손으로 넘길 때와 같이 총액을 처음부터 센다.
+  resetTotalAnimation();
 }
 
 /** 로그아웃하면 남의 집 소식을 계속 듣고 있을 이유가 없다. */
