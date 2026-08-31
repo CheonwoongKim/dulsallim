@@ -2505,6 +2505,37 @@ test("밀린 고정비를 한 건씩 줄 세우지 않는다", () => {
   assert.match(fn("applyOne"), /catch \{[\s\S]*?return null/);
 });
 
+test("반영하는 사이에 사람이 바뀌면 사본에 붙이지 않는다", () => {
+  /*
+   * 고정비를 넣는 데는 왕복이 여러 번이다. 그사이 로그아웃하면 clearData 가 사본을 비우는데,
+   * 관문이 없으면 끝난 반영이 빈 사본에 앞사람 지출을 도로 붙인다.
+   * 읽는 길(loadAll·reloadHousehold·reloadMembers)에는 다 있고 쓰는 길에만 빠져 있었다.
+   */
+  const apply = fn("applyOccurrences");
+  assert.match(apply, /const session = context;/);
+  assert.match(apply, /if \(context !== session\) return/);
+  // 관문은 사본을 고치기 전에 있어야 한다. 뒤에 있으면 이미 붙은 뒤다.
+  assert.ok(
+    apply.indexOf("context !== session") < apply.indexOf("expenses = ["),
+    "관문이 사본을 고친 뒤에 있다",
+  );
+});
+
+test("반영한 지출을 사본에 두 번 넣지 않는다", () => {
+  /*
+   * 반영이 지출을 만들면 구독이 울리고, 400ms 뒤 reloadHousehold 가 사본을 통째로 갈아
+   * 끼운다. 그 목록에는 방금 만든 것이 이미 있다. 그런데 아직 안 끝난 배치가 뒤이어
+   * 붙이면 같은 지출이 두 번 보인다. 열두 달 소급이면 왕복이 400ms 를 쉽게 넘는다.
+   */
+  const apply = fn("applyOccurrences");
+  assert.doesNotMatch(apply, /expenses = \[\.\.\.expenses, \.\.\.created\]/, "붙이면 겹친다");
+  assert.match(apply, /new Map\(expenses\.map\(/);
+  assert.match(apply, /byId\.set\(expense\.id, expense\)/);
+  // 반영 기록도 같은 까닭으로 겹친다.
+  assert.doesNotMatch(apply, /fixedApplied = \[\.\.\.fixedApplied, \.\.\.appliedKeys\]/);
+  assert.match(apply, /new Set\(\[\.\.\.fixedApplied, \.\.\.appliedKeys\]\)/);
+});
+
 test("전체 화면을 열면 뒤의 가계부는 탭에서 빠진다", () => {
   // 시트는 <dialog> 라 브라우저가 가둬 주지만 화면은 아니라, 커서가 덮인 목록 속으로 사라졌다.
   assert.match(fn("showPage"), /elements\.appShell\.inert = true/);

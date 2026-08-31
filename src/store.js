@@ -309,6 +309,7 @@ const APPLY_BATCH = 6;
  * @returns {Promise<{created: number, failed: number}>} 만들어진 건수와 실패한 건수
  */
 export async function applyOccurrences(occurrences) {
+  const session = context;
   const created = [];
   const appliedKeys = [];
   let failed = 0;
@@ -330,8 +331,26 @@ export async function applyOccurrences(occurrences) {
     }
   }
 
-  expenses = [...expenses, ...created];
-  fixedApplied = [...fixedApplied, ...appliedKeys];
+  /*
+   * 다녀오는 사이에 로그아웃했거나 다른 사람이 로그인했을 수 있다.
+   * reloadHousehold 와 같은 관문이다 — 쓰는 길에서 이것만 빠져 있었다.
+   * 없으면 비운 사본에 앞사람 지출이 도로 붙어, 로그인 화면 뒤로 남의 기록이 남는다.
+   */
+  if (context !== session) return { created: created.length, failed };
+
+  /*
+   * 붙이지 않고 id 로 겹쳐 넣는다.
+   *
+   * 넣는 사이에 구독이 울린다 — 내가 만든 행이 서버에 생겼으니 당연하다. 400ms 뒤
+   * reloadHousehold 가 사본을 통째로 갈아 끼우는데 그 목록에는 방금 만든 것이 이미 들어
+   * 있다. 거기에 또 붙이면 같은 지출이 두 번 보인다. 열두 달을 소급하면 왕복이 400ms 를
+   * 쉽게 넘어 실제로 겹친다. 순서는 그리는 쪽이 날짜로 다시 세우므로 겹쳐 넣어도 된다.
+   */
+  const byId = new Map(expenses.map((expense) => [expense.id, expense]));
+  for (const expense of created) byId.set(expense.id, expense);
+  expenses = [...byId.values()];
+  // 반영 기록도 같은 까닭으로 겹칠 수 있다. 어차피 Set 으로 쓰는 값이라 여기서 접는다.
+  fixedApplied = [...new Set([...fixedApplied, ...appliedKeys])];
   return { created: created.length, failed };
 }
 
