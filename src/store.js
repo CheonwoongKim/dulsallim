@@ -335,8 +335,12 @@ export async function applyOccurrences(occurrences) {
    * 다녀오는 사이에 로그아웃했거나 다른 사람이 로그인했을 수 있다.
    * reloadHousehold 와 같은 관문이다 — 쓰는 길에서 이것만 빠져 있었다.
    * 없으면 비운 사본에 앞사람 지출이 도로 붙어, 로그인 화면 뒤로 남의 기록이 남는다.
+   *
+   * 만든 개수도 0 으로 답한다. 부르는 쪽은 이 값으로 알림을 띄우고 다시 그리는데,
+   * 지금 화면은 다른 사람의 것이다 — 옛 세션에서 넣은 건수를 그대로 넘기면
+   * 남의 화면에 "고정비 N건을 넣었어요" 가 뜬다. 이 세션에 들어간 것은 정말로 없다.
    */
-  if (context !== session) return { created: created.length, failed };
+  if (context !== session) return { created: 0, failed: 0 };
 
   /*
    * 붙이지 않고 id 로 겹쳐 넣는다.

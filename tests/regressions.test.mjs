@@ -2519,6 +2519,11 @@ test("반영하는 사이에 사람이 바뀌면 사본에 붙이지 않는다",
     apply.indexOf("context !== session") < apply.indexOf("expenses = ["),
     "관문이 사본을 고친 뒤에 있다",
   );
+  /*
+   * 만든 개수도 0 으로 답한다. 부르는 쪽은 이 값으로 알림을 띄우고 다시 그린다 —
+   * 옛 세션에서 넣은 건수를 그대로 넘기면 남의 화면에 "고정비 N건을 넣었어요" 가 뜬다.
+   */
+  assert.match(apply, /if \(context !== session\) return \{ created: 0, failed: 0 \}/);
 });
 
 test("반영한 지출을 사본에 두 번 넣지 않는다", () => {
