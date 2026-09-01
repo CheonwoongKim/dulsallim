@@ -58,18 +58,6 @@ async function 서버띄우기() {
   throw new Error("목 서버가 안 뜬다 — dist 를 먼저 구웠나?");
 }
 
-/**
- * 화면 안에서 직접 누른다.
- *
- * page.click 은 대상을 보이게 하려고 기다리는데, 전체 화면(page)은 밀려 들어오는 동안
- * 뷰포트 밖에 있어(x=417) 영영 "안 보임" 이다. CLAUDE.md §7 이 적어 둔 것과 같은 까닭이다.
- */
-const 눌러 = (page, 고르개) => page.evaluate((s) => document.querySelector(s).click(), 고르개);
-
-/** 그 화면이 열릴 때까지. 보이는지가 아니라 열렸는지로 본다. */
-const 열릴때까지 = (page, 고르개) =>
-  page.waitForFunction((s) => !document.querySelector(s).hidden, 고르개, { timeout: 7000 });
-
 /** 로그인해서 목록이 뜬 상태까지. 재는 것은 그다음부터다. */
 async function 열기(browser) {
   const page = await browser.newPage({ viewport: { width: 393, height: 852 } });

@@ -82,6 +82,24 @@ async function 넘치면버리기(cache) {
   await Promise.all(keys.slice(0, keys.length - IMAGE_LIMIT).map((key) => cache.delete(key)));
 }
 
+/**
+ * 그림 곳간에 잘못 담긴 우리 그림을 걷는다.
+ *
+ * 한동안 출처를 안 가리고 담았다. 그 곳간은 판이 올라가도 안 비우므로, 이미 담긴 사람은
+ * 아이콘을 고쳐 올려도 영영 옛것을 본다 — 이제부터 안 담는 것만으로는 안 풀린다.
+ * 판이 바뀔 때마다 한 번 훑어 우리 것만 골라 버린다. 남의 그림은 그대로 둔다.
+ */
+async function 갇힌우리그림풀기() {
+  const cache = await caches.open(IMAGE_CACHE_NAME).catch(() => null);
+  if (!cache) return;
+  const keys = await cache.keys();
+  await Promise.all(
+    keys
+      .filter((request) => new URL(request.url).origin === self.location.origin)
+      .map((request) => cache.delete(request)),
+  );
+}
+
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   return (await cache.match(request)) || networkFirst(request);
@@ -106,6 +124,7 @@ self.addEventListener("activate", (event) => {
       );
 
       await Promise.all(staleCaches.map((key) => caches.delete(key)));
+      await 갇힌우리그림풀기();
       await self.clients.claim();
 
       // 기존 설치본에는 controllerchange 처리 코드가 없다. 첫 전환에 한해 새 문서를 직접 연다.
