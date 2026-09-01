@@ -183,10 +183,29 @@ self.addEventListener("push", (event) => {
   );
 });
 
+/**
+ * 알림이 가리키는 자리. 우리 집 안이어야 한다.
+ *
+ * new URL(값, 우리주소) 는 값이 절대 주소면 그것을 그대로 쓴다 — 알림에 실린 주소가
+ * https://남의곳/… 이면 눌렀을 때 거기로 나간다. 알림은 우리 이름과 아이콘을 달고 뜨므로
+ * 그 창은 우리 화면처럼 읽힌다. 우리가 실제로 보내는 값은 "/" 뿐이라 잃을 것도 없다.
+ *
+ * 보내는 쪽에도 문을 달았지만(functions/send-push/guard.ts), 문이 하나뿐이면
+ * 그것이 열리는 날 이 자리가 그대로 뚫린다.
+ */
+function 갈곳정하기(값) {
+  try {
+    const 주소 = new URL(값 || "/", self.location.origin);
+    return 주소.origin === self.location.origin ? 주소 : new URL("/", self.location.origin);
+  } catch {
+    return new URL("/", self.location.origin);
+  }
+}
+
 /** 알림을 누르면 이미 열려 있는 창을 앞으로 가져온다. 매번 새 창을 띄우면 여러 장이 쌓인다. */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const 갈곳 = new URL(event.notification.data?.url || "/", self.location.origin);
+  const 갈곳 = 갈곳정하기(event.notification.data?.url);
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((창들) => {
       for (const 창 of 창들) {
