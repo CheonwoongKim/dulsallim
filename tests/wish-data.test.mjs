@@ -247,10 +247,14 @@ test("schema.sql 의 위시 함수 몸통은 마지막 마이그레이션과 글
    *
    * 목 서버에는 제약도 다른 표도 없어 브라우저 시험이 다 통과했다. 그래서 여기서 글자로 센다.
    */
-  const 짝 = Object.fromEntries(
-    ["wish_snapshot", "create_wish", "agree_wish", "achieve_wish", "update_wish", "set_wish_goal"]
-      .map((이름) => [이름, "migrations/20260807030000_wish_goal.sql"]),
-  );
+  const 짝 = {
+    ...Object.fromEntries(
+      ["wish_snapshot", "create_wish", "agree_wish", "achieve_wish", "update_wish", "set_wish_goal"]
+        .map((이름) => [이름, "migrations/20260807030000_wish_goal.sql"]),
+    ),
+    // 초기화를 security definer 로 바꾼 판. 여기도 몸통을 손으로 옮겨 적으면 안 된다.
+    reset_household: "migrations/20260901000000_reset_household_definer.sql",
+  };
   const 몸통 = (글, 이름) => {
     const m = new RegExp(`create or replace function ${이름}\\([\\s\\S]*?\\nas \\$\\$([\\s\\S]*?)\\n\\$\\$;`).exec(글);
     return m ? m[1].replace(/--[^\n]*/g, "").replace(/\s+/g, " ").trim() : null;

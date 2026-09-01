@@ -214,13 +214,25 @@ test("초기화는 내 가구만 지운다", async () => {
     await db.query(
       `insert into expenses (household_id, paid_by, spent_on, category, item, amount, created_by)
        values ($1, $2, '2026-08-01', 'food', '커피', 4500, $2)`, [집, 사람]);
+    await db.query(
+      `insert into fixed_costs (household_id, paid_by, category, item, amount, day_of_month, start_month)
+       values ($1, $2, 'housing', '월세', 500000, 1, '2026-01-01')`, [집, 사람]);
+    await db.query(`insert into wish_items (household_id, name, created_by) values ($1, '의자', $2)`, [집, 사람]);
   }
   await db.로서(가구.우리);
   await db.query("select reset_household()");
 
-  assert.equal((await db.query("select count(*)::int c from expenses")).rows[0].c, 0, "내 것이 남았다");
+  /*
+   * 세 표를 다 센다. 이 함수는 security definer 라 RLS 를 안 거치므로, 지우는 자리마다
+   * where 가 제 몫을 하는지 각각 봐야 한다 — 지출만 세던 때는 고정비의 where 를 지워도
+   * 검사가 통과했다.
+   */
   await db.주인으로();
-  assert.equal((await db.query("select count(*)::int c from expenses")).rows[0].c, 1, "남의 집 것까지 지웠다");
+  const 세기 = async (표, 집) => (await db.query(`select count(*)::int c from ${표} where household_id = $1`, [집])).rows[0].c;
+  for (const 표 of ["expenses", "fixed_costs", "wish_items"]) {
+    assert.equal(await 세기(표, 가구.집), 0, `내 ${표} 가 남았다`);
+    assert.equal(await 세기(표, 가구.남의집), 1, `남의 집 ${표} 까지 지웠다`);
+  }
 });
 
 test("잔소리는 구간을 넘긴 달에 한 번만 울린다", async () => {
@@ -234,8 +246,14 @@ test("잔소리는 구간을 넘긴 달에 한 번만 울린다", async () => {
   await db.query(`insert into nags (household_id, author_id, target_id, percent, body)
     values ($1, $2, $3, 80, '좀 쓰네')`, [가구.집, 가구.우리, 가구.너와]);
 
-  // 이번 달 지출에만 울린다 — 9월에 7월 기록을 넣었다고 울리면 이상하다. 그래서 오늘로 적는다.
-  const 오늘 = new Date().toISOString().slice(0, 10);
+  /*
+   * 이번 달 지출에만 울린다 — 9월에 7월 기록을 넣었다고 울리면 이상하다. 그래서 오늘로 적는다.
+   *
+   * 그 "오늘" 은 DB 에서 받는다. fire_nags 는 current_date(세션 시간대)로 이번 달을 보는데
+   * node 의 toISOString() 은 UTC 다 — 둘이 어긋나 매달 1일 00:00~09:00(KST)에 검사가
+   * 깨졌다. TZ=America/Los_Angeles 로 재현된다.
+   */
+  const 오늘 = (await db.query("select current_date::text d")).rows[0].d;
   const 쓰기 = async (amount) => {
     const { rows } = await db.query(
       `insert into expenses (household_id, paid_by, spent_on, category, item, amount, created_by)

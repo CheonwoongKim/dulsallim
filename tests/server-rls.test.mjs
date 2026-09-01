@@ -31,14 +31,12 @@ test("남의 가구 지출은 아예 안 보인다", async () => {
   assert.deepEqual((await db.query("select item from expenses")).rows.map((r) => r.item), ["남커피"]);
 });
 
-let db0;
-
 test("가구로 갈리는 표는 하나도 빠짐없이 갈린다", async () => {
   /*
    * 표마다 정책이 따로 있다. 하나를 빠뜨리거나 나중에 표를 더하면서 정책을 안 붙이면
    * 그 표만 조용히 열린다 — 지출만 재고 넘어가면 못 본다.
    */
-  db0 = await 판세우기();
+  const db0 = await 판세우기();
   const { rows: 우리고정 } = await db0.query(
     `insert into fixed_costs (household_id, paid_by, category, item, amount, day_of_month, start_month)
      values ($1, $2, 'housing', '우리월세', 500000, 1, '2026-01-01') returning id`, [가구.집, 가구.우리]);
@@ -71,13 +69,28 @@ test("가구로 갈리는 표는 하나도 빠짐없이 갈린다", async () => 
      values ($1, $2, 'housing', '몰래', 1, 1, '2026-01-01')`, [가구.남의집, 가구.남]));
 });
 
-test("로그인하지 않으면 아무것도 안 보인다", async () => {
+test("로그인했지만 가구가 없으면 아무것도 안 보인다", async () => {
   const db = await 판세우기();
   await 지출넣기(db, 가구.집, 가구.우리);
-  // anon key 만 들고 온 사람이다. 가구를 알 길이 없으니 한 줄도 안 나가야 한다.
+  // 가입은 했는데 아직 가구에 안 엮인 사람이다. 정책이 current_household_id() 로 막는다.
   await db.로서(null);
   for (const 표 of ["expenses", "profiles", "households", "fixed_costs", "wish_items", "nags"]) {
     assert.equal((await db.query(`select count(*)::int c from ${표}`)).rows[0].c, 0, `${표} 가 열려 있다`);
+  }
+});
+
+test("로그인조차 안 한 사람에게는 문이 아예 안 열린다", async () => {
+  /*
+   * anon key 는 프론트엔드에 공개된다. 그것을 아는 사람이 곧장 표를 물어보는 자리다.
+   * 여기는 RLS 가 아니라 권한이 막는다 — 정책 실수가 있어도 비로그인 접근은 막혀야 한다.
+   * 역할이 다르므로 authenticated 로 재는 것으로는 이 문을 못 본다.
+   */
+  const db = await 판세우기();
+  await 지출넣기(db, 가구.집, 가구.우리);
+  await db.로서(null, { 역할: "anon" });
+  for (const 표 of ["expenses", "profiles", "households", "fixed_costs", "fixed_cost_applications",
+                    "expense_notes", "nags", "nag_fires", "wish_items", "wish_agreements", "push_subscriptions"]) {
+    assert.match(await db.막히나(`select count(*) from ${표}`) ?? "", /permission denied/i, `${표} 가 anon 에게 열려 있다`);
   }
 });
 
@@ -129,12 +142,26 @@ test("내 프로필만 고칠 수 있다", async () => {
 test("프로필에서 손댈 수 있는 열이 정해져 있다", async () => {
   /*
    * 이름·색·목표·잔소리 켜기만 열려 있다. 가구를 바꿀 수 있으면 남의 집으로 걸어 들어간다.
+   *
+   * 무엇이 막느냐는 안 묻는다 — 막힌다는 사실만 본다. 지금은 열 권한과 RLS 가 겹쳐 있고,
+   * 어느 한쪽이 남아 있는 한 걸어 들어갈 수 없다. 기제를 못 박으면 겹을 하나 걷는 손질마다
+   * 검사가 헛되이 운다.
    */
   const db = await 판세우기();
   await db.로서(가구.우리);
-  const 막힘 = await db.막히나("update profiles set household_id = $1 where id = $2", [가구.남의집, 가구.우리]);
-  assert.ok(막힘, "가구를 스스로 바꿀 수 있다");
-  assert.match(막힘, /permission denied/i);
+  assert.ok(await db.막히나("update profiles set household_id = $1 where id = $2", [가구.남의집, 가구.우리]),
+    "가구를 스스로 바꿀 수 있다");
+  // 열어 둔 것은 그대로 열려 있어야 한다 — 마이페이지가 이 넷을 저장한다.
+  for (const [열, 값] of [["display_name", "'새이름'"], ["avatar_color", "'#12abef'"], ["monthly_goal", "700000"], ["nag_enabled", "false"]]) {
+    assert.equal(await db.막히나(`update profiles set ${열} = ${값} where id = $1`, [가구.우리]), null, `${열} 이 막혔다`);
+  }
+  // 권한 쪽 겹도 실제로 서 있는지 본다. RLS 만 남으면 정책을 손보는 날 문이 하나가 된다.
+  const 권한 = await db.query(`select has_table_privilege('authenticated','profiles','update') 표,
+    has_column_privilege('authenticated','profiles','household_id','update') 가구,
+    has_column_privilege('authenticated','profiles','display_name','update') 이름`);
+  assert.equal(권한.rows[0].표, false, "표 전체 update 가 열려 있다");
+  assert.equal(권한.rows[0].가구, false, "household_id 열이 열려 있다");
+  assert.equal(권한.rows[0].이름, true, "이름을 못 고친다");
 });
 
 test("대화는 남기되 고치거나 지울 수 없다", async () => {

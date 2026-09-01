@@ -132,6 +132,24 @@ create table if not exists nag_fires (
   primary key (target_id, month, percent)
 );
 
+-- ── 알림 받을 곳 ────────────────────────────────────────────────
+--
+-- 한 사람이 폰을 여러 대 쓸 수 있으므로 사람당 여러 줄이 될 수 있다.
+-- endpoint 가 그 기기의 주소이자 열쇠다 — 다시 설치하면 새 값이 오고, 옛 줄은
+-- 보내는 쪽이 410(사라짐)을 받으면 지운다.
+--
+-- 이 표는 한동안 migrations/20260101000008_push.sql 에만 있었다. 새 프로젝트가
+-- schema.sql 만 실행하면 이 표가 없어, 알림 켜기가 조용히 안 됐다.
+create table if not exists push_subscriptions (
+  endpoint   text primary key,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  p256dh     text not null,
+  auth       text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists push_subscriptions_user_idx on push_subscriptions (user_id);
+
 -- ── 위시리스트 ──────────────────────────────────────────────────
 create table if not exists wish_items (
   id              uuid primary key default gen_random_uuid(),
@@ -279,6 +297,14 @@ create policy nags_own on nags
   with check (author_id = auth.uid() and household_id = current_household_id());
 
 drop policy if exists wish_items_read on wish_items;
+-- 자기 구독만 만들고 지운다. 남의 알림 주소는 읽지도 못한다.
+alter table push_subscriptions enable row level security;
+drop policy if exists "own push subscriptions" on push_subscriptions;
+create policy "own push subscriptions" on push_subscriptions
+  for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
 create policy wish_items_read on wish_items
   for select using (household_id = current_household_id());
 
@@ -305,6 +331,11 @@ grant select on households, profiles to authenticated;
 
 -- 프로필 수정 권한은 열 단위로 준다. 테이블 전체에 update 를 주면 본인 행의 household_id 를
 -- 남의 가구로 바꿔치기할 수 있고, 그러면 "같은 가구" 판단 자체가 뚫린다.
+--
+-- 먼저 회수해야 뜻이 산다. Supabase 는 새 표에 anon·authenticated 로 전체 권한을 걸어 두므로
+-- (alter default privileges), 열 단위로 "주기만" 하면 이미 있는 표 전체 update 가 그대로 남는다.
+-- 지금은 RLS 가 한 겹 더 막고 있지만, 정책을 손보는 날 이 자리가 유일한 문이 된다.
+revoke update on profiles from authenticated;
 grant update (display_name, avatar_color, monthly_goal, nag_enabled) on profiles to authenticated;
 
 grant select, insert, update, delete
@@ -326,8 +357,11 @@ grant select on wish_items, wish_agreements to authenticated;
 -- 울린 기록은 아무도 직접 못 만진다. fire_nags 만 넣고, 그래야 한 번만 울린다.
 revoke all on nag_fires from authenticated, anon;
 
+-- 보내는 쪽(Edge Function)은 service_role 로 읽는다.
+grant select, insert, update, delete on push_subscriptions to authenticated;
+
 revoke all on households, profiles, fixed_costs, expenses, fixed_cost_applications,
-  expense_notes, nags, wish_items, wish_agreements from anon;
+  expense_notes, nags, wish_items, wish_agreements, push_subscriptions from anon;
 
 -- ── 서버가 통째로 처리하는 일 ───────────────────────────────────
 -- 함수 하나는 트랜잭션 하나다. 여러 요청으로 나누면 중간에 끊겼을 때

@@ -36,6 +36,16 @@ const 밑자리 = `
 
   -- 실시간 구독이 붙는 자리. schema.sql 이 여기에 표를 얹는다.
   create publication supabase_realtime;
+
+  /*
+   * Supabase 는 프로젝트를 만들 때 이 줄을 걸어 둔다. 새로 만드는 표는 처음부터
+   * anon·authenticated 에게 열려 있고, 잠그는 것은 schema.sql 의 revoke 들이 한다.
+   *
+   * 이 줄이 없으면 하네스의 authenticated 는 처음부터 아무 권한이 없어, revoke 를
+   * 통째로 지워도 여전히 막힌다 — 잠금을 지키려는 검사가 무엇을 지우든 통과한다.
+   * 실제로 그랬다(expense_notes 의 update·delete, nag_fires 의 all).
+   */
+  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 `;
 
 /** 가구 하나와 그 안의 두 사람. 검사마다 새로 세운다. */
@@ -91,11 +101,16 @@ export async function 판세우기({ 사람들 = true } = {}) {
   await db.exec("rollback;").catch(() => {});
   await db.exec("reset role; select set_config('request.jwt.claim.sub', '', false); begin;");
 
-  /** 이 사람으로서 부른다. 역할까지 바꿔야 RLS 가 실제로 걸린다. */
-  db.로서 = async (userId) => {
+  /**
+   * 이 사람으로서 부른다. 역할까지 바꿔야 RLS 가 실제로 걸린다.
+   * @param {string|null} userId 누구로. null 이면 로그인만 한 채 가구가 없는 사람이다.
+   * @param {{역할?: "authenticated"|"anon"}} [곁들임] anon 은 로그인조차 안 한 사람 —
+   *   anon key 만 들고 온 사람이고, 그쪽 문이 따로 잠겨 있다(schema.sql 의 anon revoke).
+   */
+  db.로서 = async (userId, { 역할 = "authenticated" } = {}) => {
     await db.exec("reset role;");
     await db.exec(`select set_config('request.jwt.claim.sub', '${userId ?? ""}', false);`);
-    await db.exec("set role authenticated;");
+    await db.exec(`set role ${역할};`);
   };
 
   /** 서버 몫으로 돌아온다. 검사가 판을 차릴 때 쓴다. */
