@@ -274,7 +274,7 @@ npx vite build    # 배포와 같은 조건
 **화면을 만졌으면 브라우저까지 돌린다.**
 
 ```bash
-npm run check     # 위 둘 + 진짜 브라우저(WebKit·Chromium)
+npm run check     # 위 둘 + 목 서버용 굽기 + 진짜 브라우저(WebKit·Chromium)
 ```
 
 브라우저 검사는 `npm test` 에 안 넣었다. 저쪽은 2초에 끝나 늘 도는 문이고, 브라우저를

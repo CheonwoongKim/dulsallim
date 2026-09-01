@@ -8,6 +8,12 @@
  * npm test 에 안 넣는다. 저쪽은 2초에 끝나 늘 도는 문이고(CLAUDE.md §7), 브라우저를
  * 띄우는 값은 그 문 앞에 둘 값이 아니다. `npm run check` 가 둘을 함께 돈다.
  *
+ * 아직 여기 없는 것: 위시 담기·나도·이룸의 화면 흐름. 목 서버가 그 서버 함수들을 이제
+ * 흉내 내므로 재려면 잴 수 있는데, 설정 → 위시로 들어가는 페이지 전환이 자리를 잡기 전에
+ * 눌러 검사가 들쭉날쭉했다(버튼이 뷰포트 밖 x=417 에 있는 채로 잡힌다). 불안정한 검사를
+ * 두면 붉은 것을 보고도 그냥 지나치게 되므로, 전환이 끝난 것을 제대로 기다리는 방법을
+ * 찾은 뒤에 넣는다.
+ *
  *   npm run test:browser            두 엔진에서
  *   npm run test:browser -- webkit  하나만
  */
@@ -55,6 +61,11 @@ async function 서버띄우기() {
 /** 로그인해서 목록이 뜬 상태까지. 재는 것은 그다음부터다. */
 async function 열기(browser) {
   const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
+  /*
+   * 기다리는 값을 짧게 둔다. 기본 30초로 두면 한 걸음이 어긋났을 때 몇 분을 서 있는다 —
+   * 무엇이 잘못됐는지 보려고 돌리는 것인데 그 사이 아무것도 안 보인다.
+   */
+  page.setDefaultTimeout(7000);
   const 콘솔오류 = [];
   page.on("pageerror", (e) => 콘솔오류.push(e.message));
   await page.goto(주소, { waitUntil: "domcontentloaded" });
@@ -118,20 +129,21 @@ try {
        */
     });
 
-    await 검사("못된 색은 브라우저가 버린다", async () => {
+    await 검사("사람 색이 실제로 그 색으로 칠해진다", async () => {
       /*
-       * 명부로 들어오는 색은 setMembers 가 거른다. 그 잣대가 무너져도 브라우저가
-       * style 속성에서 한 겹 더 버리는지 — 흉내 DOM 은 무엇이든 그대로 문다.
+       * 명부의 색은 style 속성 안에 들어가 아바타를 칠한다. 흉내 DOM 은 무엇을 넣어도
+       * 글자로만 들고 있어 "정말 그 색이 되나" 를 못 본다 — 브라우저에게 물어야 안다.
+       *
+       * 앞서 여기서 <i> 를 새로 만들어 재던 때가 있었는데, 그건 앱 코드를 한 줄도 안 거쳐
+       * 브라우저의 성질만 재는 검사였다. 지금은 앱이 그린 것을 본다.
        */
-      const 남은것 = await page.evaluate(() => {
-        const i = document.createElement("i");
-        i.setAttribute("style", `background:#000" onload="alert(1)`);
-        document.body.append(i);
-        const 값 = getComputedStyle(i).backgroundColor;
-        i.remove();
-        return 값;
+      const 칠 = await page.evaluate(() => {
+        const 자리 = document.querySelector("#me-avatar");
+        return { 계산: getComputedStyle(자리).backgroundColor, 속성: 자리.getAttribute("style") ?? "" };
       });
-      맞나(!/alert/.test(남은것), `style 에 남았다: ${남은것}`);
+      // 목 서버가 우리에게 준 색이다(#20211e = rgb(32, 33, 30)).
+      같나(칠.계산.replace(/\s/g, ""), "rgb(32,33,30)", "아바타가 명부의 색으로 안 칠해졌다");
+      맞나(!/alert|<|javascript:/i.test(칠.속성), `style 에 이상한 것이 들어갔다: ${칠.속성}`);
     });
 
     await 검사("디자인 토큰이 실제로 먹는다", async () => {
