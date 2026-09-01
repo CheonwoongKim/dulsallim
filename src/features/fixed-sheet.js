@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { CATEGORIES, formatMonth, formatMoney, formatShortDate } from "../domain/expenses.js";
+import { CATEGORIES, formatMoney, formatShortDate } from "../domain/expenses.js";
 import { getMemberName } from "../members.js";
 import { isValidAmount, readAmount } from "../domain/money.js";
 import {
@@ -7,6 +7,7 @@ import {
   MIN_DAY,
   collectDueOccurrences,
   describeApplied,
+  describeSchedule,
   firstApplicableMonth,
   isValidDay,
   nextOccurrenceDate,
@@ -121,15 +122,9 @@ export function closeFixedSheet() {
   hideSheet(elements.fixedSheet, showListView);
 }
 
-/** 입력한 날짜로 언제부터 반영되는지 미리 알려준다. */
+/** 입력한 날짜로 언제부터 반영되는지 미리 알려준다. 문구는 describeSchedule 이 짓는다. */
 export function updateFixedHint() {
-  const day = Number(elements.fixedDay.value);
-  if (!isValidDay(day)) {
-    elements.fixedHint.textContent = "";
-    return;
-  }
-  const startMonth = firstApplicableMonth(day);
-  elements.fixedHint.textContent = `${formatMonth(startMonth)} ${day}일부터 매월 자동으로 기록됩니다.`;
+  elements.fixedHint.textContent = describeSchedule(Number(elements.fixedDay.value));
 }
 
 function validateFixedInput({ day, item, amount }) {

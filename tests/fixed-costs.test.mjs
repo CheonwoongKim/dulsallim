@@ -5,6 +5,7 @@ import {
   MAX_BACKFILL_MONTHS,
   appliedKey,
   collectDueOccurrences,
+  describeSchedule,
   firstApplicableMonth,
   isValidDay,
   nextOccurrenceDate,
@@ -116,4 +117,73 @@ test("nextOccurrenceDate는 앞으로 들어올 날짜를 알려준다", () => {
     "2026-10-25",
     "이미 반영한 달은 건너뛴다",
   );
+});
+
+test("소급은 이번 달을 포함해 열세 달까지다", () => {
+  /*
+   * 상수 이름은 12 인데 실제 창은 13 이다 — 이번 달도 함께 세기 때문이다.
+   * 이름만 보고 12 로 읽으면 경계에서 한 달이 어긋난다. 실제로 리뷰에서 그렇게 읽혔다.
+   */
+  const 오래된것 = { id: "old", day: 1, startMonth: "2020-01" };
+  const due = collectDueOccurrences([오래된것], [], on(2026, 8, 15));
+
+  assert.equal(due.length, MAX_BACKFILL_MONTHS + 1, "이번 달까지 세어 열세 달");
+  assert.equal(due[0].date, "2025-08-01", "열두 달 앞에서 시작");
+  assert.equal(due.at(-1).date, "2026-08-01", "이번 달까지");
+});
+
+test("그보다 오래 안 열었으면 그 앞은 채우지 않는다", () => {
+  /*
+   * 일부러 그렇게 둔다. 두 해 만에 열었다고 스물넉 달치 월세가 한꺼번에 쌓이면
+   * 그게 더 나쁘다. 채우지 않은 달은 반영 기록이 없으니 나중에도 저절로 생기지 않는다.
+   */
+  const due = collectDueOccurrences([{ id: "old", day: 1, startMonth: "2020-01" }], [], on(2026, 8, 15));
+  assert.ok(due.every((occurrence) => occurrence.date >= "2025-08-01"), "창보다 앞선 달이 섞였다");
+});
+
+/* ── 등록하기 전 안내 ──────────────────────────────────────── */
+
+test("없는 날짜를 안내하지 않는다", () => {
+  /*
+   * 적은 날을 그대로 되뇌던 때는 "2026년 2월 31일부터" 였다. 그런 날은 없다.
+   * 실제로는 말일로 당겨져 2월 28일에 들어온다.
+   */
+  assert.equal(
+    describeSchedule(31, on(2026, 2, 14)),
+    "2026년 2월 28일부터 매월 자동으로 기록됩니다. 31일이 없는 달은 말일에 기록됩니다.",
+  );
+  // 30일도 2월에는 없다.
+  assert.equal(
+    describeSchedule(30, on(2026, 2, 14)),
+    "2026년 2월 28일부터 매월 자동으로 기록됩니다. 30일이 없는 달은 말일에 기록됩니다.",
+  );
+  // 31일이 없는 달은 2월만이 아니다.
+  assert.equal(
+    describeSchedule(31, on(2026, 4, 9)),
+    "2026년 4월 30일부터 매월 자동으로 기록됩니다. 31일이 없는 달은 말일에 기록됩니다.",
+  );
+});
+
+test("당겨질 일이 없으면 군말을 붙이지 않는다", () => {
+  // 28일까지는 어느 달에도 그대로 있다. 말일 이야기를 꺼낼 까닭이 없다.
+  assert.equal(describeSchedule(5, on(2026, 2, 14)), "2026년 3월 5일부터 매월 자동으로 기록됩니다.");
+  assert.equal(describeSchedule(28, on(2026, 2, 14)), "2026년 2월 28일부터 매월 자동으로 기록됩니다.");
+});
+
+test("윤년 2월에는 29일까지 있다", () => {
+  // 2028년은 윤년이다. 28일로 당기면 하루를 잃는다.
+  assert.equal(
+    describeSchedule(31, on(2028, 2, 10)),
+    "2028년 2월 29일부터 매월 자동으로 기록됩니다. 31일이 없는 달은 말일에 기록됩니다.",
+  );
+});
+
+test("반영일이 지났으면 다음 달부터라고 안내한다", () => {
+  // 등록하자마자 과거 지출이 생기지 않는다. 안내도 그 달을 가리켜야 한다.
+  assert.equal(describeSchedule(5, on(2026, 8, 20)), "2026년 9월 5일부터 매월 자동으로 기록됩니다.");
+});
+
+test("날이 아니면 아무 말도 하지 않는다", () => {
+  // 아직 안 적었거나 범위 밖이면 빈칸이다. 입력하는 사이에 붉은 글씨가 깜빡이지 않는다.
+  for (const 값 of [0, 32, Number.NaN, -1, 1.5]) assert.equal(describeSchedule(값, on(2026, 2, 14)), "");
 });
