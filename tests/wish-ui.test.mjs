@@ -118,24 +118,14 @@ test("링크로 쓸 수 있는 주소만 통과한다", async () => {
 test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", async () => {
   const 그리기 = await readFile(new URL("../src/ui/wish-list.js", import.meta.url), "utf8");
 
-  // 서버에서 온 글자가 화면에 들어가는 자리는 하나도 빠짐없이 escapeHtml 을 지난다.
-  for (const 값 of [
-    "wish.id",
-    "wish.note",
-    "href",
-    "expense.item",
-    "formatShortDate(expense.date)",
-    "getMemberName(expense.member)",
-  ]) {
-    assert.ok(그리기.includes(`escapeHtml(${값})`), `${값} 을 그대로 화면에 넣고 있다`);
-  }
-
   /*
-   * 위시 이름은 innerHTML 을 아예 안 지난다 — 칸의 읽어 주는 이름과 시트 제목 둘 다
-   * setAttribute·textContent 로 넣는다. 글자로 들어가지 않으니 태그가 될 일이 없다.
+   * 값 하나하나가 정말 걸러지는지는 tests/wish-list.test.mjs 가 실제로 그려서 본다.
+   * 여기 남은 것은 그것으로 못 보는 것 둘이다.
+   *
+   * 하나는 아래의 그물 — 내가 미처 생각 못 한 새 필드가 나중에 그대로 끼워 넣어지는 것을
+   * 막는다. 출력을 보는 검사는 내가 떠올린 필드만 덮는다.
+   * 다른 하나는 시트 제목이다. features/wish.js 는 DOM 없이 못 돌려 소스로 볼 수밖에 없다.
    */
-  assert.match(그리기, /\.setAttribute\(\s*"aria-label",\s*`\$\{wish\.name\}/);
-  assert.doesNotMatch(그리기, /\$\{escapeHtml\(wish\.name\)\}/);
   assert.match(app, /elements\.wishDetailName\.textContent = wish\.name;/);
 
   /*
