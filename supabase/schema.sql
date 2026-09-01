@@ -145,8 +145,9 @@ create table if not exists wish_items (
   image_url       text check (image_url is null or image_url ~ '^https?://'),
   created_by      uuid not null references profiles(id),
   created_at      timestamptz not null default now(),
-  state           text not null default 'proposed'
-    check (state in ('proposed', 'pursuing', 'achieved')),
+  -- 쓸 수 있는 값은 아래 wish_items_state_check 가 함께 정한다. 여기에 또 적으면
+  -- 그 제약도 wish_items_state_check 라는 같은 이름을 받아 표가 아예 안 만들어진다.
+  state           text not null default 'proposed',
   pursuing_at     timestamptz,
   -- 지출을 지워도 이룬 사실과 날짜는 남긴다. 연결만 끊어지도록 set null.
   expense_id      uuid references expenses(id) on delete set null,
@@ -651,9 +652,14 @@ $$;
 
 -- 가구의 기록을 지운다. 고정비를 먼저 지워야 반영 기록이 함께 사라지고,
 -- 그래야 초기화 직후에 지난 달 고정비가 되살아나지 않는다.
+-- security definer 로 두는 이유: authenticated 에게는 wish_items 에 select 밖에 없다.
+-- 그대로 두면 초기화가 "permission denied for table wish_items" 로 막힌다.
+-- RLS 를 우회하게 되므로, 아래 current_household_id() 로 내 가구만 지운다. 지우면 안 된다.
 create or replace function reset_household()
 returns void
 language plpgsql
+security definer
+set search_path = public
 as $$
 declare
   v_household uuid;

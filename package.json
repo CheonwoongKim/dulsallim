@@ -10,6 +10,7 @@
     "test": "node --test"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "playwright": "^1.62.1",
     "postcss": "^8.5.25",
     "vite": "^7.0.0"
