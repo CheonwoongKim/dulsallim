@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { escapeHtml, safeHref } from "../src/ui/escape.js";
+import { escapeHtml } from "../src/ui/escape.js";
 
 /*
- * 이 둘은 innerHTML 과 href 앞을 지키는 자리다. 그런데 여태 "소스에 escapeHtml( 이라고
+ * escapeHtml 은 innerHTML 앞을 지키는 자리다. 그런데 여태 "소스에 escapeHtml( 이라고
  * 적혀 있나" 만 보고 있었다 — 부르는 자리는 봤지만 정말 막히는지는 아무도 안 봤다.
  * 여기서는 실제로 돌려서 막히는 것을 확인한다.
+ *
+ * 같은 파일의 safeHref 는 tests/wish-ui.test.mjs 가 이미 돌려 보고 있어 여기서 또 하지 않는다.
  */
 
 test("innerHTML 을 깨는 글자를 전부 바꾼다", () => {
@@ -15,6 +17,25 @@ test("innerHTML 을 깨는 글자를 전부 바꾼다", () => {
   assert.equal(escapeHtml("&"), "&amp;");
   assert.equal(escapeHtml('"'), "&quot;");
   assert.equal(escapeHtml("'"), "&#039;");
+});
+
+test("여러 번 나와도 하나도 안 남긴다", () => {
+  /*
+   * 여기가 이 파일에서 제일 중요한 줄이다.
+   *
+   * replaceAll 을 replace 로 한 글자만 바꾸면 첫 번째만 바뀌고 나머지는 그대로 나간다.
+   * 그런데 공격 문자열에 그 글자가 하나씩만 있으면 그 잘못이 통째로 숨는다 —
+   * 실제로 그렇게 짰다가 리뷰에서 잡혔다. 그래서 일부러 여러 번 넣는다.
+   */
+  assert.equal(escapeHtml("<b>a</b><i>"), "&lt;b&gt;a&lt;/b&gt;&lt;i&gt;");
+  assert.equal(escapeHtml("a&b&c&d"), "a&amp;b&amp;c&amp;d");
+  assert.equal(escapeHtml(`"a" "b"`), "&quot;a&quot; &quot;b&quot;");
+  assert.equal(escapeHtml("'a' 'b'"), "&#039;a&#039; &#039;b&#039;");
+  // 다섯 글자가 뒤섞여 여러 번 나와도 위험한 글자는 하나도 안 남는다.
+  // (&는 남는다 — &lt; 의 그 앰퍼샌드다. 그래서 글자표로 따로 견준다.)
+  const 뒤섞인것 = escapeHtml(`<a href="x">&'</a><b>`);
+  assert.doesNotMatch(뒤섞인것, /[<>"']/);
+  assert.equal(뒤섞인것, "&lt;a href=&quot;x&quot;&gt;&amp;&#039;&lt;/a&gt;&lt;b&gt;");
 });
 
 test("앰퍼샌드를 먼저 바꾼다", () => {
@@ -28,11 +49,14 @@ test("앰퍼샌드를 먼저 바꾼다", () => {
 });
 
 test("태그를 열려는 시도가 글자로 남는다", () => {
-  const 공격 = `<img src=x onerror="alert(1)">`;
-  const 결과 = escapeHtml(공격);
+  // 태그가 둘이다. 하나만 막으면 뒤엣것이 살아서 나간다.
+  const 결과 = escapeHtml(`<img src=x onerror="alert(1)"><script>alert(2)</script>`);
   assert.doesNotMatch(결과, /</, "여는 꺾쇠가 남았다");
   assert.doesNotMatch(결과, />/, "닫는 꺾쇠가 남았다");
-  assert.equal(결과, "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+  assert.equal(
+    결과,
+    "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;&lt;script&gt;alert(2)&lt;/script&gt;",
+  );
 });
 
 test("속성 안에서 따옴표를 닫고 나오지 못한다", () => {
@@ -51,33 +75,4 @@ test("글자가 아닌 것을 받아도 터지지 않는다", () => {
   assert.equal(escapeHtml(1234), "1234");
   // toString 이 꺾쇠를 내놓아도 막는다.
   assert.equal(escapeHtml({ toString: () => "<b>" }), "&lt;b&gt;");
-});
-
-test("사람이 여는 주소만 링크가 된다", () => {
-  assert.equal(safeHref("https://example.com/a?b=1"), "https://example.com/a?b=1");
-  assert.equal(safeHref("http://example.com"), "http://example.com/");
-});
-
-test("누르면 코드가 도는 주소를 막는다", () => {
-  /*
-   * escapeHtml 로는 못 막는다 — javascript:alert(1) 에는 바꿀 글자가 하나도 없어
-   * 그대로 href 에 들어가고, 누르는 순간 그 코드가 우리 페이지 안에서 돈다.
-   */
-  assert.equal(safeHref("javascript:alert(1)"), null);
-  assert.equal(safeHref("JavaScript:alert(1)"), null, "대문자로 섞어도 막아야 한다");
-  assert.equal(safeHref("  javascript:alert(1)"), null, "앞의 공백으로 넘어가면 안 된다");
-  assert.equal(safeHref("java\tscript:alert(1)"), null);
-  assert.equal(safeHref("data:text/html,<script>alert(1)</script>"), null);
-  assert.equal(safeHref("vbscript:msgbox(1)"), null);
-  assert.equal(safeHref("file:///etc/passwd"), null);
-});
-
-test("주소가 아니면 링크로 만들지 않는다", () => {
-  // 상대 주소는 기준이 없어 URL 이 던진다. 우리는 절대 주소만 링크로 받는다.
-  assert.equal(safeHref("/내폴더/파일"), null);
-  assert.equal(safeHref("example.com"), null, "규약이 없으면 주소가 아니다");
-  assert.equal(safeHref(""), null);
-  assert.equal(safeHref(null), null);
-  assert.equal(safeHref(undefined), null);
-  assert.equal(safeHref(123), null);
 });
