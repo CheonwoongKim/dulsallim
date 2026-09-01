@@ -141,9 +141,12 @@ test("그림 주소도 같은 잣대를 지난다", () => {
 test("그림이 안 오면 걷어내고 첫 글자를 드러낸다", () => {
   const 칸 = createWishTile(위시({ imageUrl: "https://example.com/a.png" }));
   const 그림 = 칸.querySelector(".wish-shot img");
-  assert.equal(그림.지워졌나, false);
-  그림.깨뜨리기();
-  assert.equal(그림.지워졌나, true, "깨진 그림을 그대로 두면 첫 글자보다 못한 자리가 된다");
+  assert.ok(그림, "그림을 찾지 못했다");
+  // 그림이 안 왔다고 알리면 스스로 빠져야 한다.
+  그림.parentElement = 칸;
+  칸.children.push(그림);
+  그림.울리기("error");
+  assert.equal(칸.children.includes(그림), false, "깨진 그림을 그대로 두면 첫 글자보다 못한 자리가 된다");
 });
 
 /* ── 상태 표시 ────────────────────────────────────────────── */
