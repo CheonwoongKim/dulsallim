@@ -191,41 +191,85 @@ test("날이 아니면 아무 말도 하지 않는다", () => {
 
 /* ── 창 밖으로 밀려난 달 ───────────────────────────────────── */
 
+/**
+ * 앱을 한 번 여는 시늉. 그날 채울 것을 모으고, 잘린 것을 세고, 채운 것을 기록에 남긴다.
+ * 실제 흐름(applyDueFixedCosts)과 같은 순서다.
+ */
+function 앱열기(templates, applied, today) {
+  const due = collectDueOccurrences(templates, applied, today);
+  const skipped = countSkippedMonths(templates, applied, due, today);
+  return { created: due.length, skipped, applied: [...applied, ...due.map((o) => o.key)] };
+}
+
 test("창보다 앞이라 못 채운 건수를 센다", () => {
   /*
    * 채우지 않은 달은 반영 기록이 안 남는데 창은 늘 이번 달을 따라 앞으로 밀린다.
-   * 그래서 한 번 밀려난 달은 다음에 열어도 영영 돌아오지 않는다. 조용히 비면
-   * 지난 달 합계가 왜 적은지 알 길이 없다.
+   * 그래서 한 번 밀려난 달은 다음에 열어도 영영 돌아오지 않는다.
    */
   const 오래된것 = { id: "old", day: 1, startMonth: "2025-01" };
   // 2026-08 기준 창은 2025-08 부터다. 2025-01 ~ 2025-07 일곱 달이 밀려났다.
-  assert.equal(countSkippedMonths([오래된것], [], on(2026, 8, 15)), 7);
+  assert.equal(앱열기([오래된것], [], on(2026, 8, 15)).skipped, 7);
 });
 
 test("창 안에서 시작한 고정비는 밀려난 것이 없다", () => {
   const 최근것 = { id: "new", day: 1, startMonth: "2026-03" };
-  assert.equal(countSkippedMonths([최근것], [], on(2026, 8, 15)), 0);
+  assert.equal(앱열기([최근것], [], on(2026, 8, 15)).skipped, 0);
+  // 창의 맨 앞 달에 딱 걸친 것도 창 안이다.
+  assert.equal(앱열기([{ id: "edge", day: 1, startMonth: "2025-08" }], [], on(2026, 8, 15)).skipped, 0);
 });
 
 test("이미 반영한 달은 밀려난 것으로 세지 않는다", () => {
   // 예전에 앱을 열어 채워 둔 달이다. 비어 있지 않으니 알릴 것도 아니다.
   const 오래된것 = { id: "old", day: 1, startMonth: "2025-01" };
   const applied = ["old:2025-01", "old:2025-02", "old:2025-03"];
-  assert.equal(countSkippedMonths([오래된것], applied, on(2026, 8, 15)), 4);
+  assert.equal(앱열기([오래된것], applied, on(2026, 8, 15)).skipped, 4);
 });
 
-test("잘린 것이 있으면 채운 소식과 함께 알린다", () => {
+test("잘림은 문 그 한 번만 알린다", () => {
+  /*
+   * 여기가 이 셈의 핵심이다.
+   *
+   * "잘린 것이 있나" 로 물으면 그 값은 한 번 0 이 아니면 영영 0 이 안 된다. 그리고 매달
+   * 여는 사람은 늘 무언가를 채우므로, 한 번 오래 안 연 뒤로는 같은 숫자를 죽을 때까지
+   * 매달 듣는다. 사용자가 할 수 있는 일이 없는 사실을 되뇌는 것은 조용히 비는 것만큼 나쁘다.
+   */
+  const t = { id: "t", day: 1, startMonth: "2025-01" };
+  let applied = [];
+  const 열기 = (y, m) => {
+    const 결과 = 앱열기([t], applied, on(y, m, 15));
+    applied = 결과.applied;
+    return 결과;
+  };
+
+  // 오랜만에 열었다. 창(2025-08~)보다 앞의 일곱 달이 방금 영영 잘렸다 — 이때 알린다.
+  assert.equal(열기(2026, 8).skipped, 7);
+
+  // 그 뒤로는 매달 채우면서도 조용하다.
+  for (const month of [9, 10, 11, 12]) {
+    const 결과 = 열기(2026, month);
+    assert.ok(결과.created > 0, `2026-${month} 에는 채울 것이 있어야 이 검사가 뜻이 있다`);
+    assert.equal(결과.skipped, 0, `2026-${month} 에 또 알렸다`);
+  }
+  assert.equal(열기(2027, 6).skipped, 0, "반 년 뒤에도 조용해야 한다");
+
+  // 다시 오래 안 열어 새로 잘리면 그때는 알린다. 새 사실이니 말할 값이 있다.
+  assert.ok(열기(2028, 10).skipped > 0, "새로 잘린 것은 알려야 한다");
+});
+
+test("잘린 것이 있으면 채운 소식과 함께, 할 일까지 알린다", () => {
+  /*
+   * 잘린 것은 다시 채울 길이 없다. 개수만 말하고 끝내면 듣는 사람이 할 일이 없다.
+   * "이번 달" 이라고도 하지 않는다 — 잘림이 무는 실행은 정의상 열세 달치를 한꺼번에
+   * 채우는 실행이라, 그것을 이번 달 것이라 하면 거짓이다.
+   */
   assert.equal(
     describeApplied({ created: 13, failed: 0, skipped: 7 }),
-    "이번 달 고정비 13건을 넣었어요. 최근 13달보다 오래된 7건은 넣지 않았어요",
+    "고정비 13건을 넣었어요. 13개월보다 오래된 7건은 빠졌어요. 필요하면 직접 적어 주세요",
   );
-  // 채운 것이 없으면 말하지 않는다. 열 때마다 같은 말을 들으면 잔소리가 된다.
-  assert.equal(describeApplied({ created: 0, failed: 0, skipped: 7 }), null);
-  // 실패만 있을 때도 마찬가지다. 지금 못 넣은 것과 예전에 잘린 것은 다른 이야기다.
-  assert.equal(
-    describeApplied({ created: 0, failed: 2, skipped: 7 }),
-    "고정비 2건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요",
-  );
+  assert.doesNotMatch(describeApplied({ created: 13, failed: 0, skipped: 7 }), /이번 달/);
+  // 잘린 것이 없으면 군말이 없다.
+  assert.equal(describeApplied({ created: 3, failed: 0, skipped: 0 }), "고정비 3건을 넣었어요");
   // skipped 를 안 넘겨도 예전처럼 돈다.
-  assert.equal(describeApplied({ created: 3, failed: 0 }), "이번 달 고정비 3건을 넣었어요");
+  assert.equal(describeApplied({ created: 3, failed: 0 }), "고정비 3건을 넣었어요");
+  assert.equal(describeApplied({ created: 0, failed: 0, skipped: 7 }), null);
 });

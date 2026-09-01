@@ -33,18 +33,15 @@ let editingFixedId = null;
 /**
  * 반영일이 지난 고정비를 실제 지출로 만든다.
  * 만든 뒤에는 평범한 지출이라 수정·삭제가 자유롭고, 반영 기록 덕분에 지워도 되살아나지 않는다.
- * @returns {Promise<{created: number, failed: number}>}
+ * @returns {Promise<{created: number, failed: number, skipped: number}>}
+ *   skipped 는 창 밖으로 밀려나 영영 채우지 못한 건수. 이번에 잘림이 문 실행에서만 0 이 아니다.
  */
 export async function applyDueFixedCosts() {
   const templates = getFixedTemplates();
   const applied = getFixedApplied();
   const due = collectDueOccurrences(templates, applied);
   if (!due.length) return { created: 0, failed: 0, skipped: 0 };
-  /*
-   * 창 밖으로 밀려나 채우지 못한 것도 함께 센다. 세는 자리는 반영 전이어야 한다 —
-   * 반영하고 나면 기록이 늘어 무엇이 원래 잘려 있었는지 알 수 없다.
-   */
-  const skipped = countSkippedMonths(templates, applied);
+  const skipped = countSkippedMonths(templates, applied, due);
   return { ...(await applyOccurrences(due)), skipped };
 }
 
