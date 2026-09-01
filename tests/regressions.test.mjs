@@ -1154,7 +1154,12 @@ test("서버가 준 아바타 색을 그대로 화면에 끼워 넣지 않는다
    * 나중에 제약을 손대는 순간 곧바로 열린다. 들어오는 자리에서도 같은 잣대를 댄다.
    */
   const { toDisplayColor, PALETTE } = await import("../src/members.js");
-  for (const 못된값 of ['#000"><img src=x onerror=alert(1)>', "red;background-image:url(//x)", "", null, 12]) {
+  /*
+   * 마지막 값은 6자리 HEX 로 끝난다. 정규식에서 ^ 앵커를 지우면 그 끝만 보고 통과시켜,
+   * 앞에 붙은 것이 style 속성을 빠져나간다. 앞뒤 앵커가 둘 다 필요하다는 것을 여기서 잡는다.
+   */
+  for (const 못된값 of ['#000"><img src=x onerror=alert(1)>', "red;background-image:url(//x)", "", null, 12,
+    "red;}</style><script>alert(1)</script>#ffffff"]) {
     assert.equal(toDisplayColor(못된값), PALETTE[0].value, `${못된값} 을 그대로 통과시켰다`);
   }
   assert.equal(toDisplayColor("#12AbEf"), "#12abef");
