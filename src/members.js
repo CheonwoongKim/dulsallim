@@ -7,9 +7,20 @@
  */
 let members = [];
 
-/** @param {Array<{id: string, name: string, color: string, goal: number|null}>} list 가입 순서대로 */
+/**
+ * 명부를 세운다. 들어오는 색은 여기서 한 번 거른다.
+ *
+ * 이 색은 추이 범례에서 style 속성 안에 이스케이프 없이 들어간다(ui/trend-chart.js).
+ * 문은 둘이다 — 서버에서 오는 길과 폰에 적어 둔 사본에서 오는 길. 문마다 막으면
+ * 새 문이 생길 때마다 다시 터진다. 명부로 들어가는 길은 여기 하나뿐이라 여기서 막는다.
+ *
+ * getMemberColor 는 이미 걸러 내주는데 getMembers 만 날것을 내주고 있었다.
+ * 추이는 getMembers 를 쓴다 — 그래서 그 하나로 샜다.
+ *
+ * @param {Array<{id: string, name: string, color: string, goal: number|null}>} list 가입 순서대로
+ */
 export function setMembers(list) {
-  members = list;
+  members = list.map((member) => ({ ...member, color: toDisplayColor(member?.color) }));
 }
 
 export function getMembers() {
