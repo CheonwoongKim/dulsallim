@@ -1586,7 +1586,7 @@ test("복제는 지출 목록에만 있다", async () => {
   const { readFile } = await import("node:fs/promises");
   const read = (path) => readFile(new URL(`../src/${path}`, import.meta.url), "utf8");
 
-  assert.match(await read("ui/ledger.js"), /data-copy-id/, "지출 행에는 있어야 한다");
+  assert.match(await read("ui/expense-row.js"), /data-copy-id/, "지출 행에는 있어야 한다");
   assert.doesNotMatch(await read("features/fixed-sheet.js"), /data-copy|복제/, "고정비 행에는 없어야 한다");
 });
 

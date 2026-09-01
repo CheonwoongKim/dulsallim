@@ -31,6 +31,7 @@ const SOURCE_FILES = [
   "ui/calendar-grid.js",
   "ui/trend-chart.js",
   "ui/ledger.js",
+  "ui/expense-row.js",
   "ui/scroll-lock.js",
   "ui/category-options.js",
   "ui/header-summary.js",

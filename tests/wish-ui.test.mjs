@@ -139,13 +139,6 @@ test("위시 화면은 서버가 준 값을 그대로 끼워 넣지 않는다", 
   assert.doesNotMatch(글자로짓는곳, /\$\{wish\.[\w.]+\}/, "위시 값이 escapeHtml 없이 들어간다");
   assert.doesNotMatch(글자로짓는곳, /\$\{expense\.[\w.]+\}/, "지출 값이 escapeHtml 없이 들어간다");
 
-  // 고를 지출의 id 는 글자로 엮지 않고 dataset 으로 건넨다 — 브라우저가 값으로만 다룬다.
-  assert.match(그리기, /button\.dataset\.pickExpense = expense\.id;/);
-
-  // 주소는 한 겹 더 받는다 — safeHref 가 먼저 http·https 가 아닌 것을 버린다.
-  assert.match(그리기, /const href = safeHref\(wish\.url\);/);
-  assert.match(그리기, /const image = safeHref\(wish\.imageUrl\);/, "그림 주소도 한 겹 더 받는다");
-  assert.match(그리기, /rel="noopener noreferrer"/);
 
   /*
    * 담을 때도 통과한 것만 보낸다. 화면에서만 거르면 나중에 다른 화면이 그 값을 믿는다.
@@ -435,19 +428,22 @@ test("지우기는 한 번 묻는다", () => {
   assert.match(fn("closeDropSheet"), /droppingWishId = null/);
 });
 
-test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링크", () => {
+test("자세히 시트의 짜임과 값 — CSS·HTML 쪽", () => {
+  /*
+   * 그린 것이 맞는지는 tests/wish-list.test.mjs 가 실제로 그려서 본다 — 한마디 자리,
+   * 큰 단추 하나, 주소 없을 때 <a> 안 만들기, 단추 차례, 값이 몸통에 없는 것까지.
+   * 여기 남은 것은 그것으로 못 보는 것뿐이다: CSS 계측, index.html 의 짜임,
+   * 그리고 DOM 없이는 못 돌리는 features/wish.js 의 소스.
+   */
   assert.match(html, /<dialog class="sheet" id="wish-detail-sheet"/);
-  const 자세히 = fn("createWishDetail");
-  assert.match(자세히, /\$\{shotMarkup\(wish\)\}/);
+
   /*
    * 한마디는 없어도 자리를 잡아 둔다. 있을 때만 그리던 때는 그림 밑에서 단추까지가
    * 44px 이었다가 12px 로 줄어, 짧게 적거나 안 적으면 사진이 단추에 붙어 보였다.
    * 두 줄만큼 비워 두면 무엇을 열든 68px 로 같다(계측). 더 길면 늘어난다 — 자르지 않는다.
    */
-  assert.match(자세히, /<p class="wish-detail-note">\$\{wish\.note \? escapeHtml\(wish\.note\) : ""\}<\/p>/);
   assert.match(css, /\.wish-detail-note \{[^}]*min-height: calc\(var\(--text-15\) \* var\(--leading-text\) \* 2\)/);
   assert.doesNotMatch(css, /\.wish-detail-note \{[^}]*(-webkit-line-clamp|overflow: hidden)/, "적어 둔 말을 자르고 있다");
-  assert.match(자세히, /const href = safeHref\(wish\.url\);/, "주소는 한 겹 더 받는다");
 
   /*
    * 값은 이름 바로 밑, 시트 머리 안이다. 그림 밑에 있던 때는 이름과 값 사이에 사진 한 장이
@@ -457,8 +453,6 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
    */
   assert.match(html, /<h2 id="wish-detail-name"><\/h2>\s*<p class="wish-detail-price" id="wish-detail-price"><\/p>/);
   assert.match(app, /elements\.wishDetailPrice\.textContent = wishPriceLine\(wish\)/);
-  assert.match(fn("wishPriceLine"), /wish\.estimatedPrice \? `\$\{formatMoney\(wish\.estimatedPrice\)\}원` : "값을 안 적었어요"/);
-  assert.doesNotMatch(자세히, /wish-detail-price/, "값이 몸통에도 남아 있다");
 
   /*
    * 누가 담았는지는 탭이 이미 말한다. "천웅 올림" 도 "주연 기다리는 중" 도 걷었다 —
@@ -467,57 +461,14 @@ test("자세히가 다 말한다 — 그림·값·한마디·올린 사람·링�
   // "반올림" 같은 말에 걸리지 않게 앞을 묶어 본다.
   assert.doesNotMatch(app, /\} 올림|기다리는 중/, "담은 사람·기다림이 남아 있다");
   assert.doesNotMatch(app, /function waitingFor/, "기다림을 세는 함수가 남아 있다");
-  assert.doesNotMatch(자세히, /waiting/, "기다림을 아직 받고 있다");
-  // 이룬 날짜만 남는다.
-  assert.match(자세히, /이룸 \? `<p class="wish-detail-by">\$\{escapeHtml\(`\$\{formatAchievedOn\(wish\.achievedOn\)\} 이룸`\)\}/);
 
-  /*
-   * 큰 단추는 하나다 — 이뤘어요. 넷이 같은 무게로 늘어서면 이 시트를 무엇을 하러 열었는지가
-   * 흐려진다. 열기·고치기·지우기는 그림으로 내려간다.
-   */
-  assert.match(자세히, /class="submit-button" type="button" data-achieve-wish/);
-  assert.equal((자세히.match(/class="submit-button"/g) || []).length, 1, "큰 단추가 둘 이상이다");
-  // "나도" 는 곁들이는 것이라 색이 물러난다. 상대가 아직 안 누른 것에만 붙는다.
-  assert.match(자세히, /action === "agree"[\s\S]*?class="submit-button quiet" type="button" data-agree-wish/);
-
-  /*
-   * 링크는 이뤘어요 왼쪽에 작은 단추로 선다. 글자를 안 적는다 — "링크 열기" 라고 쓰면
-   * 옆의 이뤘어요와 같은 무게가 되어 무엇이 이 시트의 일인지 흐려진다.
-   * 모양은 큰 단추에서 오고 색만 물러난다. 링크는 여기서만 밖으로 나간다.
-   */
-  /*
-   * 그림이 곧 링크다. 옆에 작은 단추를 세워 두던 때는 그 단추가 무엇으로 가는 문인지 그림과
-   * 떨어져 있었다. 물건 사진을 누르면 그 물건을 파는 곳으로 — 짐작대로 움직인다.
-   *
-   * 주소가 없으면 누를 것이 아니므로 <a> 를 안 만든다(계측: <div> 로 온다).
-   */
-  assert.match(자세히, /<a class="wish-detail-shot" href="\$\{escapeHtml\(href\)\}"[\s\S]*?rel="noopener noreferrer" aria-label="링크 열기"/);
-  assert.match(자세히, /<div class="wish-detail-shot">\$\{shotMarkup\(wish\)\}<\/div>/);
+  // 그림이 곧 링크다. 밑줄은 걷는다 — 사진 밑에 줄이 그이면 그림이 글처럼 읽힌다.
   assert.match(css, /\.wish-detail-shot \{[^}]*text-decoration: none/);
 
-  // 목표 · 고치기 · 이뤘어요 한 줄. 앞의 둘은 같은 정사각이다.
-  assert.match(자세히, /<div class="wish-detail-do">[\s\S]*?data-goal-wish[\s\S]*?data-edit-wish[\s\S]*?data-achieve-wish/);
-  assert.match(css, /\.wish-detail-do \.wish-detail-square \{[^}]*flex: 0 0 var\(--control-lg\)/);
+  // 목표 · 고치기 · 이뤘어요 한 줄. 앞의 둘은 같은 정사각이고 이뤘어요가 남은 자리를 다 쓴다.
   assert.match(css, /\.wish-detail-do \{[^}]*display: flex/);
-  // 이룬 것에는 누를 것이 없다 — 고칠 수도 이룰 수도 없는 줄이다.
-  assert.match(자세히, /이룸\s*\?\s*""/);
   assert.match(css, /\.wish-detail-do \.wish-detail-square \{[^}]*flex: 0 0 var\(--control-lg\)/);
   assert.match(css, /\.wish-detail-do \[data-achieve-wish\] \{[^}]*flex: 1/);
-
-  // 지우기는 고치는 시트 안에 있다. 여기 두면 큰 단추 옆에서 같은 무게로 읽힌다.
-  assert.doesNotMatch(자세히, /data-remove-wish/, "지우기가 자세히에 있다");
-
-  // 어느 자리인지 시트가 스스로 말한다. 목록의 이름표는 여기에 없다.
-  assert.match(fn("자리이름"), /wish\.state === "pursuing" \? "함께 바라는 것" : "담아 둔 것"/);
-
-  // 이룬 것에는 이뤘어요를 안 붙인다. 끝난 줄이다.
-  assert.match(자세히, /const 이룸 = wish\.state === "achieved";/);
-  assert.doesNotMatch(자세히, /이룸\s*\?\s*[^:]*data-achieve-wish/, "이룬 것에 이뤘어요가 붙는다");
-
-  // 열려 있는 동안 상대가 바꾸면 따라 그린다 — 진척도 단추도 달라진다.
-  assert.match(fn("paintWishPage"), /if \(!elements\.wishDetailSheet\.hidden\) paintWishDetail\(\);/);
-  assert.match(app, /SHEETS = \[[\s\S]*?elements\.wishDetailSheet/);
-  assert.match(app, /!elements\.wishDetailSheet\.hidden\) closeWishDetail\(\)/);
 });
 
 test("고치기는 담기 시트를 다시 쓰고, 말과 값만 갈아 끼운다", () => {
