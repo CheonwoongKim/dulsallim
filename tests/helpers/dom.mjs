@@ -24,13 +24,25 @@ function 반목록() {
   };
 }
 
-/** `.a`, `태그`, `태그[속성]` 하나가 이 요소에 맞나. */
+/** `data-month-index` → `monthIndex`. dataset 의 열쇠는 이 꼴이다. */
+const 자료열쇠 = (이름) => 이름.replace(/^data-/, "").replace(/-([a-z])/g, (_, 글) => 글.toUpperCase());
+
+/**
+ * `.a`, `태그`, `태그[속성]` 하나가 이 요소에 맞나.
+ *
+ * 못 알아본 모양이면 던진다. 조용히 안 맞다고 하면 그 검사가 아무것도 안 훑고도
+ * 통과한다 — 실제로 [data-month-index] 를 못 알아보면서 말없이 0건을 내주던 때가 있었다.
+ * 여기서 던지면 그때가 이 본을 넓힐 때라는 것을 바로 안다.
+ */
 function 하나맞나(요소, 조각) {
-  const [, 태그 = "", 반 = "", 속성 = ""] = 조각.match(/^([\w-]*)(?:\.([\w-]+))?(?:\[([\w-]+)\])?$/) || [];
+  const 뜯긴것 = 조각.match(/^([\w-]*)(?:\.([\w-]+))?(?:\[([\w-]+)\])?$/);
+  if (!뜯긴것) throw new Error(`이 본이 모르는 고르개다: ${조각} — tests/helpers/dom.mjs 를 넓혀라`);
+  const [, 태그 = "", 반 = "", 속성 = ""] = 뜯긴것;
+  if (!태그 && !반 && !속성) throw new Error(`빈 고르개다: ${조각}`);
   if (태그 && 요소.tagName !== 태그) return false;
   if (반 && !요소.classList.contains(반)) return false;
-  if (속성 && 요소.getAttribute(속성) === null && !(속성.replace(/^data-/, "") in 요소.dataset)) return false;
-  return Boolean(태그 || 반 || 속성);
+  if (속성 && 요소.getAttribute(속성) === null && !(자료열쇠(속성) in 요소.dataset)) return false;
+  return true;
 }
 
 function 맞나(요소, 고르개) {
