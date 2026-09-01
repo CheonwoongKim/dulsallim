@@ -267,7 +267,7 @@ supabase migration list --linked      # 로컬과 원격이 같은지 본다
 ## 7. 이 저장소를 손댈 때 늘 해야 하는 것
 
 ```bash
-npm test          # 425건. 계단 밖 값·문서 어긋남까지 여기서 걸린다
+npm test          # 계단 밖 값·문서 어긋남까지 여기서 걸린다
 npx vite build    # 배포와 같은 조건
 ```
 

@@ -6,6 +6,7 @@ import {
   MAX_DAY,
   MIN_DAY,
   collectDueOccurrences,
+  countSkippedMonths,
   describeApplied,
   describeSchedule,
   firstApplicableMonth,
@@ -35,9 +36,16 @@ let editingFixedId = null;
  * @returns {Promise<{created: number, failed: number}>}
  */
 export async function applyDueFixedCosts() {
-  const due = collectDueOccurrences(getFixedTemplates(), getFixedApplied());
-  if (!due.length) return { created: 0, failed: 0 };
-  return applyOccurrences(due);
+  const templates = getFixedTemplates();
+  const applied = getFixedApplied();
+  const due = collectDueOccurrences(templates, applied);
+  if (!due.length) return { created: 0, failed: 0, skipped: 0 };
+  /*
+   * 창 밖으로 밀려나 채우지 못한 것도 함께 센다. 세는 자리는 반영 전이어야 한다 —
+   * 반영하고 나면 기록이 늘어 무엇이 원래 잘려 있었는지 알 수 없다.
+   */
+  const skipped = countSkippedMonths(templates, applied);
+  return { ...(await applyOccurrences(due)), skipped };
 }
 
 function renderFixedList() {

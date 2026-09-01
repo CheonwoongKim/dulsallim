@@ -329,6 +329,18 @@ test("고정비는 한 트랜잭션으로 반영해 같은 달이 두 번 들어
   assert.match(apply, /rpc\("apply_fixed_cost"/);
   assert.doesNotMatch(apply, /\.delete\(\)/, "되돌릴 일이 없어야 한다");
   assert.match(fn("applyDueFixedCosts"), /applyOccurrences\(due\)/);
+  /*
+   * 잘린 건수도 함께 실어 보낸다. 세는 자리는 반영 전이어야 한다 —
+   * 반영하고 나면 기록이 늘어 무엇이 원래 잘려 있었는지 알 수 없다.
+   */
+  const 반영 = fn("applyDueFixedCosts");
+  assert.match(반영, /countSkippedMonths\(templates, applied\)/);
+  assert.ok(
+    반영.indexOf("countSkippedMonths") < 반영.indexOf("await applyOccurrences"),
+    "반영한 뒤에 세면 잘린 것을 알 수 없다",
+  );
+  // 채울 것이 없어 일찍 나갈 때도 모양이 같아야 부르는 쪽이 갈라지지 않는다.
+  assert.match(반영, /return \{ created: 0, failed: 0, skipped: 0 \}/);
 
   const { readFile } = await import("node:fs/promises");
   for (const file of ["schema.sql", "migrations/20260101000005_hardening.sql"]) {

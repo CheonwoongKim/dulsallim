@@ -5,6 +5,7 @@ import {
   MAX_BACKFILL_MONTHS,
   appliedKey,
   collectDueOccurrences,
+  countSkippedMonths,
   describeSchedule,
   firstApplicableMonth,
   isValidDay,
@@ -186,4 +187,45 @@ test("반영일이 지났으면 다음 달부터라고 안내한다", () => {
 test("날이 아니면 아무 말도 하지 않는다", () => {
   // 아직 안 적었거나 범위 밖이면 빈칸이다. 입력하는 사이에 붉은 글씨가 깜빡이지 않는다.
   for (const 값 of [0, 32, Number.NaN, -1, 1.5]) assert.equal(describeSchedule(값, on(2026, 2, 14)), "");
+});
+
+/* ── 창 밖으로 밀려난 달 ───────────────────────────────────── */
+
+test("창보다 앞이라 못 채운 건수를 센다", () => {
+  /*
+   * 채우지 않은 달은 반영 기록이 안 남는데 창은 늘 이번 달을 따라 앞으로 밀린다.
+   * 그래서 한 번 밀려난 달은 다음에 열어도 영영 돌아오지 않는다. 조용히 비면
+   * 지난 달 합계가 왜 적은지 알 길이 없다.
+   */
+  const 오래된것 = { id: "old", day: 1, startMonth: "2025-01" };
+  // 2026-08 기준 창은 2025-08 부터다. 2025-01 ~ 2025-07 일곱 달이 밀려났다.
+  assert.equal(countSkippedMonths([오래된것], [], on(2026, 8, 15)), 7);
+});
+
+test("창 안에서 시작한 고정비는 밀려난 것이 없다", () => {
+  const 최근것 = { id: "new", day: 1, startMonth: "2026-03" };
+  assert.equal(countSkippedMonths([최근것], [], on(2026, 8, 15)), 0);
+});
+
+test("이미 반영한 달은 밀려난 것으로 세지 않는다", () => {
+  // 예전에 앱을 열어 채워 둔 달이다. 비어 있지 않으니 알릴 것도 아니다.
+  const 오래된것 = { id: "old", day: 1, startMonth: "2025-01" };
+  const applied = ["old:2025-01", "old:2025-02", "old:2025-03"];
+  assert.equal(countSkippedMonths([오래된것], applied, on(2026, 8, 15)), 4);
+});
+
+test("잘린 것이 있으면 채운 소식과 함께 알린다", () => {
+  assert.equal(
+    describeApplied({ created: 13, failed: 0, skipped: 7 }),
+    "이번 달 고정비 13건을 넣었어요. 최근 13달보다 오래된 7건은 넣지 않았어요",
+  );
+  // 채운 것이 없으면 말하지 않는다. 열 때마다 같은 말을 들으면 잔소리가 된다.
+  assert.equal(describeApplied({ created: 0, failed: 0, skipped: 7 }), null);
+  // 실패만 있을 때도 마찬가지다. 지금 못 넣은 것과 예전에 잘린 것은 다른 이야기다.
+  assert.equal(
+    describeApplied({ created: 0, failed: 2, skipped: 7 }),
+    "고정비 2건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요",
+  );
+  // skipped 를 안 넘겨도 예전처럼 돈다.
+  assert.equal(describeApplied({ created: 3, failed: 0 }), "이번 달 고정비 3건을 넣었어요");
 });

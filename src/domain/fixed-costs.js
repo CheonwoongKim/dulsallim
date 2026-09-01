@@ -86,6 +86,31 @@ export function collectDueOccurrences(templates, applied, today = new Date()) {
   return due.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/** 시작월이 터무니없이 옛날이어도 셈이 오래 돌지 않게 막는다. 알리려는 것은 개수의 크기다. */
+const MAX_SKIPPED_SCAN = 120;
+
+/**
+ * 창보다 앞이라 채우지 않은 건수.
+ *
+ * 채우지 않은 달은 반영 기록이 남지 않는데, 창은 늘 이번 달을 따라 앞으로 밀린다.
+ * 그래서 한 번 창 밖으로 밀려난 달은 다음에 열어도 영영 돌아오지 않는다.
+ * 조용히 비면 지난 달 합계가 왜 적은지 알 길이 없다 — 개수라도 알려 주려고 센다.
+ */
+export function countSkippedMonths(templates, applied, today = new Date()) {
+  const appliedSet = new Set(applied);
+  const oldestMonth = shiftMonthKey(toMonthKey(today), -MAX_BACKFILL_MONTHS);
+  let skipped = 0;
+
+  for (const template of templates) {
+    let monthKey = template.startMonth;
+    for (let scanned = 0; monthKey < oldestMonth && scanned < MAX_SKIPPED_SCAN; scanned += 1) {
+      if (!appliedSet.has(appliedKey(template.id, monthKey))) skipped += 1;
+      monthKey = shiftMonthKey(monthKey, 1);
+    }
+  }
+  return skipped;
+}
+
 /** 다음에 반영될 날짜. 관리 화면에서 "언제 들어오는지"를 보여주기 위한 값. */
 export function nextOccurrenceDate(template, applied, today = new Date()) {
   const appliedSet = new Set(applied);
@@ -105,9 +130,18 @@ export function nextOccurrenceDate(template, applied, today = new Date()) {
  * 성공과 실패는 함께 일어날 수 있다. 성공만 알리면 빠진 고정비를 모른 채 지나가고,
  * 사용자는 이번 달 합계가 왜 적은지 알 방법이 없다.
  */
-export function describeApplied({ created, failed }) {
-  if (created && failed) return `고정비 ${created}건을 넣었고 ${failed}건은 반영하지 못했어요`;
-  if (created) return `이번 달 고정비 ${created}건을 넣었어요`;
-  if (failed) return `고정비 ${failed}건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요`;
-  return null;
+export function describeApplied({ created, failed, skipped = 0 }) {
+  const 본문 =
+    created && failed ? `고정비 ${created}건을 넣었고 ${failed}건은 반영하지 못했어요`
+    : created ? `이번 달 고정비 ${created}건을 넣었어요`
+    : failed ? `고정비 ${failed}건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요`
+    : null;
+  if (!본문) return null;
+
+  /*
+   * 잘린 것이 있으면 함께 밝힌다. 채운 것이 있을 때만 말한다 —
+   * 아무것도 안 채운 날까지 되뇌면 열 때마다 같은 말을 듣는 잔소리가 된다.
+   */
+  if (!created || !skipped) return 본문;
+  return `${본문}. 최근 ${MAX_BACKFILL_MONTHS + 1}달보다 오래된 ${skipped}건은 넣지 않았어요`;
 }
