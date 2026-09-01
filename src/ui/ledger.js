@@ -1,6 +1,6 @@
 import { elements } from "../dom.js";
-import { escapeHtml } from "./escape.js";
-import { CATEGORIES, formatDayLabel, formatMoney, formatShortDate } from "../domain/expenses.js";
+import { formatDayLabel } from "../domain/expenses.js";
+import { createExpenseRow } from "./expense-row.js";
 import { getMemberName } from "../members.js";
 import {
   getDateFilter,
@@ -11,43 +11,6 @@ import {
 } from "../store.js";
 import { closeOpenRow, resetSwipeState } from "./swipe.js";
 
-function createExpenseRow(expense) {
-  const article = document.createElement("article");
-  const category = CATEGORIES[expense.category] || CATEGORIES.etc;
-  // 상대가 남긴 말이 있다는 걸 목록에서 알 수 있어야 열어 볼 생각을 한다.
-  const notes = getNoteCount(expense.id);
-  article.className = `expense-item swipe-row${expense.id === getHighlightId() ? " is-new" : ""}`;
-  article.dataset.id = expense.id;
-  // 액션 패널을 먼저 두고 내용면이 그 위를 덮는다. 스와이프하면 내용면이 밀려 액션이 드러난다.
-  // 내용면은 버튼이다. 눌러서 대화를 여는 자리인데 div 로 두면 키보드로는 닿을 수 없다.
-  const label = [
-    formatShortDate(expense.date),
-    getMemberName(expense.member),
-    category.label,
-    expense.item,
-    `${formatMoney(expense.amount)}원`,
-    notes ? `대화 ${notes}개` : null,
-    "대화 열기",
-  ].join(" ");
-  article.innerHTML = `
-    <span class="swipe-actions">
-      <button class="swipe-action is-copy" type="button" data-copy-id="${expense.id}" aria-label="${escapeHtml(expense.item)} 복제">복제</button>
-      <button class="swipe-action is-edit" type="button" data-edit-id="${expense.id}" aria-label="${escapeHtml(expense.item)} 수정">수정</button>
-      <button class="swipe-action is-delete" type="button" data-delete-id="${expense.id}" aria-label="${escapeHtml(expense.item)} 삭제">삭제</button>
-    </span>
-    <button class="expense-surface swipe-surface" type="button" aria-label="${escapeHtml(label)}">
-      <span class="expense-date">${formatShortDate(expense.date)}</span>
-      <span class="expense-copy">
-        <strong>${escapeHtml(expense.item)}</strong>
-        <span class="expense-meta">
-          ${escapeHtml(getMemberName(expense.member))}<i></i>${category.label}${notes ? `<i></i><span class="note-count">대화 ${notes}</span>` : ""}
-        </span>
-      </span>
-      <strong class="expense-amount">${formatMoney(expense.amount)}원</strong>
-    </button>
-  `;
-  return article;
-}
 
 /** 무엇 때문에 비었는지에 따라 문구가 달라야 한다. 그래야 어디를 눌러 풀지 알 수 있다. */
 function fillEmptyState() {
@@ -74,7 +37,11 @@ export function renderList(visible) {
     return;
   }
 
-  elements.list.append(...visible.map(createExpenseRow));
+  elements.list.append(
+    ...visible.map((expense) =>
+      createExpenseRow(expense, { notes: getNoteCount(expense.id), highlighted: expense.id === getHighlightId() }),
+    ),
+  );
   setHighlightId(null);
 }
 
@@ -91,7 +58,7 @@ export function repaintExpenseRow(expense) {
   // 열린 행을 갈아 끼우면 스와이프 상태가 사라진 노드를 가리킨 채 남는다. 먼저 닫는다.
   if (row.classList.contains("is-open")) closeOpenRow();
   const hadFocus = row.contains(document.activeElement);
-  const fresh = createExpenseRow(expense);
+  const fresh = createExpenseRow(expense, { notes: getNoteCount(expense.id) });
   row.replaceWith(fresh);
   if (hadFocus) fresh.querySelector(".expense-surface")?.focus();
   return true;
