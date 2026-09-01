@@ -60,3 +60,15 @@ export function 문서세우기() {
   };
   return 만든것;
 }
+
+/**
+ * 그린 글자에서 태그를 속성 표로 뽑는다. `<a class="x" href="y">` → `{class:"x", href:"y"}`.
+ *
+ * 속성 차례에 기대지 않으려고 둔다. 정규식으로 `<a class="x" href="y"` 를 통째로 견주면
+ * 차례만 바꿔도 검사가 헛되이 운다 — tests/trend-chart.test.mjs 가 먼저 겪고 이 꼴을 만들었다.
+ */
+export function 태그들(글, 이름) {
+  return [...글.matchAll(new RegExp(`<${이름}\\b([^>]*)>`, "g"))].map(([, 속성]) =>
+    Object.fromEntries([...속성.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, 키, 값]) => [키, 값])),
+  );
+}

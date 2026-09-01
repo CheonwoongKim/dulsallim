@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { 문서세우기 } from "./helpers/dom.mjs";
+import { 문서세우기, 태그들 } from "./helpers/dom.mjs";
 
 /*
  * 위시를 그리는 자리다. 서버가 준 글자가 마크업이 되는 자리가 이 저장소에서 가장 많다 —
@@ -118,17 +118,24 @@ test("누르면 코드가 도는 주소는 링크가 되지 않는다", () => {
   assert.doesNotMatch(못된것.innerHTML, /<a /, "링크를 만들었다");
   assert.doesNotMatch(못된것.innerHTML, /javascript:/);
 
-  const 멀쩡한것 = createWishDetail(위시({ url: "https://example.com/a?b=1" }));
-  assert.match(멀쩡한것.innerHTML, /<a class="wish-detail-shot" href="https:\/\/example\.com\/a\?b=1"/);
-  // 새 창으로 열되 원래 창을 넘겨주지 않는다.
-  assert.match(멀쩡한것.innerHTML, /rel="noopener noreferrer"/);
+  // 속성 차례에는 기대지 않는다. 차례만 바꿔도 우는 검사는 정당한 손질을 막는다.
+  const 링크 = 태그들(createWishDetail(위시({ url: "https://example.com/a?b=1" })).innerHTML, "a")[0];
+  assert.equal(링크.href, "https://example.com/a?b=1");
+  assert.equal(링크.class, "wish-detail-shot");
+  // 새 창으로 열되 원래 창을 넘겨주지 않는다. 둘 다 있어야 뜻이 산다.
+  assert.equal(링크.target, "_blank");
+  assert.equal(링크.rel, "noopener noreferrer");
 });
 
 test("그림 주소도 같은 잣대를 지난다", () => {
-  assert.doesNotMatch(createWishTile(위시({ imageUrl: "javascript:alert(1)" })).innerHTML, /<img/);
-  assert.match(createWishTile(위시({ imageUrl: "https://example.com/a.png" })).innerHTML, /<img src="https:\/\/example\.com\/a\.png"/);
+  assert.equal(태그들(createWishTile(위시({ imageUrl: "javascript:alert(1)" })).innerHTML, "img").length, 0);
+
+  const 그림 = 태그들(createWishTile(위시({ imageUrl: "https://example.com/a.png" })).innerHTML, "img")[0];
+  assert.equal(그림.src, "https://example.com/a.png");
   // 남의 서버로 우리 주소를 흘리지 않는다.
-  assert.match(createWishTile(위시({ imageUrl: "https://example.com/a.png" })).innerHTML, /referrerpolicy="no-referrer"/);
+  assert.equal(그림.referrerpolicy, "no-referrer");
+  // 목록은 한 화면에 여럿이라 그림을 미리 다 받지 않는다.
+  assert.equal(그림.loading, "lazy");
 });
 
 test("그림이 안 오면 걷어내고 첫 글자를 드러낸다", () => {
