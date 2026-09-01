@@ -86,26 +86,31 @@ export function collectDueOccurrences(templates, applied, today = new Date()) {
   return due.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** 시작월이 터무니없이 옛날이어도 셈이 오래 돌지 않게 막는다. 알리려는 것은 개수의 크기다. */
-const MAX_SKIPPED_SCAN = 120;
-
 /**
- * 창보다 앞이라 채우지 않은 건수.
+ * 창보다 앞이라 채우지 않은 건수. 잘림이 이번에 실제로 문 실행에서만 센다.
  *
  * 채우지 않은 달은 반영 기록이 남지 않는데, 창은 늘 이번 달을 따라 앞으로 밀린다.
  * 그래서 한 번 창 밖으로 밀려난 달은 다음에 열어도 영영 돌아오지 않는다.
  * 조용히 비면 지난 달 합계가 왜 적은지 알 길이 없다 — 개수라도 알려 주려고 센다.
+ *
+ * "잘린 것이 있나" 로 물으면 안 된다. 그 값은 한 번 0 이 아니면 영영 0 이 안 되고,
+ * 매달 여는 사람은 늘 무언가를 채우므로 같은 말을 죽을 때까지 매달 듣는다.
+ * 사용자가 할 수 있는 일이 없는 사실을 되뇌는 것은 조용히 비는 것만큼 나쁘다.
+ *
+ * 그래서 "이번에 물었나" 로 묻는다. 창의 맨 앞 달을 이제야 채우고 있다면 그 앞은 방금
+ * 영영 잘린 것이다. 다음 달에 열면 그때의 맨 앞 달은 이미 채워져 있어 조용해지고,
+ * 또 오래 안 열어 새로 잘리면 그때 다시 말한다.
  */
-export function countSkippedMonths(templates, applied, today = new Date()) {
-  const appliedSet = new Set(applied);
+export function countSkippedMonths(templates, applied, due, today = new Date()) {
   const oldestMonth = shiftMonthKey(toMonthKey(today), -MAX_BACKFILL_MONTHS);
-  let skipped = 0;
+  if (!due.some((occurrence) => occurrence.monthKey === oldestMonth)) return 0;
 
+  const appliedSet = new Set(applied);
+  let skipped = 0;
   for (const template of templates) {
-    let monthKey = template.startMonth;
-    for (let scanned = 0; monthKey < oldestMonth && scanned < MAX_SKIPPED_SCAN; scanned += 1) {
+    // 월 키는 자릿수가 고정이라 문자열 비교가 곧 시간 비교다. 창 앞에 닿으면 멈춘다.
+    for (let monthKey = template.startMonth; monthKey < oldestMonth; monthKey = shiftMonthKey(monthKey, 1)) {
       if (!appliedSet.has(appliedKey(template.id, monthKey))) skipped += 1;
-      monthKey = shiftMonthKey(monthKey, 1);
     }
   }
   return skipped;
@@ -131,17 +136,21 @@ export function nextOccurrenceDate(template, applied, today = new Date()) {
  * 사용자는 이번 달 합계가 왜 적은지 알 방법이 없다.
  */
 export function describeApplied({ created, failed, skipped = 0 }) {
+  /*
+   * "이번 달" 이라고 하지 않는다. 오랜만에 열면 열세 달치를 한꺼번에 채우는데,
+   * 그것을 이번 달 것이라 하면 거짓이다. 달을 말하지 않으면 어느 경우에도 틀리지 않는다.
+   */
   const 본문 =
     created && failed ? `고정비 ${created}건을 넣었고 ${failed}건은 반영하지 못했어요`
-    : created ? `이번 달 고정비 ${created}건을 넣었어요`
+    : created ? `고정비 ${created}건을 넣었어요`
     : failed ? `고정비 ${failed}건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요`
     : null;
   if (!본문) return null;
+  if (!skipped) return 본문;
 
   /*
-   * 잘린 것이 있으면 함께 밝힌다. 채운 것이 있을 때만 말한다 —
-   * 아무것도 안 채운 날까지 되뇌면 열 때마다 같은 말을 듣는 잔소리가 된다.
+   * 잘린 것은 다시 채울 길이 없다. 그러니 개수만 말하고 끝내면 듣는 사람이 할 일이 없다.
+   * 무엇을 해야 하는지까지 말해야 문장이 값을 한다.
    */
-  if (!created || !skipped) return 본문;
-  return `${본문}. 최근 ${MAX_BACKFILL_MONTHS + 1}달보다 오래된 ${skipped}건은 넣지 않았어요`;
+  return `${본문}. ${MAX_BACKFILL_MONTHS + 1}개월보다 오래된 ${skipped}건은 빠졌어요. 필요하면 직접 적어 주세요`;
 }
