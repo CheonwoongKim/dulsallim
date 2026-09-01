@@ -236,17 +236,44 @@ test("서비스워커는 성공한 동일 출처 응답만 캐시한다 — 그�
   assert.match(sw, /\.catch\(\(\) => \{\}\)/, "cache.put 실패가 unhandled rejection이 되면 안 된다");
 
   /*
-   * 그림은 어느 서버 것이든 담는다. 위시의 대표 그림이 남의 서버(쇼핑몰 CDN)에 있고,
+   * 남의 서버 그림은 판과 따로 담는다. 위시의 대표 그림이 남의 서버(쇼핑몰 CDN)에 있고,
    * 그 서버가 캐시를 얼마나 두라고 말해 주는지는 우리가 못 정한다 — 안 알려 주는 곳도 있다.
    * 담기 전에는 목록을 열 때마다 다시 받아 왔다(계측: 길을 끊으면 그림이 사라졌다).
    *
-   * 그림 갈래가 출처를 보는 줄보다 먼저 와야 한다. 뒤에 있으면 남의 그림은 거기서 걸러진다.
+   * 그림 갈래가 "남의 것이면 여기서 끝" 보다 먼저 와야 한다. 뒤에 있으면 거기서 걸러진다.
    */
   assert.match(sw, /request\.destination === "image"[\s\S]*?imageFirst\(request\)/);
-  assert.ok(
-    sw.indexOf('request.destination === "image"') < sw.indexOf("origin !== self.location.origin"),
-    "출처를 먼저 보면 남의 그림은 담기지 않는다",
-  );
+  /*
+   * 순서는 fetch 처리 안에서만 본다. imageFirst 는 함수 정의에도 나와서, 파일 전체를
+   * 훑으면 정의가 먼저 잡혀 무엇을 바꿔도 통과한다 — 실제로 그렇게 짰다가 재 보고 알았다.
+   */
+  const 받는자리 = sw.match(/addEventListener\("fetch"[\s\S]*?\n\}\);/)[0];
+  // 이름에 안 묶이게 본다. 변수 이름을 바꿨다고 검사가 울면 정당한 손질을 막는다.
+  const 돌려보내는줄 = 받는자리.search(/if \([\w가-힣]+\) return;/);
+  assert.ok(돌려보내는줄 >= 0, "남의 것을 돌려보내는 줄을 못 찾았다");
+  assert.ok(받는자리.indexOf("imageFirst(request)") < 돌려보내는줄,
+    "남의 것을 먼저 돌려보내면 남의 그림은 담기지 않는다");
+
+  /*
+   * 우리 그림은 거기 넣지 않는다.
+   *
+   * 그림 곳간은 판이 올라가도 안 비우는 자리다. 우리 것을 넣으면 이름에 해시가 없는 것
+   * (/icon.png·/apple-touch-icon.png)이 영영 안 바뀐다 — 아이콘을 고쳐 올려도 이미 깔린
+   * 사람에게는 옛것이 그대로 남는다. 우리 것은 판을 따르는 길로 보낸다.
+   */
+  assert.match(sw, /request\.destination === "image" && [\w가-힣]+/,
+    "우리 그림까지 판과 따로 담으면 아이콘을 고쳐도 안 바뀐다");
+
+  /*
+   * 이제부터 안 담는 것만으로는 이미 갇힌 사람이 안 풀린다. 판이 바뀔 때 한 번 훑어
+   * 우리 것만 골라 버린다 — 남의 그림까지 버리면 다시 받느라 목록이 껌뻑인다.
+   */
+  // 서비스 워커는 src 밖이라 fn() 이 못 본다. 여기서는 sw 글에서 직접 뽑는다.
+  const 풀기 = sw.match(/async function 갇힌우리그림풀기[\s\S]*?\n\}/)[0];
+  assert.match(풀기, /origin === self\.location\.origin/);
+  assert.match(풀기, /cache\.delete\(request\)/);
+  assert.doesNotMatch(풀기, /caches\.delete\(/, "곳간을 통째로 지우면 남의 그림까지 다시 받는다");
+  assert.match(sw, /await 갇힌우리그림풀기\(\);/);
 
   /*
    * 남의 서버 그림은 no-cors 로 와서 status 가 0 이고 속을 볼 수 없다(opaque).
@@ -2344,7 +2371,50 @@ test("시작이 실패해도 화면이 말없이 멈추지 않는다", () => {
 test("실시간 맞춤은 한 모듈이 맡는다", () => {
   // 로그아웃이 채널 변수 세 개를 직접 만지고 있었다. 그 상태를 가진 쪽이 정리도 맡는다.
   assert.match(fn("stopSync"), /unsubscribe\(channel\)[\s\S]*unsubscribe\(noteChannel\)[\s\S]*clearTimeout\(syncTimer\)/);
-  assert.match(app, /elements\.signOut\.addEventListener\("click", async \(\) => \{\s*stopSync\(\);/);
+  // 로그인 화면으로 돌아가는 길이 그 정리를 반드시 지난다. 안 지나면 남의 집 소식을 계속 듣는다.
+  assert.match(fn("로그인화면으로"), /stopSync\(\)/);
+});
+
+test("세션이 저절로 끊겨도 로그인 화면으로 돌아간다", () => {
+  /*
+   * 새로고침 토큰은 영원하지 않다 — 오래 안 열었거나, 다른 기기에서 비밀번호를 바꿨거나,
+   * 로그아웃을 전부 눌렀으면 죽는다. 안 듣고 있던 때는 앱이 옛 숫자를 띄운 채 남고,
+   * 무엇을 눌러도 "실패했어요" 만 떴다. 까닭도 없고 돌아갈 길도 없었다.
+   */
+  assert.match(fn("세션끊기면"), /onAuthStateChange/);
+  /*
+   * 듣는 자리에 "한 번만" 빗장을 두면 안 된다.
+   *
+   * 처음에 그렇게 짰다가 크게 틀렸다. 그 빗장은 클로저 변수라 한 번 쓰면 안 풀리는데,
+   * 스스로 로그아웃할 때도 같은 알림이 와서 거기서 써 버린다. 그래서 로그아웃했다
+   * 다시 들어온 사람은 세션이 끊겨도 아무 일도 안 일어났다 — 고치려던 그 증상 그대로다.
+   * 두 번 불려도 되게 두고, 갈래는 부르는 쪽이 가린다.
+   */
+  const 듣기 = fn("세션끊기면");
+  assert.doesNotMatch(듣기, /이미알림|한번만|already/i, "듣는 자리에 빗장을 두면 두 번째부터 안 듣는다");
+  assert.match(듣기, /profile = null;[\s\S]{0,40}손\(\)/);
+  /*
+   * 그 알림만 본다. 다른 알림(로그인·토큰 갱신)에까지 반응하면 멀쩡한 세션을 끊는다.
+   * 가리는 모양은 안 본다 — if 를 뒤집는 손질에 헛되이 울면 정당한 정리를 막는다.
+   */
+  assert.match(듣기, /"SIGNED_OUT"/, "어떤 알림인지 안 가리고 있다");
+
+  // 나가는 길이 하나여야 한다. 둘로 갈리면 한쪽만 고치게 된다.
+  assert.match(app, /세션끊기면\(\(\) => 로그인화면으로\(/);
+  assert.match(fn("로그인화면으로"), /clearData\(\)[\s\S]*showLoginScreen\(/);
+
+  /*
+   * 스스로 나갈 때는 치우고 나서 서버에 다녀온다.
+   *
+   * 순서를 뒤집으면 그 왕복이 도는 동안 앞사람 숫자가 화면에 남고, 그 요청이 튕기면
+   * 아예 안 치운다 — 남의 폰을 잠깐 빌려 쓴 사람에게는 그것이 전부다.
+   */
+  const 나가기 = app.match(/elements\.signOut\.addEventListener[\s\S]*?\n\}\);/)[0];
+  assert.ok(나가기.indexOf("로그인화면으로()") < 나가기.indexOf("await signOut()"),
+    "서버에 먼저 다녀오면 튕겼을 때 화면이 안 치워진다");
+  // 스스로 나간 것에는 까닭을 안 적는다. 그 표시는 다시 들어올 때 내린다.
+  assert.match(app, /스스로나가는중 \? "" : "다시 로그인해 주세요\."/);
+  assert.match(fn("startApp"), /스스로나가는중 = false/);
 });
 
 test("분류 선택지는 한 곳에서 만든다", () => {

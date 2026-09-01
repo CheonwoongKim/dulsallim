@@ -82,6 +82,24 @@ async function 넘치면버리기(cache) {
   await Promise.all(keys.slice(0, keys.length - IMAGE_LIMIT).map((key) => cache.delete(key)));
 }
 
+/**
+ * 그림 곳간에 잘못 담긴 우리 그림을 걷는다.
+ *
+ * 한동안 출처를 안 가리고 담았다. 그 곳간은 판이 올라가도 안 비우므로, 이미 담긴 사람은
+ * 아이콘을 고쳐 올려도 영영 옛것을 본다 — 이제부터 안 담는 것만으로는 안 풀린다.
+ * 판이 바뀔 때마다 한 번 훑어 우리 것만 골라 버린다. 남의 그림은 그대로 둔다.
+ */
+async function 갇힌우리그림풀기() {
+  const cache = await caches.open(IMAGE_CACHE_NAME).catch(() => null);
+  if (!cache) return;
+  const keys = await cache.keys();
+  await Promise.all(
+    keys
+      .filter((request) => new URL(request.url).origin === self.location.origin)
+      .map((request) => cache.delete(request)),
+  );
+}
+
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   return (await cache.match(request)) || networkFirst(request);
@@ -106,6 +124,7 @@ self.addEventListener("activate", (event) => {
       );
 
       await Promise.all(staleCaches.map((key) => caches.delete(key)));
+      await 갇힌우리그림풀기();
       await self.clients.claim();
 
       // 기존 설치본에는 controllerchange 처리 코드가 없다. 첫 전환에 한해 새 문서를 직접 연다.
@@ -125,16 +144,25 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   /*
-   * 그림은 어느 서버 것이든 담는다. 남의 서버 것이 오히려 더 필요하다 — 위시의 대표 그림이
-   * 거기 있고, 그 서버가 캐시를 얼마나 두라고 말해 주는지는 우리가 못 정한다.
+   * 남의 서버 그림만 판과 따로 담는다. 위시의 대표 그림이 거기 있고, 그 서버가 캐시를
+   * 얼마나 두라고 말해 주는지는 우리가 못 정한다 — 안 알려 주는 곳도 있다.
+   *
+   * 우리 그림은 여기 넣지 않는다. 그림 곳간은 판이 올라가도 안 비우는 자리라,
+   * 넣어 두면 이름에 해시가 없는 것(/icon.png·/apple-touch-icon.png)이 영영 안 바뀐다 —
+   * 아이콘을 고쳐 올려도 이미 깔린 사람에게는 옛것이 그대로 남는다.
+   * 우리 것은 아래 판을 따르는 길로 보낸다.
+   *
+   * 출처를 보는 이 줄이 그림 갈래 안에 있어야 한다. 밖에 두고 먼저 보면 남의 그림이
+   * 거기서 걸러져 한 장도 안 담긴다.
    */
-  if (request.destination === "image") {
+  const 남의것 = new URL(request.url).origin !== self.location.origin;
+  if (request.destination === "image" && 남의것) {
     event.respondWith(imageFirst(request));
     return;
   }
 
   // 그 밖의 외부 도메인(글꼴 CDN 등)은 브라우저 기본 처리에 맡긴다.
-  if (new URL(request.url).origin !== self.location.origin) return;
+  if (남의것) return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, true));
@@ -183,10 +211,29 @@ self.addEventListener("push", (event) => {
   );
 });
 
+/**
+ * 알림이 가리키는 자리. 우리 집 안이어야 한다.
+ *
+ * new URL(값, 우리주소) 는 값이 절대 주소면 그것을 그대로 쓴다 — 알림에 실린 주소가
+ * https://남의곳/… 이면 눌렀을 때 거기로 나간다. 알림은 우리 이름과 아이콘을 달고 뜨므로
+ * 그 창은 우리 화면처럼 읽힌다. 우리가 실제로 보내는 값은 "/" 뿐이라 잃을 것도 없다.
+ *
+ * 보내는 쪽에도 문을 달았지만(functions/send-push/guard.ts), 문이 하나뿐이면
+ * 그것이 열리는 날 이 자리가 그대로 뚫린다.
+ */
+function 갈곳정하기(값) {
+  try {
+    const 주소 = new URL(값 || "/", self.location.origin);
+    return 주소.origin === self.location.origin ? 주소 : new URL("/", self.location.origin);
+  } catch {
+    return new URL("/", self.location.origin);
+  }
+}
+
 /** 알림을 누르면 이미 열려 있는 창을 앞으로 가져온다. 매번 새 창을 띄우면 여러 장이 쌓인다. */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const 갈곳 = new URL(event.notification.data?.url || "/", self.location.origin);
+  const 갈곳 = 갈곳정하기(event.notification.data?.url);
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((창들) => {
       for (const 창 of 창들) {

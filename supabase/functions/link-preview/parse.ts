@@ -14,22 +14,58 @@
 export function 갈수있나(url: URL): boolean {
   if (url.protocol !== "http:" && url.protocol !== "https:") return false;
 
-  const 집 = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const 집 = url.hostname.toLowerCase();
+  // 대괄호가 있으면 IPv6 리터럴이다. 그 안쪽 규칙은 이름에 대면 안 된다.
+  const 여섯 = 집.startsWith("[") && 집.endsWith("]") ? 집.slice(1, -1) : null;
+  if (여섯 !== null) return IPv6가안쪽인가(여섯) ? false : true;
+
   if (집 === "localhost" || 집.endsWith(".localhost")) return false;
   if (집.endsWith(".local") || 집.endsWith(".internal") || 집.endsWith(".home.arpa")) return false;
-  // IPv6 되돌이와 사설 대역(fc00::/7, fe80::/10).
-  if (집 === "::1" || 집.startsWith("fc") || 집.startsWith("fd") || 집.startsWith("fe8")) return false;
 
-  const 넷토막 = 집.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (넷토막) {
-    const [a, b] = [Number(넷토막[1]), Number(넷토막[2])];
-    if (a === 0 || a === 10 || a === 127) return false;
-    if (a === 169 && b === 254) return false;
-    if (a === 172 && b >= 16 && b <= 31) return false;
-    if (a === 192 && b === 168) return false;
-    if (a >= 224) return false;
+  return !넷토막이안쪽인가(집);
+}
+
+/**
+ * IPv6 리터럴이 안쪽 망인가.
+ *
+ * fc00::/7·fe80::/10 을 이름에 대고 보던 때가 있었다. 그러면 fc2.com·fdn.fr·fe80shop.com
+ * 처럼 멀쩡한 곳이 막힌다 — 실제로 셋 다 막혀 있었다. 대괄호 안일 때만 본다.
+ *
+ * IPv4 를 감싼 꼴(::ffff:169.254.169.254)도 본다. 이것을 안 보던 때는 클라우드가 제 열쇠를
+ * 내주는 자리가 그대로 열렸다. WHATWG URL 이 그 꼴을 16진수로 바꿔 두므로(::ffff:a9fe:a9fe)
+ * 점 넷짜리만 찾아서는 못 잡는다.
+ */
+function IPv6가안쪽인가(여섯: string): boolean {
+  if (여섯 === "::1" || 여섯 === "::") return true;
+  if (/^f[cd]/.test(여섯)) return true;                    // fc00::/7 (고유 로컬)
+  if (/^fe[89ab]/.test(여섯)) return true;                 // fe80::/10 (링크 로컬)
+
+  /*
+   * IPv4 를 감싼 것을 도로 펴서 같은 잣대를 댄다. ::ffff:a9fe:a9fe 처럼 16진수 두 토막으로
+   * 오기도 하고 ::ffff:169.254.169.254 처럼 그대로 오기도 한다.
+   */
+  const 점넷 = 여섯.match(/::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  if (점넷) return 넷토막이안쪽인가(점넷[1]);
+
+  const 열여섯 = 여섯.match(/::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (열여섯) {
+    const 위 = parseInt(열여섯[1], 16);
+    const 아래 = parseInt(열여섯[2], 16);
+    return 넷토막이안쪽인가(`${위 >> 8}.${위 & 255}.${아래 >> 8}.${아래 & 255}`);
   }
-  return true;
+  return false;
+}
+
+/** 점 넷짜리 주소가 안쪽 망인가. */
+function 넷토막이안쪽인가(집: string): boolean {
+  const 넷토막 = 집.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!넷토막) return false;
+  const [a, b] = [Number(넷토막[1]), Number(넷토막[2])];
+  if (a === 0 || a === 10 || a === 127) return true;
+  if (a === 169 && b === 254) return true;                 // 클라우드가 제 열쇠를 내주는 자리
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  return a >= 224;
 }
 
 /**

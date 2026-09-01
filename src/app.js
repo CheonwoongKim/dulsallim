@@ -37,6 +37,7 @@ import {
   showLoginScreen,
   signIn,
   signOut,
+  세션끊기면,
 } from "./features/auth.js";
 import { applyDueFixedCosts } from "./features/fixed-sheet.js";
 
@@ -72,7 +73,11 @@ elements.loginForm.addEventListener("submit", async (event) => {
   }
 });
 
-elements.signOut.addEventListener("click", async () => {
+/**
+ * 로그인 화면으로 되돌린다. 스스로 나갈 때와 세션이 끊겼을 때가 같은 자리를 쓴다.
+ * @param {string} [말] 왜 돌아왔는지. 스스로 나간 것이면 빈칸이다.
+ */
+function 로그인화면으로(말 = "") {
   stopSync();
   closePageNow();
   clearData();
@@ -81,9 +86,32 @@ elements.signOut.addEventListener("click", async () => {
   resetTotalAnimation();
   render();
   elements.dataGate.hidden = true;
+  showLoginScreen(말);
+}
+
+/**
+ * 스스로 나가는 중인가. 나갈 때도 세션 끊김 알림이 오는데, 그건 뜻밖의 일이 아니라
+ * 까닭을 적어 줄 것이 없다. 다음에 들어올 때 startApp 이 내린다 — 알림이 늦게 와도 덮인다.
+ */
+let 스스로나가는중 = false;
+
+elements.signOut.addEventListener("click", async () => {
+  스스로나가는중 = true;
+  // 먼저 치운다. 서버에 다녀오는 사이 앞사람 숫자가 남아 있으면 안 되고,
+  // 그 왕복이 튕겨도 화면은 정리돼 있어야 한다.
+  로그인화면으로();
   await signOut();
-  showLoginScreen();
 });
+
+/*
+ * 세션이 저절로 끊겼을 때. 오래 안 열었거나 다른 기기에서 비밀번호를 바꾼 뒤다.
+ *
+ * 안 듣고 있던 때는 옛 숫자를 띄운 채 남아, 무엇을 눌러도 "실패했어요" 만 떴다.
+ * 까닭을 알려 주고 다시 들어올 자리를 내준다.
+ *
+ * 두 번 불려도 된다 — 로그인화면으로 는 같은 일을 다시 해도 결과가 같다.
+ */
+세션끊기면(() => 로그인화면으로(스스로나가는중 ? "" : "다시 로그인해 주세요."));
 
 /* ── 시작 ─────────────────────────────────────────────────── */
 
@@ -123,6 +151,8 @@ function 화면열기() {
 }
 
 async function startApp() {
+  // 다시 들어왔다. 앞서 스스로 나갔던 표시를 내린다.
+  스스로나가는중 = false;
   const profile = getProfile();
 
   /*

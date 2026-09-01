@@ -176,3 +176,43 @@ test("서버 쪽 울타리가 그대로 서 있다", async () => {
     "사람인지 보기 전에 남의 사이트를 연다",
   );
 });
+
+test("IPv4 를 감싼 IPv6 로도 안쪽에 못 간다", () => {
+  /*
+   * ::ffff:169.254.169.254 는 클라우드가 제 열쇠를 내주는 자리를 IPv6 꼴로 감싼 것이다.
+   * 점 넷짜리만 찾던 때는 이것이 그냥 지나갔다 — 서버가 대신 열어 주는 구조라
+   * 그 열쇠가 그대로 밖으로 나갈 수 있었다.
+   *
+   * WHATWG URL 이 그 꼴을 16진수로 바꿔 두기도 한다(::ffff:a9fe:a9fe). 둘 다 본다.
+   */
+  for (const 주소 of [
+    "http://[::ffff:169.254.169.254]/",
+    "http://[::ffff:a9fe:a9fe]/",
+    "http://[::ffff:127.0.0.1]/",
+    "http://[::ffff:7f00:1]/",
+    "http://[::ffff:10.0.0.1]/",
+    "http://[::ffff:192.168.1.1]/",
+  ]) {
+    assert.equal(갈수있나(new URL(주소)), false, `${주소} 가 통과했다`);
+  }
+});
+
+test("IPv6 규칙을 이름에 대지 않는다", () => {
+  /*
+   * fc00::/7·fe80::/10 을 호스트 이름 앞글자에 대고 보던 때가 있었다.
+   * 그래서 fc2.com 같은 멀쩡한 곳이 막혔다 — 실제로 쓰는 사이트다.
+   */
+  for (const 주소 of ["https://fc2.com/item", "https://fdn.fr", "https://fe80shop.com", "https://fdiscount.example"]) {
+    assert.equal(갈수있나(new URL(주소)), true, `${주소} 를 막았다`);
+  }
+  // 대괄호 안일 때는 그대로 막는다.
+  for (const 주소 of ["http://[fc00::1]/", "http://[fd12::1]/", "http://[fe80::1]/", "http://[::1]/"]) {
+    assert.equal(갈수있나(new URL(주소)), false, `${주소} 가 통과했다`);
+  }
+});
+
+test("바깥 IPv6 는 막지 않는다", () => {
+  // 남의 사이트가 IPv6 로만 오는 일이 있다. 안쪽이 아니면 열어 준다.
+  assert.equal(갈수있나(new URL("http://[2606:4700::1111]/")), true);
+  assert.equal(갈수있나(new URL("http://[2001:4860:4860::8888]/")), true);
+});
