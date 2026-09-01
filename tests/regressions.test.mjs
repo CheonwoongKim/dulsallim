@@ -236,17 +236,32 @@ test("서비스워커는 성공한 동일 출처 응답만 캐시한다 — 그�
   assert.match(sw, /\.catch\(\(\) => \{\}\)/, "cache.put 실패가 unhandled rejection이 되면 안 된다");
 
   /*
-   * 그림은 어느 서버 것이든 담는다. 위시의 대표 그림이 남의 서버(쇼핑몰 CDN)에 있고,
+   * 남의 서버 그림은 판과 따로 담는다. 위시의 대표 그림이 남의 서버(쇼핑몰 CDN)에 있고,
    * 그 서버가 캐시를 얼마나 두라고 말해 주는지는 우리가 못 정한다 — 안 알려 주는 곳도 있다.
    * 담기 전에는 목록을 열 때마다 다시 받아 왔다(계측: 길을 끊으면 그림이 사라졌다).
    *
-   * 그림 갈래가 출처를 보는 줄보다 먼저 와야 한다. 뒤에 있으면 남의 그림은 거기서 걸러진다.
+   * 그림 갈래가 "남의 것이면 여기서 끝" 보다 먼저 와야 한다. 뒤에 있으면 거기서 걸러진다.
    */
   assert.match(sw, /request\.destination === "image"[\s\S]*?imageFirst\(request\)/);
+  /*
+   * 순서는 fetch 처리 안에서만 본다. imageFirst 는 함수 정의에도 나와서, 파일 전체를
+   * 훑으면 정의가 먼저 잡혀 무엇을 바꿔도 통과한다 — 실제로 그렇게 짰다가 재 보고 알았다.
+   */
+  const 받는자리 = sw.match(/addEventListener\("fetch"[\s\S]*?\n\}\);/)[0];
   assert.ok(
-    sw.indexOf('request.destination === "image"') < sw.indexOf("origin !== self.location.origin"),
-    "출처를 먼저 보면 남의 그림은 담기지 않는다",
+    받는자리.indexOf("imageFirst(request)") < 받는자리.indexOf("if (남의것) return;"),
+    "남의 것을 먼저 돌려보내면 남의 그림은 담기지 않는다",
   );
+
+  /*
+   * 우리 그림은 거기 넣지 않는다.
+   *
+   * 그림 곳간은 판이 올라가도 안 비우는 자리다. 우리 것을 넣으면 이름에 해시가 없는 것
+   * (/icon.png·/apple-touch-icon.png)이 영영 안 바뀐다 — 아이콘을 고쳐 올려도 이미 깔린
+   * 사람에게는 옛것이 그대로 남는다. 우리 것은 판을 따르는 길로 보낸다.
+   */
+  assert.match(sw, /request\.destination === "image" && 남의것/,
+    "우리 그림까지 판과 따로 담으면 아이콘을 고쳐도 안 바뀐다");
 
   /*
    * 남의 서버 그림은 no-cors 로 와서 status 가 0 이고 속을 볼 수 없다(opaque).
@@ -2344,7 +2359,30 @@ test("시작이 실패해도 화면이 말없이 멈추지 않는다", () => {
 test("실시간 맞춤은 한 모듈이 맡는다", () => {
   // 로그아웃이 채널 변수 세 개를 직접 만지고 있었다. 그 상태를 가진 쪽이 정리도 맡는다.
   assert.match(fn("stopSync"), /unsubscribe\(channel\)[\s\S]*unsubscribe\(noteChannel\)[\s\S]*clearTimeout\(syncTimer\)/);
-  assert.match(app, /elements\.signOut\.addEventListener\("click", async \(\) => \{\s*stopSync\(\);/);
+  // 로그인 화면으로 돌아가는 길이 그 정리를 반드시 지난다. 안 지나면 남의 집 소식을 계속 듣는다.
+  assert.match(fn("로그인화면으로"), /stopSync\(\)/);
+});
+
+test("세션이 저절로 끊겨도 로그인 화면으로 돌아간다", () => {
+  /*
+   * 새로고침 토큰은 영원하지 않다 — 오래 안 열었거나, 다른 기기에서 비밀번호를 바꿨거나,
+   * 로그아웃을 전부 눌렀으면 죽는다. 안 듣고 있던 때는 앱이 옛 숫자를 띄운 채 남고,
+   * 무엇을 눌러도 "실패했어요" 만 떴다. 까닭도 없고 돌아갈 길도 없었다.
+   */
+  assert.match(fn("세션끊기면"), /onAuthStateChange/);
+  assert.match(fn("세션끊기면"), /event !== "SIGNED_OUT"/);
+  /*
+   * 스스로 나갈 때도 같은 알림이 온다. 두 번 치우지 않는다.
+   *
+   * 이름만 보면 안 된다 — 변수를 남겨 둔 채 막는 줄만 지워도 통과했다(재 보고 알았다).
+   * 막고, 세우고, 그다음에 부르는 차례를 본다.
+   */
+  const 듣기 = fn("세션끊기면");
+  assert.match(듣기, /if \(이미알림\) return;[\s\S]{0,40}이미알림 = true;/);
+  assert.ok(듣기.indexOf("이미알림 = true") < 듣기.indexOf("손()"), "세우기 전에 부르면 두 번 친다");
+  // 나가는 길이 하나여야 한다. 둘로 갈리면 한쪽만 고치게 된다.
+  assert.match(app, /세션끊기면\(\(\) => 로그인화면으로\(/);
+  assert.match(fn("로그인화면으로"), /clearData\(\)[\s\S]*showLoginScreen\(/);
 });
 
 test("분류 선택지는 한 곳에서 만든다", () => {

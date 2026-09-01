@@ -125,16 +125,25 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   /*
-   * 그림은 어느 서버 것이든 담는다. 남의 서버 것이 오히려 더 필요하다 — 위시의 대표 그림이
-   * 거기 있고, 그 서버가 캐시를 얼마나 두라고 말해 주는지는 우리가 못 정한다.
+   * 남의 서버 그림만 판과 따로 담는다. 위시의 대표 그림이 거기 있고, 그 서버가 캐시를
+   * 얼마나 두라고 말해 주는지는 우리가 못 정한다 — 안 알려 주는 곳도 있다.
+   *
+   * 우리 그림은 여기 넣지 않는다. 그림 곳간은 판이 올라가도 안 비우는 자리라,
+   * 넣어 두면 이름에 해시가 없는 것(/icon.png·/apple-touch-icon.png)이 영영 안 바뀐다 —
+   * 아이콘을 고쳐 올려도 이미 깔린 사람에게는 옛것이 그대로 남는다.
+   * 우리 것은 아래 판을 따르는 길로 보낸다.
+   *
+   * 출처를 보는 이 줄이 그림 갈래 안에 있어야 한다. 밖에 두고 먼저 보면 남의 그림이
+   * 거기서 걸러져 한 장도 안 담긴다.
    */
-  if (request.destination === "image") {
+  const 남의것 = new URL(request.url).origin !== self.location.origin;
+  if (request.destination === "image" && 남의것) {
     event.respondWith(imageFirst(request));
     return;
   }
 
   // 그 밖의 외부 도메인(글꼴 CDN 등)은 브라우저 기본 처리에 맡긴다.
-  if (new URL(request.url).origin !== self.location.origin) return;
+  if (남의것) return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, true));

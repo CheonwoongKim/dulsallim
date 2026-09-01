@@ -121,6 +121,29 @@ export async function restoreSession() {
   }
 }
 
+/**
+ * 세션이 끊기면 알려 준다.
+ *
+ * 새로고침 토큰은 영원하지 않다. 오래 안 열었거나, 다른 기기에서 비밀번호를 바꿨거나,
+ * 로그아웃을 전부 눌렀으면 죽는다. 그때 supabase 는 세션을 버리고 이 자리로 알려 주는데,
+ * 아무도 안 듣고 있었다 — 앱은 옛 숫자를 띄운 채 남고, 무엇을 눌러도 "실패했어요" 만 뜬다.
+ * 왜 그런지도 안 알려 주고 로그인 화면으로 돌아갈 길도 없다.
+ *
+ * 스스로 로그아웃할 때도 같은 알림이 온다. 부르는 쪽이 두 번 치우지 않도록 한 번만 부른다.
+ *
+ * @param {() => void} 손 세션이 없어졌을 때 할 일
+ */
+export function 세션끊기면(손) {
+  let 이미알림 = false;
+  supabase.auth.onAuthStateChange((event) => {
+    if (event !== "SIGNED_OUT") return;
+    if (이미알림) return;
+    이미알림 = true;
+    profile = null;
+    손();
+  });
+}
+
 export function showLoginScreen(message = "") {
   elements.authGate.hidden = false;
   elements.appShell.hidden = true;

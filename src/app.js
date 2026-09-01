@@ -37,6 +37,7 @@ import {
   showLoginScreen,
   signIn,
   signOut,
+  세션끊기면,
 } from "./features/auth.js";
 import { applyDueFixedCosts } from "./features/fixed-sheet.js";
 
@@ -72,7 +73,11 @@ elements.loginForm.addEventListener("submit", async (event) => {
   }
 });
 
-elements.signOut.addEventListener("click", async () => {
+/**
+ * 로그인 화면으로 되돌린다. 스스로 나갈 때와 세션이 끊겼을 때가 같은 자리를 쓴다.
+ * @param {string} [말] 왜 돌아왔는지. 스스로 나간 것이면 빈칸이다.
+ */
+function 로그인화면으로(말 = "") {
   stopSync();
   closePageNow();
   clearData();
@@ -81,9 +86,21 @@ elements.signOut.addEventListener("click", async () => {
   resetTotalAnimation();
   render();
   elements.dataGate.hidden = true;
+  showLoginScreen(말);
+}
+
+elements.signOut.addEventListener("click", async () => {
   await signOut();
-  showLoginScreen();
+  로그인화면으로();
 });
+
+/*
+ * 세션이 저절로 끊겼을 때. 오래 안 열었거나 다른 기기에서 비밀번호를 바꾼 뒤다.
+ *
+ * 안 듣고 있던 때는 옛 숫자를 띄운 채 남아, 무엇을 눌러도 "실패했어요" 만 떴다.
+ * 까닭을 알려 주고 다시 들어올 자리를 내준다.
+ */
+세션끊기면(() => 로그인화면으로("다시 로그인해 주세요."));
 
 /* ── 시작 ─────────────────────────────────────────────────── */
 
