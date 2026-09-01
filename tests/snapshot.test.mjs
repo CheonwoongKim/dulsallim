@@ -117,3 +117,49 @@ test("시작할 때 적어 둔 것부터 그리고, 로그아웃·초기화에�
   // 화면 여는 일은 두 번 불러도 한 번만 붙어야 한다(듣는 자리를 붙이는 일이 섞여 있다).
   assert.match(app, /function 화면열기\(\) \{\s*if \(화면열림\) return;/);
 });
+
+test("폰에 적힌 색도 서버에서 온 것과 같은 잣대로 거른다", async () => {
+  /*
+   * 이 색은 추이 범례에서 style 속성 안에 이스케이프 없이 들어간다.
+   * 서버로 들어오는 문은 data/remote.js 의 toMember 가 지키는데, 폰에 적어 둔 사본은
+   * 그 문을 안 지나고 곧장 화면으로 간다. 문이 둘인데 하나만 지키고 있었다.
+   */
+  const { PALETTE } = await import("../src/members.js");
+  clearSnapshot();
+  // 손으로 적어 넣은 것처럼 흉내 낸다. 정상 경로로는 이런 값이 안 들어간다.
+  localStorage.setItem(
+    "dulsallim:snapshot",
+    JSON.stringify({
+      version: 1,
+      userId: "u1",
+      data: {
+        ...데이터(),
+        members: [
+          { id: "u1", name: "천웅", color: '#000" onload="alert(1)', goal: null },
+          { id: "u2", name: "짝", color: "red;}</style><script>alert(1)</script>#ffffff", goal: null },
+          { id: "u3", name: "셋", color: "#12ABef", goal: null },
+        ],
+      },
+    }),
+  );
+
+  const 꺼낸것 = readSnapshot("u1");
+  assert.equal(꺼낸것.members[0].color, PALETTE[0].value, "따옴표를 닫고 나가는 색이 그대로 나왔다");
+  assert.equal(꺼낸것.members[1].color, PALETTE[0].value, "6자리로 끝나는 값이 그대로 나왔다");
+  // 멀쩡한 색은 살리되 형식만 맞춘다. 색 하나 때문에 어제 기록을 통째로 버리지 않는다.
+  assert.equal(꺼낸것.members[2].color, "#12abef");
+  assert.equal(꺼낸것.expenses.length, 1, "지출은 그대로 남아야 한다");
+  for (const member of 꺼낸것.members) assert.match(member.color, /^#[0-9a-f]{6}$/);
+});
+
+test("색을 거르면서 다른 것을 흘리지 않는다", () => {
+  // 구성원의 이름·목표와 나머지 꾸러미가 그대로 따라와야 한다.
+  clearSnapshot();
+  const 원본 = 데이터();
+  writeSnapshot("u1", 원본);
+  const 꺼낸것 = readSnapshot("u1");
+  assert.deepEqual(꺼낸것.members, 원본.members, "정상 색이면 손대지 않은 것과 같아야 한다");
+  assert.deepEqual(꺼낸것.expenses, 원본.expenses);
+  assert.deepEqual(꺼낸것.wishes, 원본.wishes);
+  assert.deepEqual(꺼낸것.noteCounts, 원본.noteCounts);
+});

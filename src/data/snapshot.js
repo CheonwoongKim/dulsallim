@@ -19,6 +19,8 @@
  *    적어 두지 못하는 것은 다음에 조금 늦게 뜬다는 뜻일 뿐, 잘못된 일이 아니다.
  */
 
+import { toDisplayColor } from "../members.js";
+
 const KEY = "dulsallim:snapshot";
 
 /** 담는 모양이 바뀌면 올린다. 옛 모양은 조용히 버려진다. */
@@ -42,7 +44,26 @@ export function readSnapshot(userId) {
     const 꾸러미 = JSON.parse(적힌것);
     if (꾸러미?.version !== VERSION || 꾸러미.userId !== userId) return null;
     if (!Array.isArray(꾸러미.data?.expenses) || !Array.isArray(꾸러미.data?.members)) return null;
-    return 꾸러미.data;
+
+    /*
+     * 색만은 서버에서 온 것과 같은 잣대를 댄다.
+     *
+     * 이 색은 추이 범례에서 style 속성 안에 이스케이프 없이 들어간다. 서버로 들어오는 문은
+     * data/remote.js 의 toMember 가 지키는데, 폰에 적어 둔 사본은 그 문을 안 지나고 곧장
+     * 화면으로 간다. 여기가 두 번째 문이다.
+     *
+     * 손을 타려면 이미 같은 출처에서 코드를 돌릴 수 있어야 하니 그 자체로 큰 구멍은
+     * 아니다. 다만 문이 둘인데 하나만 지키고 있을 까닭이 없다.
+     *
+     * 버리지 않고 고쳐 쓴다 — 색 하나가 이상하다고 어제 기록을 통째로 못 보여 줄 일은 아니다.
+     */
+    return {
+      ...꾸러미.data,
+      members: 꾸러미.data.members.map((member) => ({
+        ...member,
+        color: toDisplayColor(member?.color),
+      })),
+    };
   } catch {
     // 적힌 것이 깨졌거나 저장소를 못 여는 브라우저다. 없는 것으로 친다.
     return null;
