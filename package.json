@@ -7,7 +7,11 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test"
+    "test": "node --test",
+    "mock": "node tools/mock-server.mjs dist 4180",
+    "test:browser": "node tests-browser/run.mjs",
+    "check": "npm test && npm run build:mock && npm run test:browser",
+    "build:mock": "node tools/build-for-mock.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

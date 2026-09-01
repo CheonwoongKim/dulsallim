@@ -267,9 +267,21 @@ supabase migration list --linked      # 로컬과 원격이 같은지 본다
 ## 7. 이 저장소를 손댈 때 늘 해야 하는 것
 
 ```bash
-npm test          # 계단 밖 값·문서 어긋남까지 여기서 걸린다
+npm test          # 계단 밖 값·문서 어긋남까지 여기서 걸린다. 2초 안에 끝난다
 npx vite build    # 배포와 같은 조건
 ```
+
+**화면을 만졌으면 브라우저까지 돌린다.**
+
+```bash
+npm run check     # 위 둘 + 진짜 브라우저(WebKit·Chromium)
+```
+
+브라우저 검사는 `npm test` 에 안 넣었다. 저쪽은 2초에 끝나 늘 도는 문이고, 브라우저를
+띄우는 값은 그 문 앞에 둘 값이 아니다. 거기서 재는 것은 흉내 DOM 으로 원리적으로 못 보는
+것뿐이다 — 커서가 어디로 가는지, CSSOM 이 못된 값을 버리는지, 실제로 몇 px 인지.
+
+서버(제약·RLS·서버 함수)는 `npm test` 안에서 PGlite 로 본다. Docker 도 서버도 필요 없다.
 
 화면을 만졌으면 **브라우저로 재서** 확인한다. 눈으로 보고 고치면 1~2px 이 계속 쌓인다.
 재는 방법과 주의할 점은 [DESIGN.md](DESIGN.md) §12 에 있다.
@@ -280,12 +292,12 @@ npx vite build    # 배포와 같은 조건
 어긋나면 로그인부터 안 된다. 워크트리마다 새 포트를 띄우다 오늘만 다섯 번 헛돌았다.
 
 ```bash
-KEY=$(grep -m1 '^VITE_SUPABASE_ANON_KEY=' .env.local | cut -d= -f2-)
-PUB=$(grep -m1 '^VITE_VAPID_PUBLIC_KEY=' .env.local | cut -d= -f2-)
-VITE_SUPABASE_URL=http://localhost:4180 VITE_SUPABASE_ANON_KEY="$KEY" \
-  VITE_VAPID_PUBLIC_KEY="$PUB" npx vite build
-node <목서버> dist 4180
+npm run build:mock   # 4180 을 가리키게 굽는다 (키는 .env.local 에서 읽는다)
+npm run mock         # 화면과 가짜 API 를 같은 포트에서 낸다
 ```
+
+목 서버는 `tools/mock-server.mjs` 다. 한동안 저장소에 없어서 사람마다 제 것을 만들어
+썼고, 그래서 굽는 주소와 내는 주소가 어긋나는 일이 반복됐다. 이제 여기 있다.
 
 **본 체크아웃의 `dist/` 는 늘 4180 을 가리키게 구워 둔다.** 실제 배포를 확인하느라
 `npx vite build` 를 그냥 돌리면 진짜 Supabase 를 가리키게 덮여서 다음 계측이 깨진다.
