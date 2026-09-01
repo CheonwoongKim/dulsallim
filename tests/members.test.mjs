@@ -40,6 +40,28 @@ test("명부를 비우면 앞사람 흔적이 남지 않는다", () => {
   assert.equal(getMemberName("a"), "알 수 없음");
 });
 
+test("명부에 들어가는 길에서 색을 한 번 거른다", () => {
+  /*
+   * 이 색은 추이 범례에서 style 속성 안에 이스케이프 없이 들어간다. 문은 둘이다 —
+   * 서버에서 오는 길(data/remote.js 의 toMember)과 폰에 적어 둔 사본에서 오는 길
+   * (data/snapshot.js). 문마다 막으면 새 문이 생길 때 다시 터지므로 목에서 막는다.
+   *
+   * getMemberColor 는 이미 걸러 내주는데 getMembers 만 날것을 내주고 있었다.
+   * 추이는 getMembers 를 쓴다 — 그 하나로 샜다.
+   */
+  setMembers([
+    { id: "a", name: "우리", color: '#000" onload="alert(1)', goal: null },
+    { id: "b", name: "너와", color: "red;}</style><script>alert(1)</script>#ffffff", goal: null },
+    { id: "c", name: "셋", color: "#12ABef", goal: 100 },
+  ]);
+
+  for (const member of getMembers()) assert.match(member.color, /^#[0-9a-f]{6}$/, `${member.color} 가 새어 나왔다`);
+  assert.equal(getMembers()[0].color, PALETTE[0].value);
+  assert.equal(getMembers()[2].color, "#12abef", "멀쩡한 색은 형식만 맞춘다");
+  // 색만 손대고 나머지는 그대로 따라와야 한다.
+  assert.deepEqual(getMembers().map((m) => [m.id, m.name, m.goal]), [["a","우리",null],["b","너와",null],["c","셋",100]]);
+});
+
 test("이상한 색은 기본색으로 돌아간다", () => {
   setMembers(두사람);
   assert.equal(getMemberColor("a"), "#f2674b");
