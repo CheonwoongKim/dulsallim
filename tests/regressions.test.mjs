@@ -329,6 +329,18 @@ test("고정비는 한 트랜잭션으로 반영해 같은 달이 두 번 들어
   assert.match(apply, /rpc\("apply_fixed_cost"/);
   assert.doesNotMatch(apply, /\.delete\(\)/, "되돌릴 일이 없어야 한다");
   assert.match(fn("applyDueFixedCosts"), /applyOccurrences\(due\)/);
+  /*
+   * 잘린 건수도 함께 실어 보낸다. 세는 자리는 반영 전이어야 한다 —
+   * 반영하고 나면 기록이 늘어 무엇이 원래 잘려 있었는지 알 수 없다.
+   */
+  const 반영 = fn("applyDueFixedCosts");
+  assert.match(반영, /countSkippedMonths\(templates, applied\)/);
+  assert.ok(
+    반영.indexOf("countSkippedMonths") < 반영.indexOf("await applyOccurrences"),
+    "반영한 뒤에 세면 잘린 것을 알 수 없다",
+  );
+  // 채울 것이 없어 일찍 나갈 때도 모양이 같아야 부르는 쪽이 갈라지지 않는다.
+  assert.match(반영, /return \{ created: 0, failed: 0, skipped: 0 \}/);
 
   const { readFile } = await import("node:fs/promises");
   for (const file of ["schema.sql", "migrations/20260101000005_hardening.sql"]) {
@@ -2722,6 +2734,26 @@ test("켜 둔 채 자정을 넘겨도 그날 고정비가 들어온다", () => {
   // 구독을 걸 때 함께 걸리고, 로그아웃하면 함께 풀린다.
   assert.match(fn("watchForChanges"), /watchForNewDay\(\)/);
   assert.match(fn("stopSync"), /clearTimeout\(dayTimer\)/);
+});
+
+test("열어 둔 화면도 그릴 때 함께 맞춘다", () => {
+  /*
+   * repaintAfterSync 는 render 와 고정비 시트만 부른다. 그것만 보고 "분석 화면은 갱신되지
+   * 않는다"고 읽기 쉽다 — 실제로 리뷰에서 그렇게 읽혔다. 맞추는 자리는 render 안이다.
+   * 자정에도, 상대가 기록했을 때도, 달을 넘길 때도 전부 이 한 자리를 지난다.
+   */
+  const 그리기 = fn("render");
+  assert.match(그리기, /if \(!elements\.analysisPage\.hidden\) paintAnalysis\(\)/);
+  assert.match(그리기, /if \(!elements\.trendSheet\.hidden\) refreshTrend\(\)/);
+  assert.match(그리기, /if \(!elements\.wishPage\.hidden\) paintWishPage\(\)/);
+  // 고정비 목록만 render 밖이다. 그래서 repaintAfterSync 가 따로 부른다.
+  assert.match(fn("repaintAfterSync"), /render\(\);[\s\S]{0,120}refreshFixedSheet\(\)/);
+  /*
+   * 진행 중인 달의 "며칠까지" 는 그릴 때마다 오늘로 다시 잰다.
+   * 붙잡아 두면 자정을 넘겨도 어제 날짜로 견준다.
+   */
+  assert.match(fn("comparableDay"), /today = new Date\(\)/);
+  assert.match(fn("compareMonth"), /comparableDay\(monthKey, today\)/);
 });
 
 test("달까지 넘어가면 보고 있던 달도 함께 굴린다", () => {

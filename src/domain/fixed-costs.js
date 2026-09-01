@@ -1,10 +1,18 @@
-import { lastDayOfMonth, shiftMonthKey, toDateKey, toMonthKey } from "./expenses.js";
+import { formatMonth, lastDayOfMonth, shiftMonthKey, toDateKey, toMonthKey } from "./expenses.js";
 
 
 export const MIN_DAY = 1;
 export const MAX_DAY = 31;
 
-/** 오래 앱을 열지 않았을 때 한꺼번에 수십 건이 생기지 않도록 소급 범위를 제한한다. */
+/**
+ * 얼마나 거슬러 올라가 채울지. 이번 달에서 이만큼 앞까지 본다.
+ *
+ * 이번 달도 함께 세므로 실제로 채우는 창은 **열세 달**이다. 이름만 보고 열두 달로 읽으면
+ * 경계에서 한 달이 어긋난다 — 실제로 리뷰에서 그렇게 읽혔다. 검사가 이 창을 못 박아 둔다.
+ *
+ * 그보다 오래 앱을 안 열었으면 그 앞은 채우지 않는다. 일부러 그렇게 둔다 — 두 해 만에
+ * 열었다고 스물넉 달치 월세가 한꺼번에 목록에 쌓이면 그게 더 나쁘다.
+ */
 export const MAX_BACKFILL_MONTHS = 12;
 
 export function isValidDay(day) {
@@ -27,6 +35,23 @@ export function resolveOccurrenceDate(monthKey, day) {
 export function firstApplicableMonth(day, today = new Date()) {
   const thisMonth = toMonthKey(today);
   return today.getDate() <= day ? thisMonth : shiftMonthKey(thisMonth, 1);
+}
+
+/**
+ * 등록하기 전에 보여 줄 한 줄. describeApplied 와 같은 자리에 둔다 — 글자는 재 봐야 안다.
+ *
+ * 적은 날을 그대로 되뇌면 없는 날짜를 안내한다. 2월에 31일을 적으면 "2월 31일부터" 였는데,
+ * 실제로는 말일로 당겨져 2월 28일에 들어온다. 첫 반영일을 그대로 보여 준다.
+ *
+ * 29·30·31 은 2월이 늘 짧아 언젠가 반드시 당겨진다. 그 사실도 함께 밝힌다 —
+ * 28 이하는 어느 달에도 그대로 있으므로 굳이 말하지 않는다.
+ */
+export function describeSchedule(day, today = new Date()) {
+  if (!isValidDay(day)) return "";
+  const startMonth = firstApplicableMonth(day, today);
+  const firstDay = Math.min(day, lastDayOfMonth(startMonth));
+  const 말일보정 = day > 28 ? ` ${day}일이 없는 달은 말일에 기록됩니다.` : "";
+  return `${formatMonth(startMonth)} ${firstDay}일부터 매월 자동으로 기록됩니다.${말일보정}`;
 }
 
 export function appliedKey(templateId, monthKey) {
@@ -61,6 +86,31 @@ export function collectDueOccurrences(templates, applied, today = new Date()) {
   return due.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/** 시작월이 터무니없이 옛날이어도 셈이 오래 돌지 않게 막는다. 알리려는 것은 개수의 크기다. */
+const MAX_SKIPPED_SCAN = 120;
+
+/**
+ * 창보다 앞이라 채우지 않은 건수.
+ *
+ * 채우지 않은 달은 반영 기록이 남지 않는데, 창은 늘 이번 달을 따라 앞으로 밀린다.
+ * 그래서 한 번 창 밖으로 밀려난 달은 다음에 열어도 영영 돌아오지 않는다.
+ * 조용히 비면 지난 달 합계가 왜 적은지 알 길이 없다 — 개수라도 알려 주려고 센다.
+ */
+export function countSkippedMonths(templates, applied, today = new Date()) {
+  const appliedSet = new Set(applied);
+  const oldestMonth = shiftMonthKey(toMonthKey(today), -MAX_BACKFILL_MONTHS);
+  let skipped = 0;
+
+  for (const template of templates) {
+    let monthKey = template.startMonth;
+    for (let scanned = 0; monthKey < oldestMonth && scanned < MAX_SKIPPED_SCAN; scanned += 1) {
+      if (!appliedSet.has(appliedKey(template.id, monthKey))) skipped += 1;
+      monthKey = shiftMonthKey(monthKey, 1);
+    }
+  }
+  return skipped;
+}
+
 /** 다음에 반영될 날짜. 관리 화면에서 "언제 들어오는지"를 보여주기 위한 값. */
 export function nextOccurrenceDate(template, applied, today = new Date()) {
   const appliedSet = new Set(applied);
@@ -80,9 +130,18 @@ export function nextOccurrenceDate(template, applied, today = new Date()) {
  * 성공과 실패는 함께 일어날 수 있다. 성공만 알리면 빠진 고정비를 모른 채 지나가고,
  * 사용자는 이번 달 합계가 왜 적은지 알 방법이 없다.
  */
-export function describeApplied({ created, failed }) {
-  if (created && failed) return `고정비 ${created}건을 넣었고 ${failed}건은 반영하지 못했어요`;
-  if (created) return `이번 달 고정비 ${created}건을 넣었어요`;
-  if (failed) return `고정비 ${failed}건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요`;
-  return null;
+export function describeApplied({ created, failed, skipped = 0 }) {
+  const 본문 =
+    created && failed ? `고정비 ${created}건을 넣었고 ${failed}건은 반영하지 못했어요`
+    : created ? `이번 달 고정비 ${created}건을 넣었어요`
+    : failed ? `고정비 ${failed}건을 반영하지 못했어요. 잠시 뒤 다시 열어 주세요`
+    : null;
+  if (!본문) return null;
+
+  /*
+   * 잘린 것이 있으면 함께 밝힌다. 채운 것이 있을 때만 말한다 —
+   * 아무것도 안 채운 날까지 되뇌면 열 때마다 같은 말을 듣는 잔소리가 된다.
+   */
+  if (!created || !skipped) return 본문;
+  return `${본문}. 최근 ${MAX_BACKFILL_MONTHS + 1}달보다 오래된 ${skipped}건은 넣지 않았어요`;
 }

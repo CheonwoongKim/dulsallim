@@ -1,12 +1,14 @@
 import { elements } from "../dom.js";
-import { CATEGORIES, formatMonth, formatMoney, formatShortDate } from "../domain/expenses.js";
+import { CATEGORIES, formatMoney, formatShortDate } from "../domain/expenses.js";
 import { getMemberName } from "../members.js";
 import { isValidAmount, readAmount } from "../domain/money.js";
 import {
   MAX_DAY,
   MIN_DAY,
   collectDueOccurrences,
+  countSkippedMonths,
   describeApplied,
+  describeSchedule,
   firstApplicableMonth,
   isValidDay,
   nextOccurrenceDate,
@@ -34,9 +36,16 @@ let editingFixedId = null;
  * @returns {Promise<{created: number, failed: number}>}
  */
 export async function applyDueFixedCosts() {
-  const due = collectDueOccurrences(getFixedTemplates(), getFixedApplied());
-  if (!due.length) return { created: 0, failed: 0 };
-  return applyOccurrences(due);
+  const templates = getFixedTemplates();
+  const applied = getFixedApplied();
+  const due = collectDueOccurrences(templates, applied);
+  if (!due.length) return { created: 0, failed: 0, skipped: 0 };
+  /*
+   * 창 밖으로 밀려나 채우지 못한 것도 함께 센다. 세는 자리는 반영 전이어야 한다 —
+   * 반영하고 나면 기록이 늘어 무엇이 원래 잘려 있었는지 알 수 없다.
+   */
+  const skipped = countSkippedMonths(templates, applied);
+  return { ...(await applyOccurrences(due)), skipped };
 }
 
 function renderFixedList() {
@@ -121,15 +130,9 @@ export function closeFixedSheet() {
   hideSheet(elements.fixedSheet, showListView);
 }
 
-/** 입력한 날짜로 언제부터 반영되는지 미리 알려준다. */
+/** 입력한 날짜로 언제부터 반영되는지 미리 알려준다. 문구는 describeSchedule 이 짓는다. */
 export function updateFixedHint() {
-  const day = Number(elements.fixedDay.value);
-  if (!isValidDay(day)) {
-    elements.fixedHint.textContent = "";
-    return;
-  }
-  const startMonth = firstApplicableMonth(day);
-  elements.fixedHint.textContent = `${formatMonth(startMonth)} ${day}일부터 매월 자동으로 기록됩니다.`;
+  elements.fixedHint.textContent = describeSchedule(Number(elements.fixedDay.value));
 }
 
 function validateFixedInput({ day, item, amount }) {
