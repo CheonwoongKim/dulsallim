@@ -5,18 +5,18 @@
 
 with checks as (
 
-  -- 1) 테이블 10개가 모두 있는가
+  -- 1) 테이블 11개가 모두 있는가
   select
     1 as no,
     '테이블 생성' as item,
-    count(*)::text || ' / 10' as detail,
-    case when count(*) = 10 then 'OK' else 'FAIL' end as status,
+    count(*)::text || ' / 11' as detail,
+    case when count(*) = 11 then 'OK' else 'FAIL' end as status,
     'schema.sql 을 다시 실행하세요' as hint
   from information_schema.tables
   where table_schema = 'public'
     and table_name in ('households','profiles','fixed_costs','expenses',
                        'fixed_cost_applications','expense_notes','nags','nag_fires',
-                       'wish_items','wish_agreements')
+                       'wish_items','wish_agreements','push_subscriptions')
 
   union all
 
@@ -25,30 +25,30 @@ with checks as (
     2,
     'RLS 활성화',
     count(*) filter (where rowsecurity)::text || ' / ' || count(*)::text,
-    case when count(*) = 10 and count(*) = count(*) filter (where rowsecurity)
+    case when count(*) = 11 and count(*) = count(*) filter (where rowsecurity)
          then 'OK' else 'FAIL' end,
     'RLS 가 꺼진 테이블은 anon key 로 전부 읽힙니다'
   from pg_tables
   where schemaname = 'public'
     and tablename in ('households','profiles','fixed_costs','expenses',
                       'fixed_cost_applications','expense_notes','nags','nag_fires',
-                      'wish_items','wish_agreements')
+                      'wish_items','wish_agreements','push_subscriptions')
 
   union all
 
-  -- 3) 정책이 10개 다 있는가
+  -- 3) 정책이 11개 다 있는가
   -- nag_fires 에는 일부러 정책을 두지 않는다(fire_nags 만 손댄다).
   select
     3,
     '접근 정책',
-    count(*)::text || ' / 10',
-    case when count(*) = 10 then 'OK' else 'FAIL' end,
+    count(*)::text || ' / 11',
+    case when count(*) = 11 then 'OK' else 'FAIL' end,
     'RLS 만 켜고 정책이 없으면 본인도 아무것도 못 봅니다'
   from pg_policies
   where schemaname = 'public'
     and tablename in ('households','profiles','fixed_costs','expenses',
                       'fixed_cost_applications','expense_notes','nags',
-                      'wish_items','wish_agreements')
+                      'wish_items','wish_agreements','push_subscriptions')
 
   union all
 
@@ -98,7 +98,7 @@ with checks as (
     and table_schema = 'public'
     and table_name in ('households','profiles','fixed_costs','expenses',
                        'fixed_cost_applications','expense_notes','nags','nag_fires',
-                       'wish_items','wish_agreements')
+                       'wish_items','wish_agreements','push_subscriptions')
 
   union all
 

@@ -34,6 +34,11 @@ test("schema.sql 은 처음 표에서 나중 마이그레이션이 더한 것만
    *
    * 지금까지 더한 것: note · image_url(각각 제 마이그레이션) · sort_order 와 느슨해진
    * 상태 제약(migrations/20260807000000_wish_order.sql).
+   *
+   * 그 마지막 마이그레이션은 더하기만 한 것이 아니라 지우기도 했다. state 열에 붙어 있던
+   * 값 목록 검사를 drop 하고 이름 붙인 표 제약 하나로 합쳤다. 그래서 schema.sql 에는
+   * 그 열 검사가 없어야 맞다 — 남겨 두면 Postgres 가 둘에게 같은 이름
+   * (wish_items_state_check)을 붙이려 해서 표가 아예 안 만들어진다.
    */
   assert.equal(compact(tableDefinition(schema, "wish_agreements")),
                compact(tableDefinition(migration, "wish_agreements")),
@@ -46,6 +51,8 @@ test("schema.sql 은 처음 표에서 나중 마이그레이션이 더한 것만
     .replace(/image_url text check \(image_url is null[^)]*\)[^,]*, /, "")
     .replace(/is_goal boolean not null default false, /, "")
     .replace(/constraint wish_items_state_check /, "")
+    // 마지막 마이그레이션이 지운 열 검사. 처음 표에만 있고 지금 표에는 없어야 한다.
+    .replace(/ check \(state in \('proposed', 'pursuing', 'achieved'\)\)/, "")
     .replace(/pursuing_at is not null and achieved_on/, "achieved_on");
   assert.equal(뺀다(지금), 뺀다(처음), "더한 것 말고도 표가 갈렸다");
 
@@ -57,7 +64,17 @@ test("schema.sql 은 처음 표에서 나중 마이그레이션이 더한 것만
   for (const sql of [schema, migration]) {
     assert.match(sql, /estimated_price integer check \(estimated_price is null or estimated_price > 0\)/);
     assert.match(sql, /created_by\s+uuid not null references profiles\(id\)/);
-    assert.match(sql, /state in \('proposed', 'pursuing', 'achieved'\)/);
+  }
+
+  /*
+   * 쓸 수 있는 상태 셋은 처음 표에서는 열 검사가, 지금 표에서는 이름 붙인 표 제약이 정한다.
+   * 표 제약은 셋 말고는 어느 가지에도 안 걸리므로 값 목록을 따로 적지 않아도 같은 뜻이다.
+   */
+  assert.match(migration, /state in \('proposed', 'pursuing', 'achieved'\)/);
+  assert.doesNotMatch(schema, /check \(state in \(/,
+    "열 검사를 남겨 두면 표 제약과 이름이 겹쳐 wish_items 가 아예 안 만들어진다");
+  for (const 상태 of ["proposed", "pursuing", "achieved"]) {
+    assert.match(schema, new RegExp(`state = '${상태}'`), `${상태} 를 받는 가지가 없다`);
   }
 });
 
@@ -230,10 +247,14 @@ test("schema.sql 의 위시 함수 몸통은 마지막 마이그레이션과 글
    *
    * 목 서버에는 제약도 다른 표도 없어 브라우저 시험이 다 통과했다. 그래서 여기서 글자로 센다.
    */
-  const 짝 = Object.fromEntries(
-    ["wish_snapshot", "create_wish", "agree_wish", "achieve_wish", "update_wish", "set_wish_goal"]
-      .map((이름) => [이름, "migrations/20260807030000_wish_goal.sql"]),
-  );
+  const 짝 = {
+    ...Object.fromEntries(
+      ["wish_snapshot", "create_wish", "agree_wish", "achieve_wish", "update_wish", "set_wish_goal"]
+        .map((이름) => [이름, "migrations/20260807030000_wish_goal.sql"]),
+    ),
+    // 초기화를 security definer 로 바꾼 판. 여기도 몸통을 손으로 옮겨 적으면 안 된다.
+    reset_household: "migrations/20260901000000_reset_household_definer.sql",
+  };
   const 몸통 = (글, 이름) => {
     const m = new RegExp(`create or replace function ${이름}\\([\\s\\S]*?\\nas \\$\\$([\\s\\S]*?)\\n\\$\\$;`).exec(글);
     return m ? m[1].replace(/--[^\n]*/g, "").replace(/\s+/g, " ").trim() : null;
