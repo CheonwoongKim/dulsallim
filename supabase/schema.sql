@@ -60,6 +60,8 @@ create table if not exists fixed_costs (
   day_of_month smallint not null check (day_of_month between 1 and 31),
   -- 시작 "월"이지만 date 타입으로 두고 항상 1일로 정규화한다. 월 비교가 쉬워진다.
   start_month  date not null check (start_month = date_trunc('month', start_month)::date),
+  -- 할부는 고정비에 끝을 붙인 것이다. null 이면 끝이 없다(구독), 5 면 다섯 달 하고 그만둔다.
+  months       smallint check (months is null or months > 0),
   created_at   timestamptz not null default now()
 );
 

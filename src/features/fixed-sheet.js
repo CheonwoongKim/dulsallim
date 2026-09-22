@@ -1,13 +1,24 @@
 import { elements } from "../dom.js";
-import { CATEGORIES, formatMoney, formatShortDate } from "../domain/expenses.js";
+import {
+  CATEGORIES,
+  formatMoney,
+  formatMonth,
+  formatShortDate,
+  isValidMonthKey,
+  shiftMonthKey,
+  toMonthKey,
+} from "../domain/expenses.js";
 import { getMemberName } from "../members.js";
 import { isValidAmount, readAmount } from "../domain/money.js";
 import {
+  MAX_BACKFILL_MONTHS,
   MAX_DAY,
   MIN_DAY,
   collectDueOccurrences,
+  countApplied,
   countSkippedMonths,
   describeApplied,
+  describeInstallment,
   describeSchedule,
   firstApplicableMonth,
   isValidDay,
@@ -31,6 +42,18 @@ import { getProfile } from "./auth.js";
 let editingFixedId = null;
 
 /**
+ * 시작월을 아직 손대지 않았나. 그동안은 결제일을 따라 계산값으로 움직이고,
+ * 한 번 고르면 그 뒤로는 결제일을 고쳐도 고른 달을 지킨다.
+ */
+let startMonthAuto = true;
+
+/**
+ * 할부 회수의 상한. 열 해치다.
+ * 그보다 길면 할부라기보다 그냥 고정비고, 오타 하나로 다음 세기까지 안내하는 것을 막는다.
+ */
+const MAX_MONTHS = 120;
+
+/**
  * 반영일이 지난 고정비를 실제 지출로 만든다.
  * 만든 뒤에는 평범한 지출이라 수정·삭제가 자유롭고, 반영 기록 덕분에 지워도 되살아나지 않는다.
  * @returns {Promise<{created: number, failed: number, skipped: number}>}
@@ -52,6 +75,12 @@ function renderFixedList() {
     .sort((a, b) => a.day - b.day || a.item.localeCompare(b.item))
     .map((template) => {
       const next = nextOccurrenceDate(template, applied);
+      /*
+       * 할부는 몇 회째인지와 언제 끝나는지를 말한다. 그 자리에 다음 반영일까지 함께 넣으면
+       * 줄이 넘치는데, 결제일은 왼쪽 칸이 이미 말하고 있어 잃는 것이 없다.
+       */
+      const 진행 = describeInstallment(template, applied)
+        ?? (next ? `다음 ${formatShortDate(next)}` : "대기");
       const category = CATEGORIES[template.category] || CATEGORIES.etc;
       const row = document.createElement("article");
       row.className = "fixed-item swipe-row";
@@ -65,7 +94,7 @@ function renderFixedList() {
           <div class="fixed-copy">
             <strong>${escapeHtml(template.item)}</strong>
             <span>
-              ${escapeHtml(getMemberName(template.member))}<i></i>${category.label}<i></i>${next ? `다음 ${formatShortDate(next)}` : "대기"}
+              ${escapeHtml(getMemberName(template.member))}<i></i>${category.label}<i></i>${진행}
             </span>
           </div>
           <strong class="fixed-amount">${formatMoney(template.amount)}원</strong>
@@ -85,6 +114,43 @@ function showListView() {
   renderFixedList();
 }
 
+/**
+ * 시작월 후보를 채운다. 이번 달을 가운데 두고 앞뒤로 편다.
+ *
+ * 뒤로는 소급 창까지만 편다 — 그보다 앞은 고를 수는 있어도 채워지지 않아,
+ * 고른 사람만 모르는 빈 달이 생긴다. 앞으로는 한 해면 카드 첫 청구가 밀리는 경우를 덮는다.
+ *
+ * @param {string} [keep] 고치는 중인 고정비의 시작월. 창 밖이어도 목록에 남겨 둔다 —
+ *   빠져 있으면 금액만 고치고 저장해도 시작월이 조용히 다른 달로 바뀐다.
+ */
+function fillStartMonthOptions(keep) {
+  const thisMonth = toMonthKey(new Date());
+  const 후보 = [];
+  for (let i = -MAX_BACKFILL_MONTHS; i <= 12; i += 1) 후보.push(shiftMonthKey(thisMonth, i));
+  if (keep && !후보.includes(keep)) 후보.unshift(keep);
+
+  elements.fixedStartMonth.replaceChildren(...후보.map((monthKey) => {
+    const option = document.createElement("option");
+    option.value = monthKey;
+    option.textContent = formatMonth(monthKey);
+    return option;
+  }));
+}
+
+/**
+ * 지금 폼이 고치고 있는 고정비. 새로 등록하는 중이면 null.
+ * 시작월을 잠글지, 개월 수를 어디까지 줄일 수 있는지가 이것으로 갈린다.
+ */
+function editingTemplate() {
+  return editingFixedId ? getFixedTemplates().find((current) => current.id === editingFixedId) : null;
+}
+
+/** 적은 개월 수. 비워 두면 null — 그 비움이 곧 "끝이 없다"(구독)는 뜻이다. */
+function readMonths(text) {
+  const 숫자만 = String(text ?? "").replace(/\D/g, "");
+  return 숫자만 ? Number(숫자만) : null;
+}
+
 /** @param {object|null} template 넘기면 수정 모드로 연다. */
 export function showFormView(template = null) {
   editingFixedId = template?.id || null;
@@ -96,6 +162,14 @@ export function showFormView(template = null) {
   elements.fixedItem.value = template?.item || "";
   elements.fixedAmount.value = template ? formatMoney(template.amount) : "";
   elements.fixedCategory.value = template?.category || "housing";
+  elements.fixedMonths.value = template?.months ? String(template.months) : "";
+  /*
+   * 고칠 때는 원래 시작월을 그대로 보여 준다. 새로 등록할 때는 결제일을 적는 대로
+   * 계산값이 따라오게 두고(updateFixedHint), 사람이 고르면 거기서 멈춘다.
+   */
+  startMonthAuto = !template;
+  fillStartMonthOptions(template?.startMonth);
+  elements.fixedStartMonth.value = template?.startMonth || toMonthKey(new Date());
   // 지출 폼과 같은 규칙: 새로 등록하면 로그인한 사람, 고칠 때는 원래 결제자를 유지한다.
   const defaultMember = template?.member || getProfile()?.id;
   const radio = elements.fixedForm.querySelector(`input[name="fixed-member"][value="${defaultMember}"]`);
@@ -104,6 +178,7 @@ export function showFormView(template = null) {
   elements.fixedDayError.textContent = "";
   elements.fixedItemError.textContent = "";
   elements.fixedAmountError.textContent = "";
+  elements.fixedMonthsError.textContent = "";
   updateFixedHint();
 
   elements.fixedListView.hidden = true;
@@ -127,17 +202,38 @@ export function closeFixedSheet() {
   hideSheet(elements.fixedSheet, showListView);
 }
 
-/** 입력한 날짜로 언제부터 반영되는지 미리 알려준다. 문구는 describeSchedule 이 짓는다. */
+/** 적은 것으로 언제부터 언제까지 반영되는지 미리 알려준다. 문구는 describeSchedule 이 짓는다. */
 export function updateFixedHint() {
-  elements.fixedHint.textContent = describeSchedule(Number(elements.fixedDay.value));
+  const day = Number(elements.fixedDay.value);
+  // 아직 안 고른 시작월은 결제일을 따라 움직인다. 25일을 적으면 25일 기준으로 다시 잡힌다.
+  if (startMonthAuto && isValidDay(day)) elements.fixedStartMonth.value = firstApplicableMonth(day);
+  /*
+   * 고치는 중이면 그 고정비의 id 와 반영 기록을 함께 넘긴다. 이미 채운 달은 다시 안 생기므로,
+   * 넘기지 않으면 "저장하면 지난 5건" 처럼 실제보다 부풀려 말한다.
+   */
+  const 고치는것 = editingTemplate();
+  elements.fixedHint.textContent = describeSchedule({
+    id: 고치는것?.id ?? "미리보기",
+    day,
+    startMonth: elements.fixedStartMonth.value,
+    months: readMonths(elements.fixedMonths.value),
+    applied: getFixedApplied(),
+  });
 }
 
-function validateFixedInput({ day, item, amount }) {
+/** 시작월을 직접 골랐다. 그 뒤로는 결제일을 고쳐도 고른 달을 지킨다. */
+export function pickFixedStartMonth() {
+  startMonthAuto = false;
+  updateFixedHint();
+}
+
+function validateFixedInput({ day, item, amount, months }) {
   let firstInvalidField = null;
 
   elements.fixedDayError.textContent = "";
   elements.fixedItemError.textContent = "";
   elements.fixedAmountError.textContent = "";
+  elements.fixedMonthsError.textContent = "";
 
   if (!isValidDay(day)) {
     elements.fixedDayError.textContent = `${MIN_DAY}~${MAX_DAY} 사이의 날짜를 입력해 주세요.`;
@@ -151,6 +247,21 @@ function validateFixedInput({ day, item, amount }) {
     elements.fixedAmountError.textContent = "1원 이상의 금액을 입력해 주세요.";
     firstInvalidField = firstInvalidField || elements.fixedAmount;
   }
+  // 비워 두는 것은 무기한이라는 뜻이라 통과시킨다. 적었다면 실제 할부 회수여야 한다.
+  if (months !== null && (months < 1 || months > MAX_MONTHS)) {
+    elements.fixedMonthsError.textContent = `1~${MAX_MONTHS} 사이로 적거나, 끝이 없으면 비워 주세요.`;
+    firstInvalidField = firstInvalidField || elements.fixedMonths;
+  }
+  /*
+   * 이미 기록된 회차보다 적게 줄일 수 없다. 줄인다고 나간 돈이 돌아오지 않는데,
+   * 목록은 줄인 숫자로 "3회 끝남" 이라고 말하게 된다 — 다섯 번 청구해 놓고 셋이라 하는 셈이다.
+   */
+  const 고치는것 = editingTemplate();
+  const 이미 = 고치는것 ? countApplied(고치는것, getFixedApplied()) : 0;
+  if (months !== null && months >= 1 && months < 이미) {
+    elements.fixedMonthsError.textContent = `이미 ${이미}번 기록돼서 ${이미}개월보다 줄일 수 없어요.`;
+    firstInvalidField = firstInvalidField || elements.fixedMonths;
+  }
   return firstInvalidField;
 }
 
@@ -161,6 +272,8 @@ export async function handleFixedSubmit(event) {
     day: Number(String(data.get("day") || "").replace(/\D/g, "")),
     item: String(data.get("item") || "").trim(),
     amount: readAmount(data.get("amount")),
+    months: readMonths(data.get("months")),
+    startMonth: String(data.get("startMonth") || ""),
   };
 
   const firstInvalidField = validateFixedInput(input);
@@ -169,17 +282,24 @@ export async function handleFixedSubmit(event) {
     return;
   }
 
-  const existing = editingFixedId
-    ? getFixedTemplates().find((current) => current.id === editingFixedId)
-    : null;
+  const existing = editingTemplate();
   const template = {
     member: String(data.get("fixed-member")),
     category: String(data.get("category")),
     item: input.item,
     amount: input.amount,
     day: input.day,
-    // 시작월은 유지한다. 금액만 고쳤는데 반영 일정이 바뀌면 혼란스럽다.
-    startMonth: existing?.startMonth || firstApplicableMonth(input.day),
+    /*
+     * 시작월은 폼이 정한다. 계산값이 늘 맞지는 않기 때문이다 — 9월 22일에 결제일 25일로
+     * 등록하면 9월을 잡는데, 카드 첫 청구가 10월이면 한 달이 통째로 어긋난다.
+     *
+     * 이미 기록이 시작된 뒤에도 고칠 수 있다. 옮겨도 회수 상한(collectDueOccurrences)과
+     * 달별 반영 기록이 함께 막아 같은 달이 두 번 들어가거나 회수를 넘는 일이 없고,
+     * 뒤로 당겨 소급분이 생기면 저장 전에 몇 건인지 안내가 먼저 말한다.
+     * 고치러 들어오면 폼이 원래 달을 담고 열리므로, 금액만 고치면 일정은 움직이지 않는다.
+     */
+    startMonth: isValidMonthKey(input.startMonth) ? input.startMonth : firstApplicableMonth(input.day),
+    months: input.months,
   };
 
   elements.fixedSubmit.disabled = true;

@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   MAX_BACKFILL_MONTHS,
   appliedKey,
+  countApplied,
+  describeInstallment,
   collectDueOccurrences,
   countSkippedMonths,
   describeSchedule,
@@ -11,6 +13,7 @@ import {
   isValidDay,
   nextOccurrenceDate,
   describeApplied,
+  lastOccurrenceMonth,
   resolveOccurrenceDate,
 } from "../src/domain/fixed-costs.js";
 import { shiftMonthKey } from "../src/domain/expenses.js";
@@ -150,43 +153,43 @@ test("없는 날짜를 안내하지 않는다", () => {
    * 실제로는 말일로 당겨져 2월 28일에 들어온다.
    */
   assert.equal(
-    describeSchedule(31, on(2026, 2, 14)),
+    describeSchedule({ day: 31 }, on(2026, 2, 14)),
     "2026년 2월 28일부터 매월 자동으로 기록됩니다. 31일이 없는 달은 말일에 기록됩니다.",
   );
   // 30일도 2월에는 없다.
   assert.equal(
-    describeSchedule(30, on(2026, 2, 14)),
+    describeSchedule({ day: 30 }, on(2026, 2, 14)),
     "2026년 2월 28일부터 매월 자동으로 기록됩니다. 30일이 없는 달은 말일에 기록됩니다.",
   );
   // 31일이 없는 달은 2월만이 아니다.
   assert.equal(
-    describeSchedule(31, on(2026, 4, 9)),
+    describeSchedule({ day: 31 }, on(2026, 4, 9)),
     "2026년 4월 30일부터 매월 자동으로 기록됩니다. 31일이 없는 달은 말일에 기록됩니다.",
   );
 });
 
 test("당겨질 일이 없으면 군말을 붙이지 않는다", () => {
   // 28일까지는 어느 달에도 그대로 있다. 말일 이야기를 꺼낼 까닭이 없다.
-  assert.equal(describeSchedule(5, on(2026, 2, 14)), "2026년 3월 5일부터 매월 자동으로 기록됩니다.");
-  assert.equal(describeSchedule(28, on(2026, 2, 14)), "2026년 2월 28일부터 매월 자동으로 기록됩니다.");
+  assert.equal(describeSchedule({ day: 5 }, on(2026, 2, 14)), "2026년 3월 5일부터 매월 자동으로 기록됩니다.");
+  assert.equal(describeSchedule({ day: 28 }, on(2026, 2, 14)), "2026년 2월 28일부터 매월 자동으로 기록됩니다.");
 });
 
 test("윤년 2월에는 29일까지 있다", () => {
   // 2028년은 윤년이다. 28일로 당기면 하루를 잃는다.
   assert.equal(
-    describeSchedule(31, on(2028, 2, 10)),
+    describeSchedule({ day: 31 }, on(2028, 2, 10)),
     "2028년 2월 29일부터 매월 자동으로 기록됩니다. 31일이 없는 달은 말일에 기록됩니다.",
   );
 });
 
 test("반영일이 지났으면 다음 달부터라고 안내한다", () => {
   // 등록하자마자 과거 지출이 생기지 않는다. 안내도 그 달을 가리켜야 한다.
-  assert.equal(describeSchedule(5, on(2026, 8, 20)), "2026년 9월 5일부터 매월 자동으로 기록됩니다.");
+  assert.equal(describeSchedule({ day: 5 }, on(2026, 8, 20)), "2026년 9월 5일부터 매월 자동으로 기록됩니다.");
 });
 
 test("날이 아니면 아무 말도 하지 않는다", () => {
   // 아직 안 적었거나 범위 밖이면 빈칸이다. 입력하는 사이에 붉은 글씨가 깜빡이지 않는다.
-  for (const 값 of [0, 32, Number.NaN, -1, 1.5]) assert.equal(describeSchedule(값, on(2026, 2, 14)), "");
+  for (const 값 of [0, 32, Number.NaN, -1, 1.5]) assert.equal(describeSchedule({ day: 값 }, on(2026, 2, 14)), "");
 });
 
 /* ── 창 밖으로 밀려난 달 ───────────────────────────────────── */
@@ -272,4 +275,192 @@ test("잘린 것이 있으면 채운 소식과 함께, 할 일까지 알린다",
   // skipped 를 안 넘겨도 예전처럼 돈다.
   assert.equal(describeApplied({ created: 3, failed: 0 }), "고정비 3건을 넣었어요");
   assert.equal(describeApplied({ created: 0, failed: 0, skipped: 7 }), null);
+});
+
+/* ── 할부 — 끝이 있는 고정비 ──────────────────────────────── */
+
+/**
+ * 할부는 고정비에 끝을 붙인 것이다. 없던 것은 "몇 번 하고 그만둘지" 하나뿐이라
+ * 표도 반영 기계도 그대로 쓴다. 여기서는 그 끝이 실제로 지켜지는지만 본다.
+ */
+const 할부 = { ...template, months: 5 };   // 2026-06 부터 다섯 달 → 2026-10 이 마지막
+
+test("마지막 달은 시작월을 1회차로 세어 정한다", () => {
+  // months 를 그대로 더하면 한 달을 더 받는다. 여섯 달째까지 찍히고 나서야 안다.
+  assert.equal(lastOccurrenceMonth(할부), "2026-10");
+  assert.equal(lastOccurrenceMonth({ startMonth: "2026-06", months: 1 }), "2026-06", "한 번짜리는 그 달로 끝");
+  assert.equal(lastOccurrenceMonth(template), null, "구독은 끝이 없다");
+});
+
+test("할부는 회수만큼만 만들어지고 그 뒤로는 조용하다", () => {
+  const due = collectDueOccurrences([할부], [], on(2027, 6, 1));
+  assert.deepEqual(due.map((d) => d.date), [
+    "2026-06-25", "2026-07-25", "2026-08-25", "2026-09-25", "2026-10-25",
+  ]);
+  // 다 갚은 뒤 다시 열어도 새로 생기는 것이 없다.
+  assert.deepEqual(collectDueOccurrences([할부], due.map((d) => d.key), on(2027, 6, 1)), []);
+});
+
+test("끝나지 않은 할부는 여느 고정비처럼 이번 달까지만 만든다", () => {
+  // 끝이 아직 멀면 위쪽 경계는 그대로 이번 달이다. 미래 달을 미리 만들면 합계가 부푼다.
+  const due = collectDueOccurrences([할부], [], on(2026, 8, 10));
+  assert.deepEqual(due.map((d) => d.date), ["2026-06-25", "2026-07-25"]);
+});
+
+test("다 갚은 할부에는 다음 날짜가 없다", () => {
+  // 없으면 목록이 "다음 06.25" 를 영영 가리킨다 — 끝난 것을 끝났다고 말해야 한다.
+  assert.equal(nextOccurrenceDate(할부, [], on(2027, 1, 5)), null);
+  // 아직 남았으면 여느 때처럼 알려 준다.
+  assert.equal(nextOccurrenceDate(할부, [], on(2026, 8, 10)), "2026-08-25");
+  assert.equal(nextOccurrenceDate(할부, [], on(2026, 10, 1)), "2026-10-25", "마지막 회차도 다음이다");
+});
+
+test("오래된 할부의 빠진 건수는 회수를 넘지 않는다", () => {
+  /*
+   * 두 해 전에 시작한 다섯 달 할부를 창 앞의 달 수대로 세면, 애초에 없던 일곱 달까지
+   * "빠졌다" 고 말하게 된다. 상한은 회수다.
+   *
+   * 둘을 함께 넣는 이유는 잘림을 알리는 문이 "창의 맨 앞 달을 이제야 채우고 있나" 로
+   * 열리기 때문이다. 끝난 할부만 있으면 채울 것이 없어 문이 안 열리고, 그러면 셈이
+   * 맞는지 틀리는지 볼 수가 없다. 구독이 문을 열고 할부가 얼마를 보태는지 본다.
+   */
+  const 오래된구독 = { id: "sub", day: 1, startMonth: "2024-09" };
+  const 오래된할부 = { id: "old", day: 1, startMonth: "2024-09", months: 5 };
+
+  // 2026-09 기준 창은 2025-09 부터다. 구독은 그 앞 열두 달(2024-09 ~ 2025-08)이 밀려났다.
+  assert.equal(앱열기([오래된구독], [], on(2026, 9, 15)).skipped, 12);
+  /*
+   * 할부는 다섯 달짜리라 2025-01 에 이미 끝났다. 보탤 것은 다섯이다.
+   * 상한이 없으면 구독과 똑같이 열둘을 보태 24 가 된다 — 있지도 않았던 일곱 달이다.
+   */
+  assert.equal(앱열기([오래된구독, 오래된할부], [], on(2026, 9, 15)).skipped, 17);
+});
+
+test("할부 안내는 몇 개월인지와 언제 끝나는지를 함께 말한다", () => {
+  assert.equal(
+    describeSchedule({ day: 25, startMonth: "2026-10", months: 5 }, on(2026, 9, 22)),
+    "2026년 10월 25일부터 5개월, 2027년 2월까지 자동으로 기록됩니다.",
+  );
+  // 끝을 안 적으면 지금까지와 똑같이 말한다.
+  assert.equal(
+    describeSchedule({ day: 25, startMonth: "2026-10" }, on(2026, 9, 22)),
+    "2026년 10월 25일부터 매월 자동으로 기록됩니다.",
+  );
+});
+
+test("고른 시작월이 계산값을 이긴다", () => {
+  /*
+   * 9월 22일에 결제일 25일로 등록하면 계산은 9월을 잡는다. 카드 첫 청구가 10월이면
+   * 한 달이 통째로 어긋나므로 사람이 고른 달을 그대로 따라야 한다.
+   */
+  assert.match(describeSchedule({ day: 25 }, on(2026, 9, 22)), /^2026년 9월/, "안 고르면 계산값");
+  assert.match(describeSchedule({ day: 25, startMonth: "2026-10" }, on(2026, 9, 22)), /^2026년 10월/);
+});
+
+test("목록은 할부가 몇 회째인지와 언제 끝나는지를 말한다", () => {
+  assert.equal(describeInstallment(할부, []), "0/5회 · 26.10까지", "아직 한 번도 안 낸 것");
+  assert.equal(describeInstallment(할부, ["t1:2026-06", "t1:2026-07"]), "2/5회 · 26.10까지");
+  assert.equal(
+    describeInstallment(할부, ["t1:2026-06", "t1:2026-07", "t1:2026-08", "t1:2026-09", "t1:2026-10"]),
+    "5회 끝남",
+  );
+  // 다른 고정비의 반영 기록까지 제 것으로 세면 안 된다.
+  assert.equal(describeInstallment(할부, ["other:2026-06", "other:2026-07"]), "0/5회 · 26.10까지");
+  // 구독은 할 말이 없다. 부르는 쪽이 여느 때처럼 다음 반영일을 그린다.
+  assert.equal(describeInstallment(template, []), null);
+});
+
+/* ── 회수는 어느 길로도 넘을 수 없다 ──────────────────────── */
+
+test("시작월을 옮겨도 회수보다 더 청구되지 않는다", () => {
+  /*
+   * 리뷰가 잡은 자리다. 5개월 할부를 한 번 기록한 뒤 시작월을 한 달 뒤로 밀면,
+   * 옛 기록(6월)이 새 일정(7~11월) 밖으로 밀려난다. 달로만 막던 때는 그 기록이
+   * 중복을 못 막아 다섯 번이 더 생겼다 — 합쳐서 여섯 번 청구됐다.
+   *
+   * 그래서 달과 별개로 횟수로도 막는다. 범위 밖 기록도 실제로 나간 돈이라 함께 센다.
+   */
+  const 처음 = { id: "t", day: 25, startMonth: "2026-06", months: 5 };
+  const 첫회차 = collectDueOccurrences([처음], [], on(2026, 6, 26)).map((o) => o.key);
+  assert.deepEqual(첫회차, ["t:2026-06"]);
+
+  const 옮긴것 = { ...처음, startMonth: "2026-07" };
+  const 그뒤 = collectDueOccurrences([옮긴것], 첫회차, on(2027, 6, 1));
+  assert.equal(첫회차.length + 그뒤.length, 5, "회수를 넘겨 청구됐다");
+
+  // 다시 열어도 더 생기지 않는다.
+  const 전부 = [...첫회차, ...그뒤.map((o) => o.key)];
+  assert.deepEqual(collectDueOccurrences([옮긴것], 전부, on(2028, 6, 1)), []);
+});
+
+test("표시 회차는 회수를 넘지 않는다", () => {
+  // 범위 밖 기록까지 세던 때는 4회차에서 "5회 끝남" 이라고 말했다.
+  const 옮긴것 = { id: "t", day: 25, startMonth: "2026-07", months: 5 };
+  const 기록 = ["t:2026-06", "t:2026-07", "t:2026-08", "t:2026-09", "t:2026-10"];
+  assert.equal(countApplied(옮긴것, 기록), 5);
+  assert.equal(describeInstallment(옮긴것, 기록), "5회 끝남");
+  // 한 건 더 새어 들어와도 여섯이라고 말하지 않는다.
+  assert.equal(countApplied(옮긴것, [...기록, "t:2026-11"]), 5);
+});
+
+test("기록이 시작된 뒤 시작월을 옮겨도 같은 달이 두 번 안 들어간다", () => {
+  /*
+   * 시작월을 잠그지 않고 열어 두는 근거다. 잠가 두면 "지우고 다시 등록하라" 말고는 길이
+   * 없는데, 지우면 반영 기록이 함께 지워져(on delete cascade) 재등록 때 그 달이 또 들어간다 —
+   * 앱이 시킨 대로 했는데 가계부가 틀어진다.
+   *
+   * 옮겨도 안전한 까닭은 둘이다. 달별 반영 기록이 이미 낸 달을 걸러 내고, 회수 상한이
+   * 총 청구를 months 에서 끊는다. 앞으로 밀든 뒤로 당기든 두 문을 다 지나야 한다.
+   */
+  const 처음 = { id: "t", day: 25, startMonth: "2026-06", months: 5 };
+  const 첫회차 = collectDueOccurrences([처음], [], on(2026, 6, 26)).map((o) => o.key);
+
+  for (const 옮긴달 of ["2026-04", "2026-07", "2026-09"]) {
+    const 옮긴것 = { ...처음, startMonth: 옮긴달 };
+    const 전부 = [...첫회차, ...collectDueOccurrences([옮긴것], 첫회차, on(2026, 12, 1)).map((o) => o.key)];
+    const 달들 = 전부.map((key) => key.slice(-7));
+    assert.equal(달들.length, new Set(달들).size, `${옮긴달}: 같은 달이 두 번 들어갔다`);
+    assert.ok(전부.length <= 처음.months, `${옮긴달}: ${전부.length}건 — 회수를 넘었다`);
+  }
+});
+
+test("구독도 시작월을 당기면 빈 달만 채운다", () => {
+  // 회수 상한이 없는 쪽이다. 여기서도 이미 낸 달은 반영 기록이 걸러 낸다.
+  const 구독 = { id: "s", day: 25, startMonth: "2026-06" };
+  const 낸것 = collectDueOccurrences([구독], [], on(2026, 8, 26)).map((o) => o.key);
+  const 더낸것 = collectDueOccurrences([{ ...구독, startMonth: "2026-03" }], 낸것, on(2026, 8, 26));
+  assert.deepEqual(더낸것.map((o) => o.monthKey), ["2026-03", "2026-04", "2026-05"], "빈 달만 채워야 한다");
+});
+
+/* ── 저장하면 몇 건이 곧바로 생기는지 ─────────────────────── */
+
+test("지난 달을 고르면 몇 건이 곧바로 생기는지 미리 말한다", () => {
+  /*
+   * -12 를 고르면 저장하는 순간 열세 건이 쏟아지는데, 안 밝히면 저장하고 나서야 안다.
+   * 건수는 짐작하지 않고 실제로 채울 때 쓰는 함수에게 물어본다.
+   */
+  const 안내 = describeSchedule({ day: 1, startMonth: "2025-09" }, on(2026, 9, 22));
+  assert.match(안내, /저장하면 지난 13건이 곧바로 기록됩니다/);
+
+  // 할부면 회수가 상한이라 그만큼만 생긴다.
+  assert.match(
+    describeSchedule({ day: 1, startMonth: "2025-09", months: 5 }, on(2026, 9, 22)),
+    /저장하면 지난 5건이 곧바로 기록됩니다/,
+  );
+});
+
+test("앞으로 생길 것만 있으면 건수를 말하지 않는다", () => {
+  // 군말이다. 미래 달은 그날이 와야 생기므로 저장해도 아무것도 안 쏟아진다.
+  assert.doesNotMatch(describeSchedule({ day: 25, startMonth: "2026-10" }, on(2026, 9, 22)), /곧바로/);
+  assert.doesNotMatch(describeSchedule({ day: 25 }, on(2026, 9, 22)), /곧바로/);
+});
+
+test("이미 채운 달은 곧 생길 것에서 뺀다", () => {
+  // 고치러 들어왔을 때다. 이미 있는 것까지 세어 말하면 실제보다 부풀린다.
+  const 적은것 = { id: "t", day: 1, startMonth: "2026-07" };
+  assert.match(describeSchedule(적은것, on(2026, 9, 22)), /지난 3건/);
+  assert.match(
+    describeSchedule({ ...적은것, applied: ["t:2026-07", "t:2026-08"] }, on(2026, 9, 22)),
+    /지난 1건/,
+  );
 });
