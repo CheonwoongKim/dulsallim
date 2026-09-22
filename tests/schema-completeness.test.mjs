@@ -66,6 +66,14 @@ test("예외로 둔 것은 정말 그 까닭이 있다", async () => {
   // 선택 단계라고 적은 것은 README 가 그렇게 안내하고 있어야 한다.
   const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
   assert.match(readme, /20260101000009_push_triggers\.sql[\s\S]{0,120}비워 둔 두 줄/);
+
+  /*
+   * 그 안내가 9번에서 끝나면 새 프로젝트가 방금 죽인 버그를 그대로 받는다.
+   * schema.sql 에는 send_month_summary 가 없어서 9번을 직접 실행하게 되는데, 9번의 것은
+   * 결제 금액을 그대로 더하는 옛 판이다. 21번이 그 함수를 덮으므로 함께 안내해야 한다.
+   */
+  assert.match(readme, /20260101000009_push_triggers\.sql[\s\S]{0,600}20260922010000_expense_refund\.sql/,
+    "알림 켜기 안내가 9번에서 끝난다 — 새 프로젝트의 월말 요약이 결제 금액으로 센다");
 });
 
 test("마이그레이션이 세우는 것은 schema.sql 에도 다 있다", () => {

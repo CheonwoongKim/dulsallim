@@ -145,7 +145,8 @@ test("서버에서 지출을 더하는 자리는 전부 실부담으로 센다",
     assert.match(마지막, new RegExp(`create or replace function ${함수}`),
       `${함수} 를 다시 적지 않았다 — 이미 옛 판을 돌린 집에는 고침이 안 닿는다`);
   }
-  assert.equal((마지막.match(/sum\(amount - coalesce\(refunded, 0\)\)/g) ?? []).length, 2,
+  // 개수를 못 박지 않는다. 실부담으로 세는 함수를 하나 더 적는 날 헛되이 터진다.
+  assert.ok((마지막.match(/sum\(amount - coalesce\(refunded, 0\)\)/g) ?? []).length >= 2,
     "다시 적은 두 함수가 둘 다 실부담으로 세야 한다");
 });
 

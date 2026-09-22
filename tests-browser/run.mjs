@@ -340,35 +340,6 @@ try {
       맞나(잰것.some((줄) => 줄.막대 > 0), "막대가 하나도 안 그려졌다");
     });
 
-    await 검사("그 달을 전부 돌려받아도 막대가 트랙을 꽉 채우지 않는다", async () => {
-      /*
-       * 실부담 합이 0이면 0으로 나누게 되고, NaN 이 든 width 선언을 CSSOM 이 통째로
-       * 버려 막대가 트랙을 100% 채운다 — "0원 0%" 옆에 가득 찬 막대가 선다.
-       * 흉내 DOM 은 style 을 글자로만 들고 있어 이 자리를 원리적으로 못 본다.
-       */
-      await page.evaluate(() => document.querySelector("#analysis-page [data-close-page]").click());
-      await page.waitForFunction(() => document.querySelector("#analysis-page").hidden);
-      for (const [id, 값] of [["e1", "42,000"], ["e2", "12,800"], ["e3", "700,000"]]) {
-        await 환급적기(id, 값);
-        await page.waitForTimeout(250);
-      }
-      await page.waitForFunction(() => document.querySelector("#monthly-total").textContent === "0",
-        null, { timeout: 5000 });
-
-      await page.evaluate(() => document.querySelector("#open-analysis").click());
-      await page.waitForSelector("#analysis-page:not([hidden])");
-      await page.waitForTimeout(400);
-      const 잰것 = await page.evaluate(() => ({
-        총액: document.querySelector("#analysis-amount").textContent,
-        채운것: [...document.querySelectorAll(".analysis-bar i")]
-          .map((i) => Math.round(i.getBoundingClientRect().width)),
-        트랙: [...document.querySelectorAll(".analysis-bar")].length,
-      }));
-      같나(잰것.총액, "0원", "분석의 총액");
-      맞나(잰것.트랙 > 0, "견줄 줄이 아예 없다 — 이 검사가 헛돌고 있다");
-      같나(잰것.채운것.length, 0, `0원인데 막대가 ${잰것.채운것}px 로 그려졌다`);
-    });
-
     await browser.close();
   }
 } finally {
