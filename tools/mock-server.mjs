@@ -134,8 +134,13 @@ const 사용자 = { id: 사람.우리, email: "we@example.com", aud: "authentica
 const 세션 = () => ({
   access_token: "mock-access-token",
   token_type: "bearer",
-  expires_in: 3600,
-  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  /*
+   * 넉넉히 준다. 검사가 날짜에 안 흔들리려고 화면의 시계를 그 달 15일로 고정하는데,
+   * 실제로 돌리는 날이 그보다 앞이면 화면은 스스로를 미래라고 믿는다. 한 시간짜리 토큰이면
+   * 그때 만료로 보여 로그인부터 어긋난다 — 달의 어느 날에 돌리느냐로 검사가 갈리면 안 된다.
+   */
+  expires_in: 30 * 24 * 3600,
+  expires_at: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
   refresh_token: "mock-refresh-token",
   user: 사용자,
 });

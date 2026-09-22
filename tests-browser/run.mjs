@@ -78,6 +78,17 @@ async function 열기(browser) {
    * 무엇이 잘못됐는지 보려고 돌리는 것인데 그 사이 아무것도 안 보인다.
    */
   page.setDefaultTimeout(7000);
+  /*
+   * 화면의 시계를 그 달 15일 정오로 고정한다.
+   *
+   * 고정비의 첫 반영 달은 "오늘이 결제일을 지났나" 로 갈린다. 그대로 두면 같은 검사가
+   * 돌리는 날에 따라 다른 달을 기대하게 되고, 1일에는 어떤 날짜를 적어도 이번 달이라
+   * 단언이 통째로 헛돈다 — 한 달에 하루는 눈을 감는 검사다.
+   *
+   * 15일로 세워 두면 20일은 늘 이번 달, 10일은 늘 다음 달이라 셈이 한 가지로 정해진다.
+   * 달은 실제 달 그대로라 목 서버의 씨앗(이번 달 지출)과도 어긋나지 않는다.
+   */
+  await page.clock.setFixedTime(선날);
   const 콘솔오류 = [];
   page.on("pageerror", (e) => 콘솔오류.push(e.message));
   await page.goto(주소, { waitUntil: "domcontentloaded" });
@@ -107,12 +118,49 @@ async function 열기(browser) {
   return { page, 콘솔오류 };
 }
 
+/** 검사가 믿을 오늘. 달은 진짜, 날짜는 15일로 세운다. */
+const 선날 = (() => { const d = new Date(); d.setDate(15); d.setHours(12, 0, 0, 0); return d; })();
+
+/** 선날에서 몇 달 옮긴 달 키(`2026-09`). */
+const 달키 = (옮길달) => {
+  const d = new Date(선날.getFullYear(), 선날.getMonth() + 옮길달, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+/** `2026-09` → `2026년 9월` (화면이 쓰는 표기) */
+const 달이름 = (키) => `${Number(키.slice(0, 4))}년 ${Number(키.slice(5))}월`;
+/** `2026-09` → `26.09` (좁은 줄에서 쓰는 표기) */
+const 짧은달 = (키) => `${키.slice(2, 4)}.${키.slice(5)}`;
+
+/**
+ * 판을 씨앗 상태로 되돌린다.
+ *
+ * 앞 엔진의 브라우저를 닫아도 서버가 받아 둔 쓰기는 아직 처리 중일 수 있다. 그것이 되돌린
+ * 뒤에 떨어지면 다음 엔진은 지출이 한 건 더 있는 판에서 시작한다 — 실제로 "본 것 4,
+ * 바란 것 3" 으로 걸렸고, 뒤따르는 검사까지 줄줄이 엉뚱한 줄을 짚었다.
+ *
+ * 되돌린 뒤 실제로 씨앗만 남았는지 보고, 아니면 잠깐 두었다 다시 되돌린다.
+ * 기준 건수는 맨 처음 판에서 받아 둔다 — 여기에 숫자를 적어 두면 씨앗이 바뀔 때 어긋난다.
+ */
+let 씨앗지출수 = null;
+const 지출건수 = () => fetch(`${주소}/rest/v1/expenses`).then((r) => r.json()).then((줄들) => 줄들.length);
+
+async function 판되돌리기() {
+  for (let 판 = 0; 판 < 5; 판 += 1) {
+    await fetch(`${주소}/__reset`);
+    const 지금 = await 지출건수();
+    if (씨앗지출수 === null) 씨앗지출수 = 지금;
+    if (지금 === 씨앗지출수) return;
+    await new Promise((풀기) => setTimeout(풀기, 200));
+  }
+  throw new Error(`판이 씨앗(${씨앗지출수}건)으로 안 돌아온다 — 앞 엔진의 쓰기가 아직 떨어지고 있다`);
+}
+
 const 서버 = await 서버띄우기();
 try {
   for (const 이름 of 돌릴것) {
     console.log(`\n${이름}`);
     // 앞 엔진이 건드린 것을 되돌린다. 안 그러면 두 번째 엔진이 다른 판에서 시작한다.
-    await fetch(`${주소}/__reset`);
+    await 판되돌리기();
     const browser = await 엔진들[이름].launch();
     const { page, 콘솔오류 } = await 열기(browser);
 
@@ -194,47 +242,125 @@ try {
       맞나(넘침 <= 0, `${넘침}px 넘친다`);
     });
 
-    await 검사("할부를 등록하면 끝이 보인다", async () => {
+    await 검사("눌러서 대화를 연다", async () => {
+      await page.evaluate(() => document.querySelectorAll(".expense-surface")[1].click());
+      await page.waitForSelector("#notes-sheet:not([hidden])");
+      // 남긴 말은 시트가 열린 뒤에 서버에서 온다. 곧바로 읽으면 빈 자리를 본다.
+      await page.waitForFunction(() => document.querySelector("#note-list").textContent.includes("이건 뭐야?"),
+        null, { timeout: 5000 });
+      // 어느 지출의 대화인지 제목이 말해 준다.
+      맞나((await page.textContent("#notes-title")).includes("택시"), "제목이 그 지출을 안 가리킨다");
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => document.querySelector("#notes-sheet").hidden);
+    });
+
+    /*
+     * ── 할부 ──
+     * 여기서부터는 지출을 만든다(소급분이 이번 달 목록에 끼어든다). 목록의 몇 번째 줄을
+     * 짚는 검사들보다 뒤에 둔다 — 앞에 두었더니 "눌러서 대화를 연다" 가 다른 줄을 눌렀다.
+     */
+    await 검사("시작월은 결제일을 따라오다가, 고르면 그 자리에 선다", async () => {
       /*
-       * 흉내 DOM 은 index.html 을 읽지 않아 이 폼을 통째로 못 본다. 시작월 고르개가
-       * 실제로 채워지는지, 고른 달이 안내에 반영되는지, 목록 줄이 회차를 말하는지는
-       * 여기서만 잰다.
-       *
-       * 날짜에 기대지 않게 짰다 — 결제일은 계산값(이번 달 또는 다음 달)에서 시작하므로
-       * 언제 돌려도 아직 한 번도 안 낸 상태, 곧 `0/5회` 다.
+       * 흉내 DOM 은 index.html 을 읽지 않아 이 폼을 통째로 못 본다. 여기서만 잰다.
+       * 시계를 15일로 세워 두었으므로 20일은 이번 달, 10일은 다음 달이다.
        */
       await 고정비열기(page);
       await page.click("#add-fixed");
-      await page.fill("#fixed-day", "25");
+
+      await page.fill("#fixed-day", "20");
+      같나(await page.inputValue("#fixed-start-month"), 달키(0), "결제일이 안 지났으면 이번 달");
+      await page.fill("#fixed-day", "10");
+      같나(await page.inputValue("#fixed-start-month"), 달키(1), "결제일이 지났으면 다음 달");
+
+      // 직접 고르면 그 뒤로는 결제일을 고쳐도 움직이지 않는다. 고른 것을 되돌리면 안 된다.
+      await page.selectOption("#fixed-start-month", 달키(2));
+      await page.fill("#fixed-day", "20");
+      같나(await page.inputValue("#fixed-start-month"), 달키(2), "고른 달을 계산값이 덮었다");
+    });
+
+    await 검사("할부를 등록하면 고른 달 기준으로 끝이 보인다", async () => {
+      // 앞 검사가 열어 둔 폼을 이어서 쓴다 — 결제일 20일, 시작월은 직접 고른 달키(2).
       await page.fill("#fixed-item", "소파");
       await page.fill("#fixed-amount", "300000");
       await page.fill("#fixed-months", "5");
 
-      // 시작월은 고를 수 있어야 한다. 계산값이 먼저 들어와 있고, 그다음 달로 바꿔 본다.
-      const 계산값 = await page.inputValue("#fixed-start-month");
-      맞나(/^\d{4}-\d{2}$/.test(계산값), `시작월이 안 채워졌다: ${계산값}`);
-      const [해, 달] = 계산값.split("-").map(Number);
-      const 고른것 = 달 === 12 ? `${해 + 1}-01` : `${해}-${String(달 + 1).padStart(2, "0")}`;
-      await page.selectOption("#fixed-start-month", 고른것);
-
-      // 안내가 고른 달과 끝나는 달을 함께 말한다. 끝이 안 보이면 구독과 구분이 안 된다.
-      const 안내 = await page.textContent("#fixed-hint");
-      const [끝해, 끝달] = [고른것.slice(0, 4), Number(고른것.slice(5))].map(Number);
-      const 끝 = 끝달 + 4 > 12 ? `${끝해 + 1}년 ${끝달 - 8}월` : `${끝해}년 ${끝달 + 4}월`;
-      맞나(안내.includes(`${Number(고른것.slice(5))}월 25일부터 5개월`), `고른 달이 안내에 없다: ${안내}`);
-      맞나(안내.includes(`${끝}까지`), `끝나는 달이 안내에 없다: ${안내} (바란 것 ${끝})`);
+      같나(
+        await page.textContent("#fixed-hint"),
+        `${달이름(달키(2))} 20일부터 5개월, ${달이름(달키(6))}까지 자동으로 기록됩니다.`,
+        "안내가 고른 달이나 끝나는 달을 안 가리킨다",
+      );
 
       await page.click("#fixed-submit");
       await page.waitForSelector("#fixed-list-view:not([hidden])");
-      const 줄 = await page.locator(".fixed-item", { hasText: "소파" }).first().textContent();
-      맞나(줄.includes("0/5회"), `목록이 회차를 안 말한다: ${줄.replace(/\s+/g, " ")}`);
-      맞나(줄.includes(`${고른것.slice(2, 4)}.${고른것.slice(5)}`) || 줄.includes("까지"),
-        `목록이 끝나는 달을 안 말한다: ${줄.replace(/\s+/g, " ")}`);
+
+      /*
+       * 목록의 끝나는 달이 **고른 달**에서 나와야 한다. 저장할 때 고른 값을 버리고
+       * 계산값(달키(0))으로 되돌리면 여기가 두 달 어긋나 걸린다.
+       */
+      const 줄 = (await page.locator(".fixed-item", { hasText: "소파" }).first().textContent()).replace(/\s+/g, " ");
+      맞나(줄.includes(`0/5회 · ${짧은달(달키(6))}까지`), `목록이 회차나 끝을 안 말한다: ${줄}`);
 
       // 끝을 안 적은 고정비(월세)는 지금까지처럼 다음 반영일만 말한다.
       const 월세 = await page.locator(".fixed-item", { hasText: "월세" }).first().textContent();
       맞나(!월세.includes("회"), `구독에 회차가 붙었다: ${월세.replace(/\s+/g, " ")}`);
+    });
 
+    await 검사("지난 달을 고르면 몇 건이 쏟아지는지 미리 말하고, 말한 대로 넣는다", async () => {
+      /*
+       * -3 을 고르면 저장하는 순간 네 건이 한꺼번에 들어간다(지난 세 달 + 이번 달, 결제일
+       * 10일은 15일 기준으로 이미 지났다). 미리 안 밝히면 저장하고 나서야 목록에서 본다.
+       *
+       * 예고한 건수와 실제로 들어간 건수를 둘 다 본다 — 예고만 맞고 실제가 다르면
+       * 그 안내는 없느니만 못하다.
+       */
+      await page.click("#add-fixed");
+      await page.fill("#fixed-day", "10");
+      await page.selectOption("#fixed-start-month", 달키(-3));
+      await page.fill("#fixed-item", "정수기");
+      await page.fill("#fixed-amount", "20000");
+
+      맞나(
+        (await page.textContent("#fixed-hint")).includes("저장하면 지난 4건이 곧바로 기록됩니다"),
+        `예고가 없다: ${await page.textContent("#fixed-hint")}`,
+      );
+
+      await page.click("#fixed-submit");
+      await page.waitForSelector("#fixed-list-view:not([hidden])");
+      await page.waitForFunction(() => document.querySelector("#toast-message").textContent.includes("고정비"),
+        null, { timeout: 5000 });
+      같나(await page.textContent("#toast-message"), "고정비 4건을 넣었어요", "예고한 건수와 실제가 다르다");
+    });
+
+    await 검사("이미 기록이 시작된 것은 시작월을 못 고친다", async () => {
+      /*
+       * 옮기면 옛 기록이 새 일정 밖으로 밀려나 중복을 못 막는다. 5개월 할부를 한 번 기록한 뒤
+       * 시작월을 한 달 미니 여섯 번 청구됐다 — 이미 나간 돈은 되돌릴 수 없으니 일정을 잠근다.
+       */
+      const 열기 = (항목) => page.evaluate((이름) => {
+        const 줄 = [...document.querySelectorAll(".fixed-item")].find((el) => el.textContent.includes(이름));
+        줄.querySelector("[data-edit-fixed]").click();
+      }, 항목);
+
+      await 열기("정수기");
+      await page.waitForSelector("#fixed-form:not([hidden])");
+      맞나(await page.locator("#fixed-start-month").isDisabled(), "기록이 시작됐는데 시작월을 고칠 수 있다");
+      맞나((await page.textContent("#fixed-start-month-note")).includes("고칠 수 없어요"), "왜 막혔는지 안 알려 준다");
+
+      // 금액만 고쳐 저장해도 시작월은 그 자리에 남는다. 잠근 칸은 폼에 안 실려 오기 때문에,
+      // 그 빈칸을 계산값으로 메우면 여기서 달키(-3) 이 이번 달로 조용히 옮겨 간다.
+      await page.fill("#fixed-amount", "25000");
+      await page.click("#fixed-submit");
+      await page.waitForSelector("#fixed-list-view:not([hidden])");
+      await 열기("정수기");
+      await page.waitForSelector("#fixed-form:not([hidden])");
+      같나(await page.inputValue("#fixed-start-month"), 달키(-3), "저장했더니 시작월이 옮겨 갔다");
+
+      // 아직 한 번도 안 들어간 것은 얼마든지 고칠 수 있다. 맞출 것이 아직 없기 때문이다.
+      await page.click("#cancel-fixed");
+      await 열기("소파");
+      await page.waitForSelector("#fixed-form:not([hidden])");
+      맞나(!(await page.locator("#fixed-start-month").isDisabled()), "아직 안 들어간 것까지 잠갔다");
+      await page.click("#cancel-fixed");
       await page.keyboard.press("Escape");
       await page.waitForFunction(() => document.querySelector("#fixed-sheet").hidden);
     });
@@ -255,17 +381,6 @@ try {
       await page.waitForFunction(() => document.querySelector("#fixed-sheet").hidden);
     });
 
-    await 검사("눌러서 대화를 연다", async () => {
-      await page.evaluate(() => document.querySelectorAll(".expense-surface")[1].click());
-      await page.waitForSelector("#notes-sheet:not([hidden])");
-      // 남긴 말은 시트가 열린 뒤에 서버에서 온다. 곧바로 읽으면 빈 자리를 본다.
-      await page.waitForFunction(() => document.querySelector("#note-list").textContent.includes("이건 뭐야?"),
-        null, { timeout: 5000 });
-      // 어느 지출의 대화인지 제목이 말해 준다.
-      맞나((await page.textContent("#notes-title")).includes("택시"), "제목이 그 지출을 안 가리킨다");
-      await page.keyboard.press("Escape");
-      await page.waitForFunction(() => document.querySelector("#notes-sheet").hidden);
-    });
 
     await browser.close();
   }

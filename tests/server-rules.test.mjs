@@ -295,3 +295,49 @@ test("잔소리는 구간을 넘긴 달에 한 번만 울린다", async () => {
   await db.주인으로();
   assert.equal((await db.query("select count(*)::int c from nag_fires")).rows[0].c, 1, "같은 구간을 두 번 울렸다");
 });
+
+test("열세 달을 한꺼번에 채워도 잔소리는 이번 달 것만 울린다", async () => {
+  /*
+   * 시작월을 한참 뒤로 골라 등록하면 소급분이 한 번에 들어간다. 그때 달마다 잔소리가
+   * 따로 울리면, 등록 한 번에 알림이 열세 번 간다 — 리뷰에서 나온 걱정이다.
+   *
+   * 서버에 물어보니 그렇지 않다. fire_nags 는 지출의 달이 이번 달이 아니면 곧바로 나간다
+   * ("9월에 7월 기록을 넣었다고 울리면 이상하다"). 소급분은 정의상 지난 달 것이라
+   * 한 건도 울리지 않고, 이번 달 몫 하나만 남는다. 그 하나도 nag_fires 의 PK 가 접는다.
+   *
+   * 짐작으로 두지 않고 여기서 재 둔다. 나중에 저 이른 반환을 지우면 이 검사가 잡는다.
+   */
+  const db = await 판세우기();
+  await db.query("update profiles set monthly_goal = 100000 where id = $1", [가구.너와]);
+  await db.로서(가구.우리);
+  await db.query(`insert into nags (household_id, author_id, target_id, percent, body)
+    values ($1, $2, $3, 80, '좀 쓰네')`, [가구.집, 가구.우리, 가구.너와]);
+
+  // 달마다 90,000원이면 어느 달이든 혼자서 80% 구간을 넘긴다.
+  const { rows: 틀 } = await db.query(
+    `insert into fixed_costs (household_id, paid_by, category, item, amount, day_of_month, start_month)
+     values ($1, $2, 'housing', '월세', 90000, 1,
+             (date_trunc('month', current_date) - interval '12 months')::date) returning id`,
+    [가구.집, 가구.너와],
+  );
+
+  // 화면이 하는 그대로 — 오래된 달부터 열세 번 부르고, 만들어진 지출마다 잔소리를 확인한다.
+  for (let 뒤로 = 12; 뒤로 >= 0; 뒤로 -= 1) {
+    const { rows } = await db.query(
+      `select id from apply_fixed_cost($1,
+         (date_trunc('month', current_date) - make_interval(months => $2))::date,
+         (date_trunc('month', current_date) - make_interval(months => $2))::date)`,
+      [틀[0].id, 뒤로],
+    );
+    if (rows[0]) await db.query("select fire_nags($1)", [rows[0].id]);
+  }
+
+  await db.주인으로();
+  assert.equal((await db.query("select count(*)::int c from expenses")).rows[0].c, 13, "열세 달이 다 안 들어갔다");
+  assert.equal(
+    (await db.query("select count(*)::int c from nag_fires")).rows[0].c,
+    1,
+    "소급분마다 잔소리가 울렸다 — 등록 한 번에 알림이 열세 번 간다",
+  );
+  assert.equal((await db.query("select count(*)::int c from expense_notes")).rows[0].c, 1, "붙은 잔소리도 하나여야 한다");
+});

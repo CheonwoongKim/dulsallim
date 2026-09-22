@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   MAX_BACKFILL_MONTHS,
   appliedKey,
+  countApplied,
   describeInstallment,
+  hasApplied,
   collectDueOccurrences,
   countSkippedMonths,
   describeSchedule,
@@ -367,4 +369,78 @@ test("목록은 할부가 몇 회째인지와 언제 끝나는지를 말한다",
   assert.equal(describeInstallment(할부, ["other:2026-06", "other:2026-07"]), "0/5회 · 26.10까지");
   // 구독은 할 말이 없다. 부르는 쪽이 여느 때처럼 다음 반영일을 그린다.
   assert.equal(describeInstallment(template, []), null);
+});
+
+/* ── 회수는 어느 길로도 넘을 수 없다 ──────────────────────── */
+
+test("시작월을 옮겨도 회수보다 더 청구되지 않는다", () => {
+  /*
+   * 리뷰가 잡은 자리다. 5개월 할부를 한 번 기록한 뒤 시작월을 한 달 뒤로 밀면,
+   * 옛 기록(6월)이 새 일정(7~11월) 밖으로 밀려난다. 달로만 막던 때는 그 기록이
+   * 중복을 못 막아 다섯 번이 더 생겼다 — 합쳐서 여섯 번 청구됐다.
+   *
+   * 그래서 달과 별개로 횟수로도 막는다. 범위 밖 기록도 실제로 나간 돈이라 함께 센다.
+   */
+  const 처음 = { id: "t", day: 25, startMonth: "2026-06", months: 5 };
+  const 첫회차 = collectDueOccurrences([처음], [], on(2026, 6, 26)).map((o) => o.key);
+  assert.deepEqual(첫회차, ["t:2026-06"]);
+
+  const 옮긴것 = { ...처음, startMonth: "2026-07" };
+  const 그뒤 = collectDueOccurrences([옮긴것], 첫회차, on(2027, 6, 1));
+  assert.equal(첫회차.length + 그뒤.length, 5, "회수를 넘겨 청구됐다");
+
+  // 다시 열어도 더 생기지 않는다.
+  const 전부 = [...첫회차, ...그뒤.map((o) => o.key)];
+  assert.deepEqual(collectDueOccurrences([옮긴것], 전부, on(2028, 6, 1)), []);
+});
+
+test("표시 회차는 회수를 넘지 않는다", () => {
+  // 범위 밖 기록까지 세던 때는 4회차에서 "5회 끝남" 이라고 말했다.
+  const 옮긴것 = { id: "t", day: 25, startMonth: "2026-07", months: 5 };
+  const 기록 = ["t:2026-06", "t:2026-07", "t:2026-08", "t:2026-09", "t:2026-10"];
+  assert.equal(countApplied(옮긴것, 기록), 5);
+  assert.equal(describeInstallment(옮긴것, 기록), "5회 끝남");
+  // 한 건 더 새어 들어와도 여섯이라고 말하지 않는다.
+  assert.equal(countApplied(옮긴것, [...기록, "t:2026-11"]), 5);
+});
+
+test("한 번이라도 기록됐는지는 범위를 안 가린다", () => {
+  // 시작월을 잠글지 정하는 값이다. 범위 밖에 남은 기록도 그 달에 돈이 나간 것은 같다.
+  const t = { id: "t", day: 25, startMonth: "2026-07", months: 5 };
+  assert.equal(hasApplied(t, []), false);
+  assert.equal(hasApplied(t, ["t:2026-06"]), true, "범위 밖이어도 청구는 있었다");
+  assert.equal(hasApplied(t, ["other:2026-07"]), false, "남의 기록을 제 것으로 세면 안 된다");
+});
+
+/* ── 저장하면 몇 건이 곧바로 생기는지 ─────────────────────── */
+
+test("지난 달을 고르면 몇 건이 곧바로 생기는지 미리 말한다", () => {
+  /*
+   * -12 를 고르면 저장하는 순간 열세 건이 쏟아지는데, 안 밝히면 저장하고 나서야 안다.
+   * 건수는 짐작하지 않고 실제로 채울 때 쓰는 함수에게 물어본다.
+   */
+  const 안내 = describeSchedule({ day: 1, startMonth: "2025-09" }, on(2026, 9, 22));
+  assert.match(안내, /저장하면 지난 13건이 곧바로 기록됩니다/);
+
+  // 할부면 회수가 상한이라 그만큼만 생긴다.
+  assert.match(
+    describeSchedule({ day: 1, startMonth: "2025-09", months: 5 }, on(2026, 9, 22)),
+    /저장하면 지난 5건이 곧바로 기록됩니다/,
+  );
+});
+
+test("앞으로 생길 것만 있으면 건수를 말하지 않는다", () => {
+  // 군말이다. 미래 달은 그날이 와야 생기므로 저장해도 아무것도 안 쏟아진다.
+  assert.doesNotMatch(describeSchedule({ day: 25, startMonth: "2026-10" }, on(2026, 9, 22)), /곧바로/);
+  assert.doesNotMatch(describeSchedule({ day: 25 }, on(2026, 9, 22)), /곧바로/);
+});
+
+test("이미 채운 달은 곧 생길 것에서 뺀다", () => {
+  // 고치러 들어왔을 때다. 이미 있는 것까지 세어 말하면 실제보다 부풀린다.
+  const 적은것 = { id: "t", day: 1, startMonth: "2026-07" };
+  assert.match(describeSchedule(적은것, on(2026, 9, 22)), /지난 3건/);
+  assert.match(
+    describeSchedule({ ...적은것, applied: ["t:2026-07", "t:2026-08"] }, on(2026, 9, 22)),
+    /지난 1건/,
+  );
 });

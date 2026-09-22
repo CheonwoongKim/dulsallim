@@ -56,20 +56,38 @@ export function lastOccurrenceMonth({ startMonth, months }) {
  * 29·30·31 은 2월이 늘 짧아 언젠가 반드시 당겨진다. 그 사실도 함께 밝힌다 —
  * 28 이하는 어느 달에도 그대로 있으므로 굳이 말하지 않는다.
  */
-export function describeSchedule({ day, startMonth = null, months = null }, today = new Date()) {
+export function describeSchedule({ id = "미리보기", day, startMonth = null, months = null, applied = [] }, today = new Date()) {
   if (!isValidDay(day)) return "";
   // 시작월은 사람이 고를 수 있다. 안 고른 채로 물으면 계산값을 쓴다.
   const 시작 = startMonth || firstApplicableMonth(day, today);
   const firstDay = Math.min(day, lastDayOfMonth(시작));
   const 말일보정 = day > 28 ? ` ${day}일이 없는 달은 말일에 기록됩니다.` : "";
   const 끝 = lastOccurrenceMonth({ startMonth: 시작, months });
+
+  /*
+   * 지난 달을 고르면 저장하는 순간 그만큼이 한꺼번에 기록된다. -12 를 고르면 열세 건이다.
+   * 그것을 안 밝히고 "앞으로 기록됩니다" 라고만 하면, 저장하고 나서야 목록에 쏟아진 것을
+   * 본다. 몇 건인지는 짐작하지 않고 실제로 채울 때 쓰는 함수에게 물어본다 —
+   * 말일 보정도 소급 창도 그쪽이 이미 알고 있어, 따로 세면 두 셈이 어긋난다.
+   */
+  const 곧 = collectDueOccurrences([{ id, day, startMonth: 시작, months }], applied, today).length;
+  const 소급 = 곧 ? ` 저장하면 지난 ${곧}건이 곧바로 기록됩니다.` : "";
+
   // 할부는 끝을 함께 말해야 한다. 끝이 안 보이면 구독과 구분되지 않는다.
-  if (끝) return `${formatMonth(시작)} ${firstDay}일부터 ${months}개월, ${formatMonth(끝)}까지 자동으로 기록됩니다.${말일보정}`;
-  return `${formatMonth(시작)} ${firstDay}일부터 매월 자동으로 기록됩니다.${말일보정}`;
+  if (끝) return `${formatMonth(시작)} ${firstDay}일부터 ${months}개월, ${formatMonth(끝)}까지 자동으로 기록됩니다.${소급}${말일보정}`;
+  return `${formatMonth(시작)} ${firstDay}일부터 매월 자동으로 기록됩니다.${소급}${말일보정}`;
 }
 
 export function appliedKey(templateId, monthKey) {
   return `${templateId}:${monthKey}`;
+}
+
+/** 이 고정비로 반영된 기록 전부. 달을 안 가린다 — 실제로 나간 횟수를 세는 자리다. */
+function 지금까지낸것(templateId, applied) {
+  const 앞 = `${templateId}:`;
+  let 센것 = 0;
+  for (const key of applied) if (key.startsWith(앞)) 센것 += 1;
+  return 센것;
 }
 
 /**
@@ -90,12 +108,25 @@ export function collectDueOccurrences(templates, applied, today = new Date()) {
     // 할부는 끝이 있다. 끝난 달까지만 본다 — 안 막으면 다 갚은 할부가 매달 다시 찍힌다.
     const 끝 = lastOccurrenceMonth(template);
     const to = 끝 && 끝 < thisMonth ? 끝 : thisMonth;
-    for (let monthKey = from; monthKey <= to; monthKey = shiftMonthKey(monthKey, 1)) {
+
+    /*
+     * 달 경계와 별개로 **횟수**로도 막는다. 달만 보면 일정이 움직이는 순간 새는 자리가 생긴다 —
+     * 5개월 할부를 한 번 기록한 뒤 시작월을 한 달 뒤로 미니, 옛 기록이 새 범위 밖으로 밀려나
+     * 중복을 못 막고 여섯 번 청구됐다.
+     *
+     * 그래서 범위 밖 기록까지 세어 회수에서 뺀다. 그 달에 돈이 나간 것은 매한가지라,
+     * 세는 것이 맞다. 화면이 시작월을 잠가 두긴 했지만 그것은 화면의 약속일 뿐이고,
+     * 여기서 막으면 어느 길로 들어와도 회수를 넘을 수 없다.
+     */
+    let 남은횟수 = template.months ? template.months - 지금까지낸것(template.id, applied) : Infinity;
+
+    for (let monthKey = from; monthKey <= to && 남은횟수 > 0; monthKey = shiftMonthKey(monthKey, 1)) {
       const key = appliedKey(template.id, monthKey);
       if (appliedSet.has(key)) continue;
       const date = resolveOccurrenceDate(monthKey, template.day);
       if (date > todayKey) continue;
       due.push({ template, monthKey, date, key });
+      남은횟수 -= 1;
     }
   }
 
@@ -159,6 +190,26 @@ export function nextOccurrenceDate(template, applied, today = new Date()) {
 }
 
 /**
+ * 이 할부로 실제 청구된 회차. 회수를 넘겨 세지 않는다.
+ *
+ * 달을 안 가리고 센 다음 months 에서 자른다. 세는 것과 만드는 것이 같은 기준이라야
+ * "몇 번 냈나" 와 "몇 번 더 나가나" 가 서로 맞는다 — collectDueOccurrences 도 같은 셈으로
+ * 상한을 지킨다. 자르기 때문에 표시 회차가 months 를 넘는 일은 구조적으로 없다.
+ */
+export function countApplied(template, applied) {
+  const 센것 = 지금까지낸것(template.id, applied);
+  return template.months ? Math.min(센것, template.months) : 센것;
+}
+
+/**
+ * 한 번이라도 반영된 적이 있나. 여기서는 범위 밖 기록도 센다 —
+ * 일정에서 벗어나 있어도 그 달에 실제로 돈이 나간 것은 같기 때문이다.
+ */
+export function hasApplied(template, applied) {
+  return 지금까지낸것(template.id, applied) > 0;
+}
+
+/**
  * 목록 한 줄에 붙일 할부 진행. 구독이면 null 이라 부르는 쪽이 여느 때처럼 그린다.
  *
  * 몇 번 냈고 몇 번 남았는지, 그리고 언제 끝나는지를 함께 말한다. 같은 금액이 매달
@@ -170,7 +221,7 @@ export function nextOccurrenceDate(template, applied, today = new Date()) {
 export function describeInstallment(template, applied) {
   const 끝 = lastOccurrenceMonth(template);
   if (!끝) return null;
-  const 낸것 = applied.filter((key) => key.startsWith(`${template.id}:`)).length;
+  const 낸것 = countApplied(template, applied);
   if (낸것 >= template.months) return `${template.months}회 끝남`;
   // 줄이 좁아 끝나는 달은 짧게 적는다. `2027-02` → `27.02`
   return `${낸것}/${template.months}회 · ${끝.slice(2).replace("-", ".")}까지`;

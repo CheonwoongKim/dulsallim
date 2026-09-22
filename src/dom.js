@@ -203,6 +203,7 @@ export const elements = {
   fixedForm: document.querySelector("#fixed-form"),
   fixedDay: document.querySelector("#fixed-day"),
   fixedStartMonth: document.querySelector("#fixed-start-month"),
+  fixedStartMonthNote: document.querySelector("#fixed-start-month-note"),
   fixedMonths: document.querySelector("#fixed-months"),
   fixedCategory: document.querySelector("#fixed-category"),
   fixedItem: document.querySelector("#fixed-item"),
