@@ -149,6 +149,18 @@ export function nextDateFilter(current, date) {
 }
 
 /**
+ * 실제로 부담한 금액. 합계를 내는 자리는 전부 이것을 지나야 한다.
+ *
+ * 병원에서 10만 원을 내고 실손보험에서 7만 원을 돌려받으면 나간 돈은 3만 원이다.
+ * 그렇다고 금액을 3만 원으로 고쳐 적으면 10만 원이 나갔다는 사실이 사라지고,
+ * 이미 울린 잔소리도 되돌릴 수 없다(그 달 그 구간은 다시 못 울린다).
+ * 그래서 원래 금액은 그대로 두고, 더할 때만 돌려받은 만큼을 뺀다.
+ */
+export function netAmount(expense) {
+  return expense.amount - (expense.refunded ?? 0);
+}
+
+/**
  * 목표까지 얼마 남았는지 낸다.
  *
  * @param {object} input
@@ -165,7 +177,7 @@ export function summarizeGoal({ monthly, memberId, goal, draft = 0, excludeId = 
   const spent =
     monthly
       .filter((expense) => expense.member === memberId && expense.id !== excludeId)
-      .reduce((sum, expense) => sum + expense.amount, 0) + draft;
+      .reduce((sum, expense) => sum + netAmount(expense), 0) + draft;
   const remaining = goal - spent;
 
   return {
@@ -183,12 +195,12 @@ export function summarizeGoal({ monthly, memberId, goal, draft = 0, excludeId = 
  * @param {Array<{id: string, name: string}>} members 화면에 놓일 순서대로
  */
 export function summarize(monthly, members = []) {
-  const total = monthly.reduce((sum, expense) => sum + expense.amount, 0);
+  const total = monthly.reduce((sum, expense) => sum + netAmount(expense), 0);
   let assigned = 0;
 
   const perMember = members.map((member, index) => {
     const own = monthly.filter((expense) => expense.member === member.id);
-    const memberTotal = own.reduce((sum, expense) => sum + expense.amount, 0);
+    const memberTotal = own.reduce((sum, expense) => sum + netAmount(expense), 0);
     // 마지막 사람은 남은 몫을 그대로 가져간다. 반올림해도 비중 합이 항상 100%가 된다.
     const isLast = index === members.length - 1;
     const percent = !total

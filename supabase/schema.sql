@@ -74,6 +74,11 @@ create table if not exists expenses (
   category      text not null check (is_valid_category(category)),
   item          text not null check (char_length(trim(item)) > 0),
   amount        integer not null check (amount > 0),
+  -- 실비 환급. 병원에서 10만 원을 내고 나중에 7만 원을 돌려받으면 실제 부담은 3만 원이다.
+  -- 금액을 3만 원으로 덮어쓰면 10만 원이 나간 사실이 사라지고, 이미 울린 잔소리도 못 되돌린다
+  -- (nag_fires 가 (대상,달,구간) 을 기본키로 두어 그 달 그 구간은 다시 못 울린다).
+  -- 그래서 결제 금액은 그대로 두고 돌려받은 만큼만 따로 적는다. 안 받았으면 null 이다.
+  refunded      integer check (refunded is null or (refunded > 0 and refunded <= amount)),
   -- 고정비에서 자동 생성됐는지. 템플릿을 지워도 지출 기록은 남아야 하므로 set null.
   fixed_cost_id uuid references fixed_costs(id) on delete set null,
   created_at    timestamptz not null default now(),
@@ -797,7 +802,9 @@ begin
   select monthly_goal into v_goal from profiles where id = v_paid_by;
   if v_goal is null or v_goal <= 0 then return; end if;
 
-  select coalesce(sum(amount), 0) into v_spent
+  -- 실부담으로 센다. 화면의 합계도 amount - refunded 로 내므로, 여기서 결제 금액을 그대로
+  -- 더하면 서버가 화면과 다른 숫자를 보고 잔소리를 울린다.
+  select coalesce(sum(amount - coalesce(refunded, 0)), 0) into v_spent
     from expenses
    where paid_by = v_paid_by
      and date_trunc('month', spent_on)::date = v_month;

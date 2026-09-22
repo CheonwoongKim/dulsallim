@@ -69,11 +69,35 @@ async function 열기(browser) {
   const 콘솔오류 = [];
   page.on("pageerror", (e) => 콘솔오류.push(e.message));
   await page.goto(주소, { waitUntil: "domcontentloaded" });
-  await page.fill("#login-email", "we@example.com");
-  await page.fill("#login-password", "swordfish");
-  await page.click("#login-submit");
-  await page.waitForSelector(".expense-item", { timeout: 15000 });
-  return { page, 콘솔오류 };
+
+  /*
+   * 한 번 치고 곧바로 누르지 않는다.
+   *
+   * 앱은 세션을 확인하고 나서 로그인 화면을 세우는데(app.js 의 boot), 그때 도는
+   * form.reset() 이 방금 친 것을 지운다 — 로그인 화면이 뜨기를 기다렸다 쳐도, 인증
+   * 이벤트가 뒤늦게 한 번 더 오면 그 사이에 비워진다. 그러면 빈 폼이 넘어가고
+   * "이메일과 비밀번호를 모두 입력해 주세요" 에서 멈춘 채 목록을 기다리게 된다.
+   * 크로미움에서 스무 번에 다섯 번 그랬다(이 가지 전에도 같은 비율이었다).
+   *
+   * 앱을 고칠 일이 아니다 — 사람은 화면이 선 뒤에 친다. 여기서 값이 남아 있는 것을
+   * 확인하고 누르고, 지워졌으면 다시 친다.
+   */
+  await page.waitForSelector("#auth-gate:not([hidden])", { timeout: 15000 });
+  for (let 번째 = 1; ; 번째 += 1) {
+    await page.fill("#login-email", "we@example.com");
+    await page.fill("#login-password", "swordfish");
+    await page.click("#login-submit");
+    try {
+      await page.waitForSelector(".expense-item", { timeout: 8000 });
+      return { page, 콘솔오류 };
+    } catch (오류) {
+      // 둘 다 본다. 지우는 일이 두 줄 사이에 끼면 한쪽만 비어 있다.
+      const 비었나 = await page.evaluate(() =>
+        !document.querySelector("#login-email").value || !document.querySelector("#login-password").value);
+      // 비어 있지 않은데 안 들어갔으면 진짜로 무언가 깨진 것이다. 덮지 않는다.
+      if (!비었나 || 번째 >= 3) throw 오류;
+    }
+  }
 }
 
 const 서버 = await 서버띄우기();
@@ -86,13 +110,42 @@ try {
     const { page, 콘솔오류 } = await 열기(browser);
 
     await 검사("로그인하면 이번 달 목록이 뜬다", async () => {
-      같나(await page.locator(".expense-item").count(), 3, "지출 줄 수");
+      같나(await page.locator(".expense-item").count(), 4, "지출 줄 수");
       /*
        * 합계는 0 에서 세어 올라간다. 다 오를 때까지 기다린다 —
        * 그냥 읽으면 세는 도중의 숫자를 잡는다(실제로 142,383 을 읽었다).
+       *
+       * 42,000 + 12,800 + 700,000 + (100,000 − 70,000) = 784,800.
+       * 환급을 안 빼면 854,800 이 나온다.
        */
-      await page.waitForFunction(() => document.querySelector("#monthly-total").textContent === "754,800",
+      await page.waitForFunction(() => document.querySelector("#monthly-total").textContent === "784,800",
         null, { timeout: 5000 });
+    });
+
+    await 검사("환급이 있는 줄은 실부담이 제일 크게 보인다", async () => {
+      /*
+       * 합계에 들어가는 숫자가 줄에서 가장 커야 한다 — 결제 금액이 더 크게 보이면
+       * 보이는 숫자를 다 더해도 위의 총액이 안 나온다.
+       *
+       * 몇 px 인지는 브라우저에게 물어야 안다. 흉내 DOM 은 두 글자 크기를 다 "토큰 이름"
+       * 으로만 들고 있어 어느 쪽이 큰지 모른다.
+       */
+      const 잰것 = await page.evaluate(() => {
+        const 줄 = [...document.querySelectorAll(".expense-item")].at(-1);
+        const 큰것 = 줄.querySelector(".expense-amount strong");
+        const 작은것 = 줄.querySelector(".expense-amount small");
+        return {
+          실부담: 큰것?.textContent.trim() ?? "",
+          곁들임: 작은것?.textContent.trim() ?? "",
+          큰글자: 큰것 ? parseFloat(getComputedStyle(큰것).fontSize) : 0,
+          작은글자: 작은것 ? parseFloat(getComputedStyle(작은것).fontSize) : 0,
+        };
+      });
+      같나(잰것.실부담, "30,000원", "줄의 큰 숫자");
+      맞나(잰것.곁들임.includes("100,000원") && 잰것.곁들임.includes("70,000원"),
+        `결제 금액과 환급액이 둘 다 안 보인다: ${잰것.곁들임}`);
+      맞나(잰것.큰글자 > 잰것.작은글자,
+        `실부담 ${잰것.큰글자}px 이 곁들임 ${잰것.작은글자}px 보다 크지 않다`);
     });
 
     await 검사("여는 동안 콘솔이 조용하다", async () => {

@@ -8,6 +8,7 @@ import {
   formatShortDate,
   getMonthlyExpenses,
   isValidMonthKey,
+  netAmount,
   shiftMonthKey,
 } from "../domain/expenses.js";
 import { getMemberName, getMembers } from "../members.js";
@@ -119,8 +120,10 @@ function 펴진것(key) {
         <p class="analysis-detail-row">
           <time>${escapeHtml(formatShortDate(expense.date))}</time>
           <span>${escapeHtml(expense.item)}</span>
-          <small>${escapeHtml(getMemberName(expense.member))}</small>
-          <b>${formatMoney(expense.amount)}원</b>
+          <small>${escapeHtml(getMemberName(expense.member))}${
+            expense.refunded ? ` · 환급 ${formatMoney(expense.refunded)}원` : ""
+          }</small>
+          <b>${formatMoney(netAmount(expense))}원</b>
         </p>`,
         )
         .join("")}

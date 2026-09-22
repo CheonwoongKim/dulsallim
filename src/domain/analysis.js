@@ -1,4 +1,4 @@
-import { CATEGORIES, shiftMonthKey, toMonthKey } from "./expenses.js";
+import { CATEGORIES, netAmount, shiftMonthKey, toMonthKey } from "./expenses.js";
 
 /**
  * 진행 중인 달은 같은 날짜까지만 견준다.
@@ -21,7 +21,7 @@ export function untilDay(expenses, maxDay) {
 /** 그 달 합계. maxDay를 주면 그 날짜까지만 센다. */
 export function sumMonth(expenses, monthKey, maxDay = null) {
   const monthly = expenses.filter((expense) => expense.date.startsWith(monthKey));
-  return untilDay(monthly, maxDay).reduce((sum, expense) => sum + expense.amount, 0);
+  return untilDay(monthly, maxDay).reduce((sum, expense) => sum + netAmount(expense), 0);
 }
 
 /**
@@ -59,9 +59,9 @@ export function compareMonth(expenses, monthKey, today = new Date()) {
  * 안 쓴 분류는 빼고 준다 — `0원` 줄이 늘어서면 어디에 많이 썼는지 눈이 찾아다녀야 한다.
  */
 export function sumByCategory(monthly) {
-  const total = monthly.reduce((sum, expense) => sum + expense.amount, 0);
+  const total = monthly.reduce((sum, expense) => sum + netAmount(expense), 0);
   const totals = monthly.reduce((acc, expense) => {
-    acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+    acc[expense.category] = (acc[expense.category] || 0) + netAmount(expense);
     return acc;
   }, {});
 

@@ -1,5 +1,5 @@
 import { elements } from "../dom.js";
-import { CATEGORIES, formatMoney, formatShortDate } from "../domain/expenses.js";
+import { CATEGORIES, formatMoney, formatShortDate, netAmount } from "../domain/expenses.js";
 import { getMemberName } from "../members.js";
 import { addNote, countNote, getExpenses, loadNotes } from "../store.js";
 import { escapeHtml } from "../ui/escape.js";
@@ -59,7 +59,8 @@ function paintHeader(expense) {
   const category = CATEGORIES[expense.category] || CATEGORIES.etc;
   elements.notesEyebrow.textContent =
     `${formatShortDate(expense.date)} · ${getMemberName(expense.member)} · ${category.label}`;
-  elements.notesTitle.textContent = `${expense.item} ${formatMoney(expense.amount)}원`;
+  // 목록의 줄이 말하는 숫자와 같아야 한다. 눌러서 연 자리가 다른 금액을 말하면 어느 쪽이 맞는지 모른다.
+  elements.notesTitle.textContent = `${expense.item} ${formatMoney(netAmount(expense))}원`;
 }
 
 export async function openNotes(expenseId) {

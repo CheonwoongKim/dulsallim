@@ -231,7 +231,7 @@
   color: var(--ink-soft);
 }
 
-/* 마이페이지의 목표 입력 보조 문구 */
+/* 적는 칸 아래 곁들이는 한 줄. 마이페이지의 목표와 지출 시트의 실비 환급이 쓴다. */
 .field-hint {
   color: var(--ink-soft);
   font-size: var(--text-12);

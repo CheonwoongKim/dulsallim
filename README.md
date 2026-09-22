@@ -96,7 +96,7 @@ Supabase 프로젝트를 만든 뒤, SQL Editor 에서 이 세 개를 순서대�
 `20260101000001_profile.sql` 은 그 시점의 권한만 열어 두므로 나중 것을 도로 닫아 버립니다.
 
 <details>
-<summary>운영 중인 프로젝트를 최신으로 올릴 때 — 마이그레이션 20개</summary>
+<summary>운영 중인 프로젝트를 최신으로 올릴 때 — 마이그레이션 21개</summary>
 
 아직 실행하지 않은 것만 순서대로 실행하고 `verify.sql` 로 확인합니다.
 
@@ -122,6 +122,7 @@ Supabase 프로젝트를 만든 뒤, SQL Editor 에서 이 세 개를 순서대�
 | 18 | `supabase/migrations/20260807020000_wish_body_restore.sql` | 16번이 누락한 분기 복구 (16번을 실행했다면 필수) |
 | 19 | `supabase/migrations/20260807030000_wish_goal.sql` | 순서 이동 대신 "지금 목표" 지정 |
 | 20 | `supabase/migrations/20260901000000_reset_household_definer.sql` | 데이터 초기화가 막혀 있던 것을 푼다 (위시를 들인 뒤로 계속 막혀 있었다) |
+| 21 | `supabase/migrations/20260922010000_expense_refund.sql` | 실비 환급 — 결제 금액은 두고 돌려받은 금액을 따로 적는다 |
 
 </details>
 

@@ -38,6 +38,8 @@ function 밑자료() {
       { id: "e1", household_id: 집, paid_by: 사람.우리, spent_on: 날(3), category: "food", item: "장보기", amount: 42000, created_at: "2026-01-01T00:00:00Z", fixed_cost_id: null },
       { id: "e2", household_id: 집, paid_by: 사람.너와, spent_on: 날(5), category: "transport", item: "택시", amount: 12800, created_at: "2026-01-02T00:00:00Z", fixed_cost_id: null },
       { id: "e3", household_id: 집, paid_by: 사람.우리, spent_on: 날(12), category: "housing", item: "월세", amount: 700000, created_at: "2026-01-03T00:00:00Z", fixed_cost_id: "f1" },
+      // 실비 환급이 붙은 줄. 목록 맨 아래에 오도록 1일에 둔다 — 차례가 바뀌면 위 검사들이 다른 줄을 짚는다.
+      { id: "e4", household_id: 집, paid_by: 사람.너와, spent_on: 날(1), category: "medical", item: "병원", amount: 100000, refunded: 70000, created_at: "2026-01-04T00:00:00Z", fixed_cost_id: null },
     ],
     /*
      * 시작월을 이번 달로 둔다. 지난 달로 두면 앱이 열리자마자 밀린 달을 전부 채우려 들어

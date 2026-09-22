@@ -37,6 +37,12 @@ elements.amount.addEventListener("input", (event) => {
   elements.amountError.textContent = "";
   syncGoalNotice();
 });
+elements.refunded.addEventListener("input", (event) => {
+  event.target.value = formatAmountInput(event.target.value);
+  elements.refundedError.textContent = "";
+  // 환급받은 만큼은 목표에서도 빠진다. 금액칸과 같은 자리를 다시 그린다.
+  syncGoalNotice();
+});
 elements.item.addEventListener("input", () => {
   elements.itemError.textContent = "";
 });

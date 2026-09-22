@@ -25,6 +25,8 @@ export function toExpense(row) {
     category: safeCategory(row.category),
     item: row.item,
     amount: row.amount,
+    // 실비로 돌려받은 금액. 안 받았으면 null 이다 — 0 으로 눕히면 "받았는데 0원" 과 구분이 안 된다.
+    refunded: row.refunded ?? null,
     // 같은 날 여러 건을 기록한 순서를 지키기 위한 보조 정렬 키.
     createdAt: Date.parse(row.created_at) || 0,
   };
@@ -38,6 +40,7 @@ export function fromExpense(expense, { householdId, userId }) {
     category: expense.category,
     item: expense.item,
     amount: expense.amount,
+    refunded: expense.refunded || null,
     created_by: userId,
     // 고정비에서 자동으로 생긴 건지 표시한다. 직접 적은 지출이면 비어 있다.
     fixed_cost_id: expense.fixedCostId || null,

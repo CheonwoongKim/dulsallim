@@ -1,4 +1,4 @@
-import { CATEGORIES, formatMoney, formatShortDate } from "../domain/expenses.js";
+import { CATEGORIES, formatMoney, formatShortDate, netAmount } from "../domain/expenses.js";
 import { getMemberColor, getMemberName } from "../members.js";
 import { escapeHtml, safeHref } from "./escape.js";
 
@@ -175,7 +175,7 @@ export function createExpenseChoice(expense) {
   button.innerHTML = `
     <span>
       <strong>${escapeHtml(expense.item)}</strong>
-      <small>${escapeHtml(formatShortDate(expense.date))} · ${escapeHtml(getMemberName(expense.member))} · ${category.label} · ${formatMoney(expense.amount)}원</small>
+      <small>${escapeHtml(formatShortDate(expense.date))} · ${escapeHtml(getMemberName(expense.member))} · ${category.label} · ${formatMoney(netAmount(expense))}원</small>
     </span>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
   `;

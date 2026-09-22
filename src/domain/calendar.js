@@ -1,4 +1,4 @@
-import { lastDayOfMonth, parseMonthKey } from "./expenses.js";
+import { lastDayOfMonth, netAmount, parseMonthKey } from "./expenses.js";
 
 export const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -33,7 +33,7 @@ export function buildCalendar(monthKey) {
 /** 날짜별 합계. 칸에 넣을 숫자를 미리 모아 둔다. */
 export function sumByDate(expenses) {
   return expenses.reduce((totals, expense) => {
-    totals[expense.date] = (totals[expense.date] || 0) + expense.amount;
+    totals[expense.date] = (totals[expense.date] || 0) + netAmount(expense);
     return totals;
   }, {});
 }
