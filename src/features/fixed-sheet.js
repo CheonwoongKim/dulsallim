@@ -21,7 +21,6 @@ import {
   describeInstallment,
   describeSchedule,
   firstApplicableMonth,
-  hasApplied,
   isValidDay,
   nextOccurrenceDate,
 } from "../domain/fixed-costs.js";
@@ -168,22 +167,9 @@ export function showFormView(template = null) {
    * 고칠 때는 원래 시작월을 그대로 보여 준다. 새로 등록할 때는 결제일을 적는 대로
    * 계산값이 따라오게 두고(updateFixedHint), 사람이 고르면 거기서 멈춘다.
    */
-  /*
-   * 한 번이라도 기록된 할부는 시작월을 잠근다.
-   *
-   * 옮기면 옛 기록이 새 일정 밖으로 밀려나는데, 밖으로 난 기록은 중복을 못 막는다.
-   * 5개월 할부를 한 번 기록한 뒤 시작월을 한 달 뒤로 미니 여섯 번 청구됐다.
-   * 이미 나간 돈은 되돌릴 수 없으니, 되돌릴 수 없는 것이 생긴 뒤로는 일정을 고정한다.
-   * 첫 기록 전에는 얼마든지 고칠 수 있다 — 그때는 맞출 것이 아직 아무것도 없다.
-   */
-  const 잠김 = Boolean(template) && hasApplied(template, getFixedApplied());
   startMonthAuto = !template;
   fillStartMonthOptions(template?.startMonth);
   elements.fixedStartMonth.value = template?.startMonth || toMonthKey(new Date());
-  elements.fixedStartMonth.disabled = 잠김;
-  elements.fixedStartMonthNote.textContent = 잠김
-    ? "이미 기록이 시작돼 시작월은 고칠 수 없어요. 바꾸려면 지우고 다시 등록해 주세요."
-    : "";
   // 지출 폼과 같은 규칙: 새로 등록하면 로그인한 사람, 고칠 때는 원래 결제자를 유지한다.
   const defaultMember = template?.member || getProfile()?.id;
   const radio = elements.fixedForm.querySelector(`input[name="fixed-member"][value="${defaultMember}"]`);
@@ -297,7 +283,6 @@ export async function handleFixedSubmit(event) {
   }
 
   const existing = editingTemplate();
-  const 잠긴시작월 = existing && hasApplied(existing, getFixedApplied()) ? existing.startMonth : null;
   const template = {
     member: String(data.get("fixed-member")),
     category: String(data.get("category")),
@@ -308,11 +293,12 @@ export async function handleFixedSubmit(event) {
      * 시작월은 폼이 정한다. 계산값이 늘 맞지는 않기 때문이다 — 9월 22일에 결제일 25일로
      * 등록하면 9월을 잡는데, 카드 첫 청구가 10월이면 한 달이 통째로 어긋난다.
      *
-     * 다만 이미 기록이 시작된 것은 원래 달을 그대로 쓴다. 고르개를 잠가 두었으므로 폼에는
-     * 아예 안 실려 오는데(disabled 는 FormData 에 안 담긴다), 그 빈칸을 계산값으로 메우면
-     * 잠근 보람 없이 시작월이 조용히 옮겨 간다.
+     * 이미 기록이 시작된 뒤에도 고칠 수 있다. 옮겨도 회수 상한(collectDueOccurrences)과
+     * 달별 반영 기록이 함께 막아 같은 달이 두 번 들어가거나 회수를 넘는 일이 없고,
+     * 뒤로 당겨 소급분이 생기면 저장 전에 몇 건인지 안내가 먼저 말한다.
+     * 고치러 들어오면 폼이 원래 달을 담고 열리므로, 금액만 고치면 일정은 움직이지 않는다.
      */
-    startMonth: 잠긴시작월 ?? (isValidMonthKey(input.startMonth) ? input.startMonth : firstApplicableMonth(input.day)),
+    startMonth: isValidMonthKey(input.startMonth) ? input.startMonth : firstApplicableMonth(input.day),
     months: input.months,
   };
 

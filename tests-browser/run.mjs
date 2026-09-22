@@ -57,6 +57,15 @@ async function 고정비열기(page) {
   await page.waitForSelector("#fixed-sheet:not([hidden])");
 }
 
+/** 목록에서 그 고정비의 수정 단추를 누른다. 스와이프 뒤에 숨어 있어 페이지 안에서 누른다. */
+async function 고정비고치기(page, 항목) {
+  await page.evaluate((이름) => {
+    const 줄 = [...document.querySelectorAll(".fixed-item")].find((el) => el.textContent.includes(이름));
+    줄.querySelector("[data-edit-fixed]").click();
+  }, 항목);
+  await page.waitForSelector("#fixed-form:not([hidden])");
+}
+
 /** 목 서버를 띄운다. 이미 떠 있으면 그것을 쓴다. */
 async function 서버띄우기() {
   const 살아있나 = await fetch(주소).then((r) => r.ok).catch(() => false);
@@ -318,6 +327,7 @@ try {
       await page.selectOption("#fixed-start-month", 달키(-3));
       await page.fill("#fixed-item", "정수기");
       await page.fill("#fixed-amount", "20000");
+      await page.fill("#fixed-months", "12");
 
       맞나(
         (await page.textContent("#fixed-hint")).includes("저장하면 지난 4건이 곧바로 기록됩니다"),
@@ -331,38 +341,79 @@ try {
       같나(await page.textContent("#toast-message"), "고정비 4건을 넣었어요", "예고한 건수와 실제가 다르다");
     });
 
-    await 검사("이미 기록이 시작된 것은 시작월을 못 고친다", async () => {
-      /*
-       * 옮기면 옛 기록이 새 일정 밖으로 밀려나 중복을 못 막는다. 5개월 할부를 한 번 기록한 뒤
-       * 시작월을 한 달 미니 여섯 번 청구됐다 — 이미 나간 돈은 되돌릴 수 없으니 일정을 잠근다.
-       */
-      const 열기 = (항목) => page.evaluate((이름) => {
-        const 줄 = [...document.querySelectorAll(".fixed-item")].find((el) => el.textContent.includes(이름));
-        줄.querySelector("[data-edit-fixed]").click();
-      }, 항목);
+    await 검사("몇 개월 칸은 1~120 만 받는다", async () => {
+      // 0 이면 만들어질 달이 하나도 없고, 세 자리를 넘기면 다음 세기까지 안내한다.
+      await page.click("#add-fixed");
+      await page.fill("#fixed-day", "20");
+      await page.fill("#fixed-item", "소파2");
+      await page.fill("#fixed-amount", "10000");
 
-      await 열기("정수기");
-      await page.waitForSelector("#fixed-form:not([hidden])");
-      맞나(await page.locator("#fixed-start-month").isDisabled(), "기록이 시작됐는데 시작월을 고칠 수 있다");
-      맞나((await page.textContent("#fixed-start-month-note")).includes("고칠 수 없어요"), "왜 막혔는지 안 알려 준다");
+      for (const 못된값 of ["0", "200"]) {
+        await page.fill("#fixed-months", 못된값);
+        await page.click("#fixed-submit");
+        맞나(!(await page.locator("#fixed-form").isHidden()), `${못된값} 을 받아 저장해 버렸다`);
+        맞나((await page.textContent("#fixed-months-error")).includes("1~120"), `${못된값} 에 까닭을 안 알려 준다`);
+      }
 
-      // 금액만 고쳐 저장해도 시작월은 그 자리에 남는다. 잠근 칸은 폼에 안 실려 오기 때문에,
-      // 그 빈칸을 계산값으로 메우면 여기서 달키(-3) 이 이번 달로 조용히 옮겨 간다.
-      await page.fill("#fixed-amount", "25000");
+      // 비우는 것은 "끝이 없다"는 뜻이라 통과해야 한다. 막으면 구독을 못 만든다.
+      await page.fill("#fixed-months", "");
       await page.click("#fixed-submit");
       await page.waitForSelector("#fixed-list-view:not([hidden])");
-      await 열기("정수기");
-      await page.waitForSelector("#fixed-form:not([hidden])");
-      같나(await page.inputValue("#fixed-start-month"), 달키(-3), "저장했더니 시작월이 옮겨 갔다");
+    });
 
-      // 아직 한 번도 안 들어간 것은 얼마든지 고칠 수 있다. 맞출 것이 아직 없기 때문이다.
-      await page.click("#cancel-fixed");
-      await 열기("소파");
-      await page.waitForSelector("#fixed-form:not([hidden])");
-      맞나(!(await page.locator("#fixed-start-month").isDisabled()), "아직 안 들어간 것까지 잠갔다");
-      await page.click("#cancel-fixed");
-      await page.keyboard.press("Escape");
-      await page.waitForFunction(() => document.querySelector("#fixed-sheet").hidden);
+    await 검사("이미 기록이 시작돼도 시작월을 고칠 수 있고, 같은 달이 두 번 안 들어간다", async () => {
+      /*
+       * 잠가 두었더니 "지우고 다시 등록하라" 말고는 길이 없었는데, 지우면 반영 기록이 함께
+       * 지워져(on delete cascade) 재등록 때 그 달이 또 들어간다 — 앱이 시킨 대로 했는데
+       * 가계부가 틀어졌다. 그래서 열어 두고, 안전한지를 여기서 잰다.
+       *
+       * 정수기는 달키(-3) 부터 넉 달이 이미 기록돼 있다. 시작월을 달키(-1) 로 밀면
+       * 그 두 달은 이미 반영 기록이 있어 다시 안 들어가고, 새로 들어갈 것도 없다.
+       *
+       * 그 "다시 안 들어감" 은 두 겹이다 — 화면이 이미 낸 달을 건너뛰고, 서버가 (고정비, 달)
+       * 기본키로 또 막는다. 그래서 한 겹만 뚫어서는 여기가 안 빨개진다. 겹마다 제 검사가
+       * 따로 있고(fixed-costs.test.mjs 의 "이미 반영한 달은 다시 만들지 않는다",
+       * server-rules.test.mjs 의 "두 번 불러도 한 번만 만든다"), 여기는 사람이 보는
+       * 결과를 지킨다. 두 겹을 다 뚫으면 여기가 잡는 것을 재 봤다.
+       */
+      await 고정비열기(page);
+      await 고정비고치기(page, "정수기");
+      맞나(!(await page.locator("#fixed-start-month").isDisabled()), "시작월이 잠겨 있다");
+
+      await page.selectOption("#fixed-start-month", 달키(-1));
+      await page.click("#fixed-submit");
+      await page.waitForSelector("#fixed-list-view:not([hidden])");
+      await page.waitForFunction(() => document.querySelector("#toast-message").textContent.length > 0,
+        null, { timeout: 5000 });
+      같나(
+        await page.textContent("#toast-message"),
+        "고정비를 수정했어요. 이미 기록된 지출은 그대로예요",
+        "옮겼더니 이미 기록된 달이 다시 들어갔다",
+      );
+
+      // 정말 옮겨졌나 — 끝나는 달이 새 시작월에서 나온다(달키(-1) + 11개월).
+      const 줄 = (await page.locator(".fixed-item", { hasText: "정수기" }).first().textContent()).replace(/\s+/g, " ");
+      맞나(줄.includes(`4/12회 · ${짧은달(달키(10))}까지`), `시작월이 안 옮겨졌다: ${줄}`);
+    });
+
+    await 검사("이미 기록된 회차보다 적게 줄일 수 없다", async () => {
+      /*
+       * 줄인다고 나간 돈이 돌아오지 않는데 목록은 줄인 숫자로 "2회 끝남" 이라고 말하게 된다.
+       * 넉 번 청구해 놓고 둘이라 하는 셈이라, 돈은 안 새도 라벨이 거짓이 된다.
+       */
+      await 고정비고치기(page, "정수기");
+      await page.fill("#fixed-months", "2");
+      await page.click("#fixed-submit");
+      맞나(!(await page.locator("#fixed-form").isHidden()), "줄이는 것을 받아 저장해 버렸다");
+      맞나(
+        (await page.textContent("#fixed-months-error")).includes("이미 4번 기록돼서"),
+        `까닭을 안 알려 준다: ${await page.textContent("#fixed-months-error")}`,
+      );
+
+      // 이미 낸 만큼이나 그보다 길게는 고칠 수 있다. 늘리는 길까지 막으면 안 된다.
+      await page.fill("#fixed-months", "4");
+      await page.click("#fixed-submit");
+      await page.waitForSelector("#fixed-list-view:not([hidden])");
     });
 
     await 검사("할부 줄이 가로로 안 넘친다", async () => {

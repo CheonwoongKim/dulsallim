@@ -6,7 +6,6 @@ import {
   appliedKey,
   countApplied,
   describeInstallment,
-  hasApplied,
   collectDueOccurrences,
   countSkippedMonths,
   describeSchedule,
@@ -404,12 +403,33 @@ test("표시 회차는 회수를 넘지 않는다", () => {
   assert.equal(countApplied(옮긴것, [...기록, "t:2026-11"]), 5);
 });
 
-test("한 번이라도 기록됐는지는 범위를 안 가린다", () => {
-  // 시작월을 잠글지 정하는 값이다. 범위 밖에 남은 기록도 그 달에 돈이 나간 것은 같다.
-  const t = { id: "t", day: 25, startMonth: "2026-07", months: 5 };
-  assert.equal(hasApplied(t, []), false);
-  assert.equal(hasApplied(t, ["t:2026-06"]), true, "범위 밖이어도 청구는 있었다");
-  assert.equal(hasApplied(t, ["other:2026-07"]), false, "남의 기록을 제 것으로 세면 안 된다");
+test("기록이 시작된 뒤 시작월을 옮겨도 같은 달이 두 번 안 들어간다", () => {
+  /*
+   * 시작월을 잠그지 않고 열어 두는 근거다. 잠가 두면 "지우고 다시 등록하라" 말고는 길이
+   * 없는데, 지우면 반영 기록이 함께 지워져(on delete cascade) 재등록 때 그 달이 또 들어간다 —
+   * 앱이 시킨 대로 했는데 가계부가 틀어진다.
+   *
+   * 옮겨도 안전한 까닭은 둘이다. 달별 반영 기록이 이미 낸 달을 걸러 내고, 회수 상한이
+   * 총 청구를 months 에서 끊는다. 앞으로 밀든 뒤로 당기든 두 문을 다 지나야 한다.
+   */
+  const 처음 = { id: "t", day: 25, startMonth: "2026-06", months: 5 };
+  const 첫회차 = collectDueOccurrences([처음], [], on(2026, 6, 26)).map((o) => o.key);
+
+  for (const 옮긴달 of ["2026-04", "2026-07", "2026-09"]) {
+    const 옮긴것 = { ...처음, startMonth: 옮긴달 };
+    const 전부 = [...첫회차, ...collectDueOccurrences([옮긴것], 첫회차, on(2026, 12, 1)).map((o) => o.key)];
+    const 달들 = 전부.map((key) => key.slice(-7));
+    assert.equal(달들.length, new Set(달들).size, `${옮긴달}: 같은 달이 두 번 들어갔다`);
+    assert.ok(전부.length <= 처음.months, `${옮긴달}: ${전부.length}건 — 회수를 넘었다`);
+  }
+});
+
+test("구독도 시작월을 당기면 빈 달만 채운다", () => {
+  // 회수 상한이 없는 쪽이다. 여기서도 이미 낸 달은 반영 기록이 걸러 낸다.
+  const 구독 = { id: "s", day: 25, startMonth: "2026-06" };
+  const 낸것 = collectDueOccurrences([구독], [], on(2026, 8, 26)).map((o) => o.key);
+  const 더낸것 = collectDueOccurrences([{ ...구독, startMonth: "2026-03" }], 낸것, on(2026, 8, 26));
+  assert.deepEqual(더낸것.map((o) => o.monthKey), ["2026-03", "2026-04", "2026-05"], "빈 달만 채워야 한다");
 });
 
 /* ── 저장하면 몇 건이 곧바로 생기는지 ─────────────────────── */

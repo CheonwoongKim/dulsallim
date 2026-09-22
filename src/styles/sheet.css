@@ -458,16 +458,6 @@
 .field-group select:hover {
   border-color: var(--line-strong);
 }
-
-/*
- * 잠긴 칸. 눌러도 안 열리니 눌리지 않는 것처럼 보여야 한다 —
- * 멀쩡해 보이는데 반응이 없으면 고장으로 읽힌다. 왜 잠겼는지는 바로 아래 한 줄이 말한다.
- */
-.field-group select:disabled {
-  color: var(--ink-soft);
-  background: var(--paper-deep);
-  cursor: default;
-}
 .segmented-control {
   display: grid;
   padding: var(--space-1);

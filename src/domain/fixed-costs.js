@@ -202,14 +202,6 @@ export function countApplied(template, applied) {
 }
 
 /**
- * 한 번이라도 반영된 적이 있나. 여기서는 범위 밖 기록도 센다 —
- * 일정에서 벗어나 있어도 그 달에 실제로 돈이 나간 것은 같기 때문이다.
- */
-export function hasApplied(template, applied) {
-  return 지금까지낸것(template.id, applied) > 0;
-}
-
-/**
  * 목록 한 줄에 붙일 할부 진행. 구독이면 null 이라 부르는 쪽이 여느 때처럼 그린다.
  *
  * 몇 번 냈고 몇 번 남았는지, 그리고 언제 끝나는지를 함께 말한다. 같은 금액이 매달
