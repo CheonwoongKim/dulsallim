@@ -100,14 +100,60 @@ async function 열기(browser) {
   }
 }
 
+/**
+ * 판을 씨앗으로 되돌린다. 되돌아온 것까지 보고 나서야 다음 엔진을 띄운다.
+ *
+ * 이 PR 전까지 브라우저 검사는 전부 **읽기만** 해서 되돌릴 것이 없었다. 그래서
+ * `fetch(__reset)` 한 줄은 한 번도 시험된 적이 없다. 쓰기 검사가 들어온 지금은
+ * 여기가 판 전체를 떠받친다 — 안 되돌아간 채로 뒤 엔진을 돌리면 엉뚱한 판에서 재고도
+ * 모른다. 조용히 넘어가느니 여기서 큰 소리로 죽는다(CLAUDE.md §3).
+ */
+async function 판되돌리기() {
+  const 답 = await fetch(`${주소}/__reset`);
+  if (!답.ok) throw new Error(`__reset 이 ${답.status} 를 줬다`);
+  const 줄들 = await fetch(`${주소}/rest/v1/expenses?id=eq.e4`).then((r) => r.json());
+  const 환급 = Array.isArray(줄들) ? 줄들[0]?.refunded : undefined;
+  if (환급 !== 70000) {
+    throw new Error(`판이 안 되돌아왔다 — e4.refunded 가 ${환급} 이다 (씨앗은 70000)`);
+  }
+}
+
 const 서버 = await 서버띄우기();
 try {
   for (const 이름 of 돌릴것) {
     console.log(`\n${이름}`);
     // 앞 엔진이 건드린 것을 되돌린다. 안 그러면 두 번째 엔진이 다른 판에서 시작한다.
-    await fetch(`${주소}/__reset`);
+    await 판되돌리기();
     const browser = await 엔진들[이름].launch();
     const { page, 콘솔오류 } = await 열기(browser);
+
+    /**
+     * 열린 시트나 덮는 화면을 다 닫는다. 검사마다 같은 자리에서 시작하게 하는 것이 일이다.
+     *
+     * 앞 검사가 시트를 연 채로 죽으면 그 뒤가 줄줄이 따라 죽었다 — `showModal()` 로 연
+     * 시트는 최상위 레이어라, 열려 있으면 뒤의 줄을 아예 못 누른다. 실제로 쓰기 검사
+     * 다섯이 한 번에 빨개진 적이 있고(아홉 판 중 두 판), 그 지문이 그것이었다.
+     * 여기서 앞의 뒤끝을 끊어 두면 한 검사가 넘어져도 그 하나만 넘어진다.
+     */
+    const 다닫기 = async () => {
+      for (let i = 0; i < 5; i += 1) {
+        const 열린것 = await page.evaluate(() => {
+          const 시트 = [...document.querySelectorAll("dialog.sheet")].find((d) => !d.hidden);
+          if (시트) return `sheet:${시트.id}`;
+          const 화면 = [...document.querySelectorAll(".page")].find((p) => !p.hidden);
+          return 화면 ? `page:${화면.id}` : "";
+        });
+        if (!열린것) return;
+        if (열린것.startsWith("page:")) {
+          await page.evaluate((그것) =>
+            document.querySelector(`#${그것} [data-close-page]`).click(), 열린것.slice(5));
+        } else {
+          await page.keyboard.press("Escape");
+        }
+        await page.waitForTimeout(400);
+      }
+      throw new Error("열린 시트나 화면을 못 닫았다");
+    };
 
     await 검사("로그인하면 이번 달 목록이 뜬다", async () => {
       같나(await page.locator(".expense-item").count(), 4, "지출 줄 수");
@@ -230,17 +276,18 @@ try {
 
     await 검사("눌러서 연 자리도 목록과 같은 숫자를 말한다", async () => {
       // 목록이 3만 원이라 하고 대화 시트가 10만 원이라 하면 어느 쪽이 맞는지 알 수 없다.
+      await 다닫기();
       await page.evaluate(() => document.querySelectorAll(".expense-surface")[3].click());
       await page.waitForSelector("#notes-sheet:not([hidden])");
       const 제목 = await page.textContent("#notes-title");
       맞나(제목.includes("30,000원"), `대화 시트 제목이 실부담을 안 말한다: ${제목}`);
       맞나(!제목.includes("100,000원"), `대화 시트 제목이 결제 금액을 말한다: ${제목}`);
-      await page.keyboard.press("Escape");
-      await page.waitForFunction(() => document.querySelector("#notes-sheet").hidden);
+      await 다닫기();
     });
 
     await 검사("분석에서 펴 본 줄도 실부담을 말한다", async () => {
       // 분류 합계는 실부담인데 그 아래 펴진 줄이 결제 금액이면, 줄을 더해도 위 숫자가 안 나온다.
+      await 다닫기();
       await page.evaluate(() => document.querySelector("#open-analysis").click());
       await page.waitForSelector("#analysis-page:not([hidden])");
       await page.waitForTimeout(400);
@@ -252,8 +299,7 @@ try {
       });
       같나(줄.금액, "30,000원", "펴진 줄의 금액");
       맞나(줄.곁들임.includes("70,000원"), `얼마를 돌려받았는지 안 보인다: ${줄.곁들임}`);
-      await page.evaluate(() => document.querySelector("#analysis-page [data-close-page]").click());
-      await page.waitForFunction(() => document.querySelector("#analysis-page").hidden);
+      await 다닫기();
     });
 
     /*
@@ -263,20 +309,27 @@ try {
      * 이라 폼 모듈에 닿지 못한다(dom.js 가 #id 로 요소를 찾는데 흉내 DOM 은 그 고르개를
      * 모른다). 적는 칸부터 서버를 지나 다시 목록까지 한 바퀴 도는 것은 여기서만 볼 수 있다.
      */
-    const 총액 = () => page.textContent("#monthly-total");
     const 마지막줄 = () => page.evaluate(() =>
       [...document.querySelectorAll(".expense-item")].at(-1).querySelector(".expense-amount").textContent.replace(/\s+/g, " ").trim());
-    /** 그 지출을 수정으로 열어 환급액을 적고 저장한다. 빈 글자면 환급을 지운다. */
-    const 환급적기 = async (id, 값) => {
+
+    /** 그 지출을 수정으로 연다. 열려 있던 것은 먼저 닫아 늘 같은 자리에서 시작한다. */
+    const 수정으로열기 = async (id) => {
+      await 다닫기();
       await page.evaluate((그것) => document.querySelector(`[data-edit-id="${그것}"]`).click(), id);
       await page.waitForSelector("#entry-sheet:not([hidden])");
+    };
+
+    /** 환급액을 적고 저장한다. 빈 글자면 환급을 지운다. 닫히는 것까지 보고 돌아간다. */
+    const 환급적기 = async (id, 값) => {
+      await 수정으로열기(id);
       await page.fill("#expense-refunded", 값);
       await page.evaluate(() => document.querySelector("#expense-submit").click());
+      // 안 기다리면 다음 걸음이 닫히는 중인 시트와 겨룬다.
+      await page.waitForFunction(() => document.querySelector("#entry-sheet").hidden, null, { timeout: 5000 });
     };
 
     await 검사("수정으로 열면 적어 둔 환급액이 그대로 채워져 있다", async () => {
-      await page.evaluate(() => document.querySelector('[data-edit-id="e4"]').click());
-      await page.waitForSelector("#entry-sheet:not([hidden])");
+      await 수정으로열기("e4");
       같나(await page.inputValue("#expense-amount"), "100,000", "결제 금액");
       같나(await page.inputValue("#expense-refunded"), "70,000", "환급액");
       // 남은 목표도 실부담으로 말한다. 결제 금액으로 세면 여기 숫자가 달라진다.
@@ -287,16 +340,17 @@ try {
       await page.fill("#expense-refunded", "90,000");
       await page.waitForFunction(() => document.querySelector("#goal-notice").textContent.includes("577,200"),
         null, { timeout: 3000 });
+      await 다닫기();
     });
 
     await 검사("결제한 것보다 많이 돌려받았다고 하면 저장이 막힌다", async () => {
+      await 수정으로열기("e4");
       await page.fill("#expense-refunded", "200,000");
       await page.evaluate(() => document.querySelector("#expense-submit").click());
       await page.waitForTimeout(300);
       같나(await page.textContent("#refunded-error"), "환급액은 결제 금액보다 클 수 없어요.");
       맞나(!(await page.evaluate(() => document.querySelector("#entry-sheet").hidden)), "막았는데 시트가 닫혔다");
-      await page.keyboard.press("Escape");
-      await page.waitForFunction(() => document.querySelector("#entry-sheet").hidden);
+      await 다닫기();
     });
 
     await 검사("적은 환급액이 서버를 지나 합계까지 내려간다", async () => {
@@ -324,6 +378,7 @@ try {
       await 환급적기("e4", "100,000");
       await page.waitForFunction(() => document.querySelector("#monthly-total").textContent === "754,800",
         null, { timeout: 5000 });
+      await 다닫기();
       await page.evaluate(() => document.querySelector("#open-analysis").click());
       await page.waitForSelector("#analysis-page:not([hidden])");
       await page.waitForTimeout(400);
@@ -338,6 +393,7 @@ try {
         `0원 분류에 ${의료?.막대}px 막대가 그려졌다`);
       // 다른 줄은 멀쩡히 그려져야 한다 — 다 안 그리면 위 확인이 헛것이다.
       맞나(잰것.some((줄) => 줄.막대 > 0), "막대가 하나도 안 그려졌다");
+      await 다닫기();
     });
 
     await browser.close();
