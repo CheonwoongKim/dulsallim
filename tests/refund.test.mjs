@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 import { sumByCategory, sumMonth } from "../src/domain/analysis.js";
@@ -12,8 +13,8 @@ import { 문서세우기, 태그들 } from "./helpers/dom.mjs";
  * 실비 환급 — 결제한 금액과 실제로 부담한 금액을 갈라 두는 자리.
  *
  * 병원에서 10만 원을 내고 나중에 실손보험에서 7만 원을 돌려받으면 나간 돈은 3만 원이다.
- * 여태는 금액을 3만 원으로 고쳐 적었는데, 그러면 10만 원이 나간 사실이 사라지고
- * 이미 울린 잔소리도 못 되돌린다(그 달 그 구간은 다시 못 울린다).
+ * 여태는 금액을 3만 원으로 고쳐 적었는데, 그러면 10만 원이 나간 사실이 사라진다.
+ * (이미 울린 잔소리는 여기서도 안 꺼진다. 그건 그대로 두기로 한 자리다.)
  *
  * 그래서 결제 금액은 그대로 두고 돌려받은 만큼만 따로 적는다. 대신 **더하는 자리가
  * 하나라도 남으면 화면마다 숫자가 달라진다.** 여기서 자리마다 값으로 확인한다 —
@@ -104,6 +105,50 @@ test("DB 행과 화면 값 사이에서 환급이 살아 남는다", () => {
   assert.equal(fromExpense({ ...화면, refunded: 0 }, { householdId: "h", userId: 나 }).refunded, null);
 });
 
+test("서버에서 지출을 더하는 자리는 전부 실부담으로 센다", async () => {
+  /*
+   * 화면만 고치고 서버를 놓치면 알림과 잔소리가 화면과 다른 숫자를 말한다. 실제로
+   * 월말 요약이 그랬다 — 알림은 854,800 을, 화면은 784,800 을 보여 주고 있었다.
+   *
+   * 그래서 자리를 손으로 세지 않고 supabase/ 를 통째로 훑는다. 새 합산 자리가 생겨도
+   * 결제 금액을 그대로 더하면 여기서 걸린다.
+   */
+  const 뿌리 = new URL("../supabase/", import.meta.url);
+  const 파일들 = [
+    "schema.sql",
+    ...(await readdir(new URL("migrations/", 뿌리))).filter((이름) => 이름.endsWith(".sql")).sort()
+      .map((이름) => `migrations/${이름}`),
+  ];
+
+  /*
+   * 옛 마이그레이션은 그때의 몸통을 들고 있는 것이 맞다. 고치면 그 판까지만 돌린 집에서
+   * 없는 열을 골라 터진다. 대신 마지막 판이 둘 다 다시 적는지를 아래에서 확인한다.
+   * (이 두 파일에 새 합산 자리를 더하는 일은 없다 — 지나간 판이다.)
+   */
+  const 옛판 = {
+    "migrations/20260101000004_nag.sql": "그때의 fire_nags",
+    "migrations/20260101000009_push_triggers.sql": "그때의 send_month_summary",
+  };
+
+  const 날것 = [];
+  for (const 이름 of 파일들) {
+    if (이름 in 옛판) continue;
+    const 글 = await readFile(new URL(이름, 뿌리), "utf8");
+    for (const 맞은것 of 글.matchAll(/sum\(\s*amount\s*\)/g)) 날것.push(`${이름}: ${맞은것[0]}`);
+  }
+  assert.deepEqual(날것, [],
+    "결제 금액을 그대로 더한다 — sum(amount - coalesce(refunded, 0)) 로 셀 것");
+
+  // 옛판이라 적은 것은 정말 뒤에서 다시 적혔어야 한다. 적당히 넣고 넘어가지 못하게.
+  const 마지막 = await readFile(new URL("migrations/20260922010000_expense_refund.sql", 뿌리), "utf8");
+  for (const 함수 of ["fire_nags", "send_month_summary"]) {
+    assert.match(마지막, new RegExp(`create or replace function ${함수}`),
+      `${함수} 를 다시 적지 않았다 — 이미 옛 판을 돌린 집에는 고침이 안 닿는다`);
+  }
+  assert.equal((마지막.match(/sum\(amount - coalesce\(refunded, 0\)\)/g) ?? []).length, 2,
+    "다시 적은 두 함수가 둘 다 실부담으로 세야 한다");
+});
+
 /* ── 목록의 한 줄 ─────────────────────────────────────────── */
 
 문서세우기();
@@ -137,6 +182,14 @@ test("합계에 들어가는 숫자가 줄에서 제일 크게 앉는다", () =>
   assert.ok(큰것.includes("30,000원"), `큰 자리에 실부담이 없다: ${큰것}`);
   assert.ok(!큰것.includes("100,000"), "큰 자리에 결제 금액이 앉았다");
   assert.ok(작은것.includes("100,000원") && 작은것.includes("70,000원"));
+});
+
+test("위시를 이룬 지출 고르기도 실제로 낸 돈을 보인다", async () => {
+  // 목록이 3만 원이라 한 지출을 여기서 10만 원이라 하면 어느 것을 고르는지 헷갈린다.
+  const { createExpenseChoice } = await import("../src/ui/wish-list.js");
+  const 글 = createExpenseChoice(병원()).innerHTML;
+  assert.ok(글.includes("30,000원"), `실부담이 없다: ${글}`);
+  assert.ok(!글.includes("100,000원"), "결제 금액을 그대로 보인다");
 });
 
 test("환급이 없는 줄은 곁들이는 칸을 안 만든다", () => {

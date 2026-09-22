@@ -1782,7 +1782,7 @@ test("분석 막대는 줄마다 같은 길이를 쓴다", () => {
 test("막대 길이는 옆에 적힌 %와 같은 것을 가리킨다", () => {
   // 1등 분류 기준으로 그리면 47%인데 꽉 찬 막대가 되어 '거의 다 식비'로 읽힌다.
   const paint = fn("paintShares");
-  assert.match(paint, /width:\$\{\(category\.total \/ total\) \* 100\}%/);
+  assert.match(paint, /fill\(category\.total, total,/, "그 달 총액을 기준으로 나눠야 한다");
   assert.doesNotMatch(paint, /categories\[0\]\.total/, "1등을 기준으로 삼으면 안 된다");
   // 회색 트랙이 100% 자리를 지켜야 비교 대상이 생긴다.
   assert.match(css, /\.analysis-bar \{[^}]*background: var\(--paper-deep\)/);
@@ -1805,10 +1805,9 @@ test("비교 막대 둘은 같은 자로 잰다", () => {
   // "줄였다"로 읽힌다. 길이 차이가 곧 금액 차이여야 한다.
   const paint = fn("paintCompared");
   assert.match(paint, /const scale = Math\.max\([\s\S]{0,120}?row\.total, row\.otherTotal/);
-  // 두 막대가 같은 fill\(\)을 지나며 같은 scale 로 나뉜다.
-  assert.match(paint, /amount \/ scale/);
-  assert.match(paint, /fill\(row\.total, row\.color\)/);
-  assert.match(paint, /fill\(row\.otherTotal, row\.color\)/);
+  // 두 막대가 같은 fill()을 지나며 같은 scale 로 나뉜다.
+  assert.match(paint, /fill\(row\.total, scale,/);
+  assert.match(paint, /fill\(row\.otherTotal, scale,/);
   assert.doesNotMatch(paint, /compared\.total/, "각 달 총액으로 나누면 비중 비교가 되어 버린다");
 });
 
@@ -1827,9 +1826,26 @@ test("견줄 기록이 없는 달은 고를 수 없다", () => {
   assert.match(app, /button && !button\.disabled/, "막힌 버튼을 눌러도 켜지면 안 된다");
 });
 
-test("0원인 분류에는 막대를 그리지 않는다", () => {
-  // 최소 굵기 8px 이 0에까지 적용되면 안 썼는데 쓴 것처럼 보인다.
-  assert.match(fn("paintCompared"), /amount \? `<i style="width:.*?" : ""/s);
+test("막대는 0원일 때도 기준이 0일 때도 그리지 않는다", () => {
+  /*
+   * 둘 다 그림만 거짓말하는 자리라 숫자를 보는 검사로는 안 잡힌다.
+   *
+   * 0원인데 최소 굵기 8px 이 남으면 안 쓴 분류가 1만 원짜리 줄과 같은 막대를 얻는다.
+   * 기준이 0이면 나눗셈이 NaN 이 되고, CSSOM 은 못된 값이 든 선언을 통째로 버려
+   * width 가 사라진 막대가 트랙을 꽉 채운다 — 그 달을 전부 돌려받으면 실부담 합이
+   * 진짜로 0이 된다. 비중 쪽과 비교 쪽이 같은 fill() 을 지나므로 한 번만 막으면 된다.
+   *
+   * 정말 그렇게 그려지는지는 브라우저가 잰다(tests-browser/run.mjs).
+   */
+  const 공용 = app.match(/const fill = [\s\S]*?;\n/);
+  assert.ok(공용, "공용 fill 을 찾지 못했다");
+  assert.match(공용[0], /amount &&/, "금액과 기준을 둘 다 확인해야 한다");
+  assert.match(공용[0], /: ""/, "안 그릴 때는 빈 글자여야 한다");
+  // 두 그리는 자리가 정말 그 하나를 지나는지. 지나지 않으면 위 막음이 헛것이다.
+  for (const 자리 of ["paintShares", "paintCompared"]) {
+    assert.match(fn(자리), /fill\(/, `${자리} 가 공용 fill 을 안 쓴다`);
+    assert.doesNotMatch(fn(자리), /<i style="width:/, `${자리} 가 막대를 직접 그린다`);
+  }
 });
 
 test("비교를 고를 수 있다는 것이 눈에 보인다", () => {

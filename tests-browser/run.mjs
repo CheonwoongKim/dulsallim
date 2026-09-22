@@ -228,6 +228,147 @@ try {
       await page.waitForFunction(() => document.querySelector("#notes-sheet").hidden);
     });
 
+    await 검사("눌러서 연 자리도 목록과 같은 숫자를 말한다", async () => {
+      // 목록이 3만 원이라 하고 대화 시트가 10만 원이라 하면 어느 쪽이 맞는지 알 수 없다.
+      await page.evaluate(() => document.querySelectorAll(".expense-surface")[3].click());
+      await page.waitForSelector("#notes-sheet:not([hidden])");
+      const 제목 = await page.textContent("#notes-title");
+      맞나(제목.includes("30,000원"), `대화 시트 제목이 실부담을 안 말한다: ${제목}`);
+      맞나(!제목.includes("100,000원"), `대화 시트 제목이 결제 금액을 말한다: ${제목}`);
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => document.querySelector("#notes-sheet").hidden);
+    });
+
+    await 검사("분석에서 펴 본 줄도 실부담을 말한다", async () => {
+      // 분류 합계는 실부담인데 그 아래 펴진 줄이 결제 금액이면, 줄을 더해도 위 숫자가 안 나온다.
+      await page.evaluate(() => document.querySelector("#open-analysis").click());
+      await page.waitForSelector("#analysis-page:not([hidden])");
+      await page.waitForTimeout(400);
+      await page.evaluate(() => document.querySelector('.analysis-row[data-category="medical"]').click());
+      await page.waitForSelector(".analysis-detail-row");
+      const 줄 = await page.evaluate(() => {
+        const r = document.querySelector(".analysis-detail-row");
+        return { 금액: r.querySelector("b").textContent, 곁들임: r.querySelector("small").textContent };
+      });
+      같나(줄.금액, "30,000원", "펴진 줄의 금액");
+      맞나(줄.곁들임.includes("70,000원"), `얼마를 돌려받았는지 안 보인다: ${줄.곁들임}`);
+      await page.evaluate(() => document.querySelector("#analysis-page [data-close-page]").click());
+      await page.waitForFunction(() => document.querySelector("#analysis-page").hidden);
+    });
+
+    /*
+     * ── 쓰기 경로 ──────────────────────────────────────────────
+     *
+     * 폼이 환급액을 아예 안 보내게 고쳐도 node 쪽 검사는 전부 초록이었다. 그쪽은 흉내 DOM
+     * 이라 폼 모듈에 닿지 못한다(dom.js 가 #id 로 요소를 찾는데 흉내 DOM 은 그 고르개를
+     * 모른다). 적는 칸부터 서버를 지나 다시 목록까지 한 바퀴 도는 것은 여기서만 볼 수 있다.
+     */
+    const 총액 = () => page.textContent("#monthly-total");
+    const 마지막줄 = () => page.evaluate(() =>
+      [...document.querySelectorAll(".expense-item")].at(-1).querySelector(".expense-amount").textContent.replace(/\s+/g, " ").trim());
+    /** 그 지출을 수정으로 열어 환급액을 적고 저장한다. 빈 글자면 환급을 지운다. */
+    const 환급적기 = async (id, 값) => {
+      await page.evaluate((그것) => document.querySelector(`[data-edit-id="${그것}"]`).click(), id);
+      await page.waitForSelector("#entry-sheet:not([hidden])");
+      await page.fill("#expense-refunded", 값);
+      await page.evaluate(() => document.querySelector("#expense-submit").click());
+    };
+
+    await 검사("수정으로 열면 적어 둔 환급액이 그대로 채워져 있다", async () => {
+      await page.evaluate(() => document.querySelector('[data-edit-id="e4"]').click());
+      await page.waitForSelector("#entry-sheet:not([hidden])");
+      같나(await page.inputValue("#expense-amount"), "100,000", "결제 금액");
+      같나(await page.inputValue("#expense-refunded"), "70,000", "환급액");
+      // 남은 목표도 실부담으로 말한다. 결제 금액으로 세면 여기 숫자가 달라진다.
+      맞나((await page.textContent("#goal-notice")).includes("557,200"),
+        `남은 목표가 실부담 기준이 아니다: ${await page.textContent("#goal-notice")}`);
+
+      // 치는 동안 따라 움직인다. 2만 원 더 돌려받으면 남은 목표도 2만 원 늘어난다.
+      await page.fill("#expense-refunded", "90,000");
+      await page.waitForFunction(() => document.querySelector("#goal-notice").textContent.includes("577,200"),
+        null, { timeout: 3000 });
+    });
+
+    await 검사("결제한 것보다 많이 돌려받았다고 하면 저장이 막힌다", async () => {
+      await page.fill("#expense-refunded", "200,000");
+      await page.evaluate(() => document.querySelector("#expense-submit").click());
+      await page.waitForTimeout(300);
+      같나(await page.textContent("#refunded-error"), "환급액은 결제 금액보다 클 수 없어요.");
+      맞나(!(await page.evaluate(() => document.querySelector("#entry-sheet").hidden)), "막았는데 시트가 닫혔다");
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => document.querySelector("#entry-sheet").hidden);
+    });
+
+    await 검사("적은 환급액이 서버를 지나 합계까지 내려간다", async () => {
+      await 환급적기("e4", "40,000");
+      // 854,800 − 40,000. 폼이 환급을 안 보내면 854,800 에 머문다.
+      await page.waitForFunction(() => document.querySelector("#monthly-total").textContent === "814,800",
+        null, { timeout: 5000 });
+      맞나((await 마지막줄()).startsWith("60,000원"), `줄이 실부담을 안 보인다: ${await 마지막줄()}`);
+    });
+
+    await 검사("환급을 지우면 결제 금액으로 돌아간다", async () => {
+      await 환급적기("e4", "");
+      await page.waitForFunction(() => document.querySelector("#monthly-total").textContent === "854,800",
+        null, { timeout: 5000 });
+      같나(await 마지막줄(), "100,000원", "곁들이는 칸이 남았다");
+    });
+
+    /*
+     * ── 그림이 거짓말하는 자리 ────────────────────────────────
+     *
+     * 아래 둘은 숫자로는 안 잡힌다. 금액도 %도 맞게 적히는데 막대만 틀리게 그려진다.
+     */
+    await 검사("실부담 0원인 분류는 막대를 안 얻는다", async () => {
+      // 병원만 전액 환급. 그 줄은 "0원 0%" 인데 최소 굵기 8px 이 남으면 쓴 것처럼 보인다.
+      await 환급적기("e4", "100,000");
+      await page.waitForFunction(() => document.querySelector("#monthly-total").textContent === "754,800",
+        null, { timeout: 5000 });
+      await page.evaluate(() => document.querySelector("#open-analysis").click());
+      await page.waitForSelector("#analysis-page:not([hidden])");
+      await page.waitForTimeout(400);
+      const 잰것 = await page.evaluate(() => [...document.querySelectorAll(".analysis-row")].map((줄) => ({
+        이름: 줄.querySelector(".analysis-name").textContent,
+        금액: 줄.querySelector(".analysis-amount").textContent,
+        막대: 줄.querySelector(".analysis-bar i")
+          ? Math.round(줄.querySelector(".analysis-bar i").getBoundingClientRect().width) : null,
+      })));
+      const 의료 = 잰것.find((줄) => 줄.이름 === "의료");
+      맞나(의료 === undefined || 의료.막대 === null,
+        `0원 분류에 ${의료?.막대}px 막대가 그려졌다`);
+      // 다른 줄은 멀쩡히 그려져야 한다 — 다 안 그리면 위 확인이 헛것이다.
+      맞나(잰것.some((줄) => 줄.막대 > 0), "막대가 하나도 안 그려졌다");
+    });
+
+    await 검사("그 달을 전부 돌려받아도 막대가 트랙을 꽉 채우지 않는다", async () => {
+      /*
+       * 실부담 합이 0이면 0으로 나누게 되고, NaN 이 든 width 선언을 CSSOM 이 통째로
+       * 버려 막대가 트랙을 100% 채운다 — "0원 0%" 옆에 가득 찬 막대가 선다.
+       * 흉내 DOM 은 style 을 글자로만 들고 있어 이 자리를 원리적으로 못 본다.
+       */
+      await page.evaluate(() => document.querySelector("#analysis-page [data-close-page]").click());
+      await page.waitForFunction(() => document.querySelector("#analysis-page").hidden);
+      for (const [id, 값] of [["e1", "42,000"], ["e2", "12,800"], ["e3", "700,000"]]) {
+        await 환급적기(id, 값);
+        await page.waitForTimeout(250);
+      }
+      await page.waitForFunction(() => document.querySelector("#monthly-total").textContent === "0",
+        null, { timeout: 5000 });
+
+      await page.evaluate(() => document.querySelector("#open-analysis").click());
+      await page.waitForSelector("#analysis-page:not([hidden])");
+      await page.waitForTimeout(400);
+      const 잰것 = await page.evaluate(() => ({
+        총액: document.querySelector("#analysis-amount").textContent,
+        채운것: [...document.querySelectorAll(".analysis-bar i")]
+          .map((i) => Math.round(i.getBoundingClientRect().width)),
+        트랙: [...document.querySelectorAll(".analysis-bar")].length,
+      }));
+      같나(잰것.총액, "0원", "분석의 총액");
+      맞나(잰것.트랙 > 0, "견줄 줄이 아예 없다 — 이 검사가 헛돌고 있다");
+      같나(잰것.채운것.length, 0, `0원인데 막대가 ${잰것.채운것}px 로 그려졌다`);
+    });
+
     await browser.close();
   }
 } finally {
