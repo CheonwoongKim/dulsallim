@@ -18,6 +18,15 @@ import { extname, join, normalize } from "node:path";
 
 const [, , 낼자리 = "dist", 포트 = "4180"] = process.argv;
 
+/*
+ * 이 판의 고유값. 검사가 "내가 띄운 그 서버가 답하고 있나" 를 확인하는 데 쓴다.
+ *
+ * 앞 실행이 남긴 고아 서버가 포트를 쥐고 있어도 200 은 멀쩡히 준다 — 답이 왔다는 것만으로는
+ * 누가 답했는지 알 수 없다. 실제로 그 서버의 옛 판에서 재고도 초록을 받았다.
+ * 손으로 띄울 때는(npm run mock) 대조할 사람이 없으므로 pid 로 둔다.
+ */
+const 판번호 = process.env.MOCK_RUN_ID || `pid-${process.pid}`;
+
 const 사람 = {
   우리: "bbbbbbbb-0000-0000-0000-000000000001",
   너와: "bbbbbbbb-0000-0000-0000-000000000002",
@@ -212,7 +221,7 @@ createServer(async (req, res) => {
   if (길 === "/auth/v1/logout") { res.writeHead(204); return res.end(); }
 
   /* ── 검사가 판을 되돌릴 때 ────────────────────────────── */
-  if (길 === "/__reset") { 자료 = 밑자료(); return 보내기(res, 200, { ok: true }, req); }
+  if (길 === "/__reset") { 자료 = 밑자료(); return 보내기(res, 200, { ok: true, 판: 판번호 }, req); }
 
   /* ── 표 ───────────────────────────────────────────────── */
   if (길.startsWith("/rest/v1/rpc/")) {

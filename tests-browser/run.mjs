@@ -19,10 +19,13 @@
  */
 
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import process from "node:process";
 import { chromium, webkit } from "playwright";
 
 const 주소 = "http://localhost:4180";
+/* 내가 띄운 서버인지 대조할 값. 고아가 답해도 200 은 나오므로 답만으로는 모른다. */
+const 판번호 = randomUUID();
 const 엔진들 = { webkit, chromium };
 const 고른것 = process.argv.slice(2).filter((a) => a in 엔진들);
 const 돌릴것 = 고른것.length ? 고른것 : Object.keys(엔진들);
@@ -45,17 +48,68 @@ const 같나 = (본것, 바란것, 말) => {
 };
 const 맞나 = (참인가, 말) => { if (!참인가) throw new Error(말); };
 
-/** 목 서버를 띄운다. 이미 떠 있으면 그것을 쓴다. */
+/**
+ * 목 서버를 띄운다.
+ *
+ * 예전에는 "이미 떠 있으면 그것을 쓴다" 였다. 그게 이 검사를 흔들던 뿌리다 —
+ * 앞 실행이 kill() 만 쏘고 안 기다려서 부모가 먼저 끝나고 목 서버가 **고아로** 남았고,
+ * 다음 실행은 그 옛 서버에 그대로 붙어 **옛 판에서 재고도 초록을 받았다.**
+ * (열세 판 중 여섯이 빨갰고, 뒤로 갈수록 나빠졌다. 쌓이고 있었다는 뜻이다.)
+ *
+ * 그래서 이제 **남의 서버에는 안 붙는다.** 4180 이 비어 있지 않으면 그 자리에서 죽는다.
+ * 포트는 4180 그대로 둔다 — 재는 자리를 옮기는 것은 CLAUDE.md §7 이 막아 둔 길이다.
+ */
 async function 서버띄우기() {
-  const 살아있나 = await fetch(주소).then((r) => r.ok).catch(() => false);
-  if (살아있나) return null;
-  const 아이 = spawn("node", ["tools/mock-server.mjs", "dist", "4180"], { stdio: "ignore" });
+  if (await fetch(주소).then(() => true).catch(() => false)) {
+    throw new Error(
+      "4180 을 이미 누가 쓰고 있다. 앞 실행이 남긴 고아일 수 있다.\n" +
+      "  그 서버에 붙으면 옛 판에서 재고도 초록이 나온다. 보고 끄고 다시 돌려라:\n" +
+      "    lsof -nP -iTCP:4180 -sTCP:LISTEN\n" +
+      "    pkill -f 'tools/mock-server.mjs'",
+    );
+  }
+
+  /*
+   * stdio:"ignore" 였다. 포트를 못 잡아도(EADDRINUSE) 그 오류가 아무 데도 안 갔다 —
+   * 조용히 죽고, 검사는 옛 서버에 붙었다. 이제 듣고 있다가 큰 소리로 죽는다.
+   */
+  const 아이 = spawn("node", ["tools/mock-server.mjs", "dist", "4180"], {
+    stdio: ["ignore", "ignore", "pipe"],
+    env: { ...process.env, MOCK_RUN_ID: 판번호 },
+  });
+  let 남긴말 = "";
+  let 못뜬까닭 = null;
+  아이.stderr.on("data", (조각) => { 남긴말 += 조각; });
+  아이.on("error", (오류) => { 못뜬까닭 ??= 오류.message; });
+  아이.on("exit", (코드, 신호) => { 못뜬까닭 ??= `일찍 끝났다 (code=${코드}, signal=${신호})`; });
+
   for (let i = 0; i < 50; i += 1) {
+    if (못뜬까닭) throw new Error(`목 서버가 못 떴다 — ${못뜬까닭}\n${남긴말.trim()}`);
     if (await fetch(주소).then((r) => r.ok).catch(() => false)) return 아이;
     await new Promise((풀기) => setTimeout(풀기, 100));
   }
-  아이.kill();
-  throw new Error("목 서버가 안 뜬다 — dist 를 먼저 구웠나?");
+  await 서버끄기(아이);
+  throw new Error(`목 서버가 안 뜬다 — dist 를 먼저 구웠나?\n${남긴말.trim()}`);
+}
+
+/**
+ * 죽는 것까지 보고 돌아온다.
+ *
+ * kill() 은 SIGTERM 을 쏘기만 한다. 안 기다리면 부모가 먼저 끝나고 자식이 고아로 남아
+ * 포트를 쥔 채 살아 있다 — 다음 실행이 그것에 붙는다. 실제로 그렇게 남은 것을 잡았다.
+ */
+async function 서버끄기(아이) {
+  if (!아이 || 아이.exitCode !== null || 아이.signalCode !== null) return;
+  const 끝남 = new Promise((풀기) => 아이.once("exit", 풀기));
+  아이.kill("SIGTERM");
+  const 안죽었나 = await Promise.race([
+    끝남.then(() => false),
+    new Promise((풀기) => setTimeout(() => 풀기(true), 3000)),
+  ]);
+  if (안죽었나) {
+    아이.kill("SIGKILL");
+    await 끝남;
+  }
 }
 
 /** 로그인해서 목록이 뜬 상태까지. 재는 것은 그다음부터다. */
@@ -111,6 +165,17 @@ async function 열기(browser) {
 async function 판되돌리기() {
   const 답 = await fetch(`${주소}/__reset`);
   if (!답.ok) throw new Error(`__reset 이 ${답.status} 를 줬다`);
+
+  /*
+   * 답이 왔다는 것만으로는 부족하다 — 앞 실행이 남긴 고아 서버도 200 을 준다.
+   * 누가 답했는지를 본다. 이 값은 spawn 할 때 내가 쥐여 준 것이라 옛 서버는 못 낸다.
+   */
+  const { 판 } = await 답.json();
+  if (판 !== 판번호) {
+    throw new Error(`내가 띄운 서버가 아니다 — 답한 판은 ${판}, 내 것은 ${판번호}`);
+  }
+
+  // 씨앗으로 정말 돌아왔나. 안 돌아온 채로 다음 엔진을 돌리면 엉뚱한 판에서 재고도 모른다.
   const 줄들 = await fetch(`${주소}/rest/v1/expenses?id=eq.e4`).then((r) => r.json());
   const 환급 = Array.isArray(줄들) ? 줄들[0]?.refunded : undefined;
   if (환급 !== 70000) {
@@ -125,6 +190,7 @@ try {
     // 앞 엔진이 건드린 것을 되돌린다. 안 그러면 두 번째 엔진이 다른 판에서 시작한다.
     await 판되돌리기();
     const browser = await 엔진들[이름].launch();
+    try {
     const { page, 콘솔오류 } = await 열기(browser);
 
     /**
@@ -396,10 +462,13 @@ try {
       await 다닫기();
     });
 
-    await browser.close();
+    } finally {
+      // 검사가 터져도 닫는다. 안 닫으면 helper 가 CLOSE_WAIT 로 남아 다음 판을 흔든다.
+      await browser.close();
+    }
   }
 } finally {
-  서버?.kill();
+  await 서버끄기(서버);
 }
 
 console.log(`\n통과 ${통과} · 실패 ${실패.length}`);
