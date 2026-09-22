@@ -1,6 +1,6 @@
 import { elements } from "../dom.js";
+import { sumByCategory } from "../domain/analysis.js";
 import {
-  CATEGORIES,
   formatMoney,
   getMonthlyExpenses,
   nextCategoryFilter,
@@ -34,21 +34,13 @@ import { closeOpenRow } from "../ui/swipe.js";
  * 다만 "모두 지우기" 는 셋을 다 푼다. 여기서 못 걸 뿐, 걸려 있으면 여기서 풀린다.
  */
 
-/** 그 달에 실제로 쓴 분류만, 많이 쓴 순으로. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다. */
-function 이번달분류() {
-  const 합계 = new Map();
-  for (const expense of getMonthlyExpenses(getExpenses(), getSelectedMonth())) {
-    합계.set(expense.category, (합계.get(expense.category) ?? 0) + expense.amount);
-  }
-  return [...합계.entries()]
-    .map(([key, total]) => ({
-      key,
-      label: (CATEGORIES[key] || CATEGORIES.etc).label,
-      color: (CATEGORIES[key] || CATEGORIES.etc).color,
-      total,
-    }))
-    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
-}
+/*
+ * 그 달에 실제로 쓴 분류만, 많이 쓴 순으로. 안 쓴 분류를 늘어놓으면 고를 것이 묻힌다.
+ *
+ * 분석 화면과 같은 함수를 쓴다. 여기서 따로 세던 때는 합계가 두 곳에서 나와,
+ * 실비 환급처럼 "무엇을 더할지" 가 바뀌면 한쪽만 고쳐질 자리였다.
+ */
+const 이번달분류 = () => sumByCategory(getMonthlyExpenses(getExpenses(), getSelectedMonth()));
 
 function 그리기() {
   const 걸린것 = getCategoryFilter();

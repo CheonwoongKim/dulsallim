@@ -8,6 +8,7 @@ import {
   formatShortDate,
   getMonthlyExpenses,
   isValidMonthKey,
+  netAmount,
   shiftMonthKey,
 } from "../domain/expenses.js";
 import { getMemberName, getMembers } from "../members.js";
@@ -82,6 +83,23 @@ export function paintAnalysis() {
     : paintShares(categories, compared.total);
 }
 
+/**
+ * 막대 하나. 두 가지를 막는다.
+ *
+ * **0원이면 아예 그리지 않는다.** 최소 굵기 8px(analysis.css)이 남으면 안 쓴 분류가
+ * 1만 원짜리 줄과 같은 크기의 막대를 얻어, 그림이 숫자와 다른 말을 한다.
+ *
+ * **기준이 0이면 그리지 않는다.** 0으로 나누면 NaN 이 되고, CSSOM 은 못된 값이 든 선언을
+ * 통째로 버린다 — width 가 사라져 막대가 트랙을 꽉 채운다. "0원 0%" 옆에 가득 찬 막대다.
+ *
+ * 뒤엣것은 지금 닿을 수 없는 길이다. refunded <= amount 가 DB 의 check 라 실부담은 늘
+ * 0 이상이고, 그래서 총액이 0이면 분류 합계도 모두 0이라 앞엣것에서 이미 걸린다.
+ * 그런 줄 알고 남긴다 — 제약이 느슨해지거나 폰에 적어 둔 사본이 어긋나면 그때 이것이
+ * 마지막 문이다. 따로 걸리는 검사는 없다(있을 수가 없다).
+ */
+const fill = (amount, 기준, color) =>
+  amount && 기준 ? `<i style="width:${(amount / 기준) * 100}%;background:${color}"></i>` : "";
+
 /** 비교 끔: 막대는 그 달 총액 대비 비중. 옆의 %와 같은 것을 가리킨다. */
 function paintShares(categories, total) {
   return categories
@@ -90,7 +108,7 @@ function paintShares(categories, total) {
       <button class="analysis-row" type="button" data-category="${escapeHtml(category.key)}"
         aria-expanded="${category.key === openedCategory}">
         <span class="analysis-name">${escapeHtml(category.label)}</span>
-        <span class="analysis-bar"><i style="width:${(category.total / total) * 100}%;background:${category.color}"></i></span>
+        <span class="analysis-bar">${fill(category.total, total, category.color)}</span>
         <span class="analysis-amount">${formatMoney(category.total)}원</span>
         <span class="analysis-percent">${category.percent}%</span>
       </button>${펴진것(category.key)}`,
@@ -119,8 +137,10 @@ function 펴진것(key) {
         <p class="analysis-detail-row">
           <time>${escapeHtml(formatShortDate(expense.date))}</time>
           <span>${escapeHtml(expense.item)}</span>
-          <small>${escapeHtml(getMemberName(expense.member))}</small>
-          <b>${formatMoney(expense.amount)}원</b>
+          <small>${escapeHtml(getMemberName(expense.member))}${
+            expense.refunded ? ` · 환급 ${formatMoney(expense.refunded)}원` : ""
+          }</small>
+          <b>${formatMoney(netAmount(expense))}원</b>
         </p>`,
         )
         .join("")}
@@ -151,18 +171,14 @@ function paintCompared(categories, otherCategories) {
   const rows = compareCategories(categories, otherCategories);
   const scale = Math.max(...rows.flatMap((row) => [row.total, row.otherTotal]), 1);
 
-  // 0원이면 막대를 아예 그리지 않는다. 최소 굵기 8px 이 남으면 안 썼는데 쓴 것처럼 보인다.
-  const fill = (amount, color) =>
-    amount ? `<i style="width:${(amount / scale) * 100}%;background:${color}"></i>` : "";
-
   return rows
     .map(
       (row) => `
       <div class="analysis-row is-compared">
         <span class="analysis-name">${escapeHtml(row.label)}</span>
         <span class="analysis-pair">
-          <span class="analysis-bar">${fill(row.total, row.color)}</span>
-          <span class="analysis-bar is-other">${fill(row.otherTotal, row.color)}</span>
+          <span class="analysis-bar">${fill(row.total, scale, row.color)}</span>
+          <span class="analysis-bar is-other">${fill(row.otherTotal, scale, row.color)}</span>
         </span>
         <span class="analysis-amount">${formatMoney(row.total)}원</span>
         <span class="analysis-percent ${row.diff > 0 ? "is-up" : row.diff < 0 ? "is-down" : ""}">${

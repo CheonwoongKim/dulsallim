@@ -172,6 +172,16 @@
   font-size: var(--text-15);
   letter-spacing: var(--tracking-body);
   white-space: nowrap;
+  /* 두 줄이 되면 자리가 숫자보다 넓어진다. 오른쪽 끝을 맞춰야 자릿수가 세로로 선다. */
+  text-align: right;
+}
+
+/* 결제 금액과 환급액. 합계에 들어가는 것은 위의 실부담이라 이쪽을 작고 옅게 둔다. */
+.expense-amount small {
+  display: block;
+  margin-top: var(--space-05);
+  color: var(--ink-soft);
+  font-size: var(--text-11);
 }
 
 .empty-state {

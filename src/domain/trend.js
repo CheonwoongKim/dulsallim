@@ -1,4 +1,4 @@
-import { toMonthKey } from "./expenses.js";
+import { netAmount, toMonthKey } from "./expenses.js";
 
 /**
  * 한 해의 월별 지출 추이를 계산한다. 그리는 일은 여기서 하지 않는다.
@@ -94,7 +94,7 @@ export function buildYearSeries(expenses, members, year, today = new Date()) {
 function sumOf(rows, memberId) {
   return rows
     .filter((expense) => expense.member === memberId)
-    .reduce((sum, expense) => sum + expense.amount, 0);
+    .reduce((sum, expense) => sum + netAmount(expense), 0);
 }
 
 /** `2026-09` > `2026-08`. 월 키는 자리수가 고정이라 글자 비교로 충분하다. */

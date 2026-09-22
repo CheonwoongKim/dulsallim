@@ -8,6 +8,7 @@ import {
   getMonthlyExpenses,
   isValidDateKey,
   lastDayOfMonth,
+  netAmount,
   summarizeGoal,
   toDateKey,
   toMonthKey,
@@ -71,7 +72,11 @@ export function syncGoalNotice() {
         monthly: getMonthlyExpenses(getExpenses(), date.slice(0, 7)),
         memberId,
         goal: getMemberGoal(memberId),
-        draft: readAmount(data.get("amount")),
+        // 돌려받을 만큼은 목표에서 빠진다. 총액으로 세면 목록의 합계와 다른 말을 한다.
+        draft: Math.max(0, netAmount({
+          amount: readAmount(data.get("amount")),
+          refunded: readAmount(data.get("refunded")),
+        })),
         excludeId: editingExpenseId,
       })
     : null;
@@ -107,6 +112,8 @@ export function openForm(draft = null, { editing = Boolean(draft) } = {}) {
   elements.category.value = expense?.category || "food";
   elements.item.value = expense?.item || "";
   elements.amount.value = expense ? formatMoney(expense.amount) : "";
+  // 대개는 나중에 들어온다. 비워 두고, 돈이 들어오면 그때 이 줄을 수정해서 채운다.
+  elements.refunded.value = expense?.refunded ? formatMoney(expense.refunded) : "";
   // 새로 적을 때는 로그인한 사람이 결제자다. 대부분 자기가 쓴 걸 적으므로 매번 고르지 않아도 된다.
   const defaultMember = expense?.member || getProfile()?.id;
   const memberRadio = elements.form.querySelector(`input[name="member"][value="${defaultMember}"]`);
@@ -114,6 +121,7 @@ export function openForm(draft = null, { editing = Boolean(draft) } = {}) {
   elements.dateError.textContent = "";
   elements.itemError.textContent = "";
   elements.amountError.textContent = "";
+  elements.refundedError.textContent = "";
   syncGoalNotice();
   elements.form.scrollTop = 0;
   showSheet(elements.sheet);
@@ -134,16 +142,19 @@ function readForm() {
     category: String(data.get("category")),
     item: String(data.get("item") || "").trim(),
     amount: readAmount(data.get("amount")),
+    // 0 은 "안 받았다" 다. null 로 눕혀야 DB 의 check(refunded > 0) 에 안 걸린다.
+    refunded: readAmount(data.get("refunded")) || null,
   };
 }
 
 /** 잘못된 필드가 있으면 첫 번째 필드를 돌려주고, 없으면 null. */
-function validateExpenseInput({ date, item, amount }) {
+function validateExpenseInput({ date, item, amount, refunded }) {
   let firstInvalidField = null;
 
   elements.dateError.textContent = "";
   elements.itemError.textContent = "";
   elements.amountError.textContent = "";
+  elements.refundedError.textContent = "";
 
   if (!isValidDateKey(date)) {
     elements.dateError.textContent = `${MIN_YEAR}~${MAX_YEAR}년 사이의 날짜를 선택해 주세요.`;
@@ -156,6 +167,12 @@ function validateExpenseInput({ date, item, amount }) {
   if (!isValidAmount(amount)) {
     elements.amountError.textContent = "1원 이상의 금액을 입력해 주세요.";
     firstInvalidField = firstInvalidField || elements.amount;
+  }
+  // 결제한 것보다 많이 돌려받을 수는 없다. DB 의 check 와 같은 잣대다 —
+  // 여기서 안 막으면 "저장에 실패했어요" 로만 끝나 무엇이 잘못됐는지 알 길이 없다.
+  if (refunded !== null && refunded > amount) {
+    elements.refundedError.textContent = "환급액은 결제 금액보다 클 수 없어요.";
+    firstInvalidField = firstInvalidField || elements.refunded;
   }
   return firstInvalidField;
 }

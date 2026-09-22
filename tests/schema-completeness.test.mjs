@@ -66,6 +66,22 @@ test("예외로 둔 것은 정말 그 까닭이 있다", async () => {
   // 선택 단계라고 적은 것은 README 가 그렇게 안내하고 있어야 한다.
   const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
   assert.match(readme, /20260101000009_push_triggers\.sql[\s\S]{0,120}비워 둔 두 줄/);
+
+  /*
+   * 그 안내가 9번에서 끝나면 새 프로젝트가 방금 죽인 버그를 그대로 받는다.
+   * schema.sql 에는 send_month_summary 가 없어서 9번을 직접 실행하게 되는데, 9번의 것은
+   * 결제 금액을 그대로 더하는 옛 판이다. 21번이 그 함수를 덮으므로 함께 안내해야 한다.
+   *
+   * 두 이름 사이의 글자 거리로 재지 않는다. 처음에 {0,600} 으로 뒀는데, 그 사이에 놓인
+   * 마이그레이션 표가 1045자라 여유가 445자뿐이었다 — 표에서 줄 네댓만 덜어 내면
+   * §2.5 를 통째로 지워도 안 걸린다. 알림 절을 잘라 그 **안에** 있는지를 본다.
+   */
+  const 알림절 = readme.slice(readme.indexOf("### 2. 푸시 알림"), readme.indexOf("### 3. 환경 변수"));
+  assert.ok(알림절.length > 200, "알림 절을 못 잘랐다 — 제목이 바뀌었나");
+  assert.ok(알림절.includes("20260922010000_expense_refund.sql"),
+    "알림 켜기 안내가 9번에서 끝난다 — 새 프로젝트의 월말 요약이 결제 금액으로 센다");
+  assert.ok(알림절.indexOf("20260101000009_push_triggers.sql") < 알림절.indexOf("20260922010000_expense_refund.sql"),
+    "21번이 9번보다 먼저 나온다 — 덮는 차례가 뒤집힌다");
 });
 
 test("마이그레이션이 세우는 것은 schema.sql 에도 다 있다", () => {
@@ -81,6 +97,37 @@ test("마이그레이션이 세우는 것은 schema.sql 에도 다 있다", () =
     }
   }
   assert.deepEqual(빠진것, [], "새 프로젝트가 schema.sql 만 실행하면 이것이 없다");
+});
+
+/**
+ * 마이그레이션이 다시 적은 함수는 그 함수의 **마지막** 판이다. schema.sql 이 그것과
+ * 글자까지 같아야 한다. 옛 판까지 견주면 안 된다 — 옛 마이그레이션은 그때의 몸통을 들고
+ * 있는 것이 맞다. 그래서 짝을 손으로 적고, 까닭을 함께 둔다.
+ *
+ * 위시 함수 여섯은 tests/wish-data.test.mjs 가 같은 방식으로 본다. 거기서 한 번 데였다 —
+ * 반환 모양만 바꾸면서 몸통을 손으로 옮겨 적었고 세 곳이 조용히 어긋났다.
+ */
+const 마지막판 = {
+  fire_nags: "20260922010000_expense_refund.sql",
+};
+
+/** `as $$ ... $$;` 사이. 주석과 공백 차이는 봐준다 — 견주는 것은 도는 코드다. */
+const 몸통 = (글, 이름) => {
+  const m = new RegExp(`create or replace function ${이름}\\([\\s\\S]*?\\nas \\$\\$([\\s\\S]*?)\\n\\$\\$;`).exec(글);
+  return m ? m[1].replace(/--[^\n]*/g, "").replace(/\s+/g, " ").trim() : null;
+};
+
+test("마이그레이션이 다시 적은 함수 몸통은 schema.sql 과 글자까지 같다", () => {
+  for (const [이름, 파일] of Object.entries(마지막판)) {
+    const 글 = 마이그레이션들.find(([이름표]) => 이름표 === 파일)?.[1];
+    assert.ok(글, `${파일} 을 못 찾았다`);
+    const 스키마몸통 = 몸통(스키마, 이름);
+    const 마이그몸통 = 몸통(글, 이름);
+    assert.ok(스키마몸통, `schema.sql 에 ${이름} 이 없다`);
+    assert.ok(마이그몸통, `${파일} 에 ${이름} 이 없다`);
+    assert.equal(스키마몸통, 마이그몸통,
+      `${이름} 몸통이 ${파일} 과 다르다 — 옮겨 적지 말고 schema.sql 에서 그대로 복사할 것`);
+  }
 });
 
 test("견줄 것이 실제로 있다", () => {

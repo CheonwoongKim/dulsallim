@@ -1,5 +1,5 @@
 import { escapeHtml } from "./escape.js";
-import { CATEGORIES, formatMoney, formatShortDate } from "../domain/expenses.js";
+import { CATEGORIES, formatMoney, formatShortDate, netAmount } from "../domain/expenses.js";
 import { getMemberName } from "../members.js";
 
 /**
@@ -15,6 +15,15 @@ import { getMemberName } from "../members.js";
 export function createExpenseRow(expense, { notes = 0, highlighted = false } = {}) {
   const article = document.createElement("article");
   const category = CATEGORIES[expense.category] || CATEGORIES.etc;
+  /*
+   * 합계에 들어가는 숫자는 실부담이다. 그러니 줄에서 제일 크게 보이는 것도 그 숫자여야 한다 —
+   * 결제 금액을 앞세우면 보이는 숫자를 다 더해도 위의 총액이 안 나온다.
+   * 결제한 금액과 돌려받은 금액은 그 아래 작게 붙여, 왜 그 숫자인지가 줄 안에서 읽히게 한다.
+   */
+  const 실부담 = netAmount(expense);
+  const 환급 = expense.refunded
+    ? `${formatMoney(expense.amount)}원 − 환급 ${formatMoney(expense.refunded)}원`
+    : null;
   article.className = `expense-item swipe-row${highlighted ? " is-new" : ""}`;
   article.dataset.id = expense.id;
   // 액션 패널을 먼저 두고 내용면이 그 위를 덮는다. 스와이프하면 내용면이 밀려 액션이 드러난다.
@@ -24,7 +33,8 @@ export function createExpenseRow(expense, { notes = 0, highlighted = false } = {
     getMemberName(expense.member),
     category.label,
     expense.item,
-    `${formatMoney(expense.amount)}원`,
+    `${formatMoney(실부담)}원`,
+    환급,
     notes ? `대화 ${notes}개` : null,
     "대화 열기",
   ].join(" ");
@@ -42,7 +52,10 @@ export function createExpenseRow(expense, { notes = 0, highlighted = false } = {
           ${escapeHtml(getMemberName(expense.member))}<i></i>${category.label}${notes ? `<i></i><span class="note-count">대화 ${notes}</span>` : ""}
         </span>
       </span>
-      <strong class="expense-amount">${formatMoney(expense.amount)}원</strong>
+      <span class="expense-amount">
+        <strong>${formatMoney(실부담)}원</strong>
+        ${환급 ? `<small>${환급}</small>` : ""}
+      </span>
     </button>
   `;
   return article;

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { 가구, 판세우기 } from "./helpers/db.mjs";
@@ -36,6 +37,54 @@ test("금액은 1원 이상 정수다", async () => {
   assert.equal(await 지출(db, { amount: 1 }), null);
   assert.match(await 지출(db, { amount: 0 }), /constraint|check/i);
   assert.match(await 지출(db, { amount: -1000 }), /constraint|check/i);
+});
+
+test("환급액은 0원보다 크고 결제 금액을 넘을 수 없다", async () => {
+  /*
+   * 화면도 같은 잣대로 막지만, 마지막 문은 여기다. 폰에 적어 둔 사본으로 들어오거나
+   * 화면의 잣대가 느슨해지면 결제보다 많이 돌려받은 줄이 생기고, 그 달 합계가 음수가 된다.
+   */
+  const db = await 판세우기();
+  await db.로서(가구.우리);
+  const 환급 = (값) => db.막히나(
+    `insert into expenses (household_id, paid_by, spent_on, category, item, amount, refunded, created_by)
+     values ($1, $2, '2026-08-01', 'medical', '병원', 100000, $3, $2)`,
+    [가구.집, 가구.우리, 값],
+  );
+  assert.equal(await 환급(70000), null);
+  assert.equal(await 환급(100000), null, "낸 만큼 다 돌려받는 일도 있다");
+  assert.equal(await 환급(null), null, "안 받았으면 비어 있다");
+  assert.match(await 환급(0), /constraint|check/i, "0 은 '안 받았다' 여야 한다 — null 로 적는다");
+  assert.match(await 환급(-1), /constraint|check/i);
+  assert.match(await 환급(100001), /constraint|check/i, "낸 것보다 많이 돌려받았다");
+});
+
+test("실비 환급 마이그레이션은 이미 쓰던 집을 따라잡게 한다", async () => {
+  /*
+   * 여기 판은 schema.sql 로 세운 것이라 refunded 가 이미 있다. 그래서 열을 떨어뜨려
+   * **마이그레이션 전의 집**으로 되돌려 놓고, 마이그레이션 파일을 그대로 먹인다.
+   *
+   * 이걸 안 보면 파일에서 alter 줄이 빠져도 아무도 모른다 — 마이그레이션은 조용히 통과하고
+   * (plpgsql 몸통은 부를 때 가서야 열을 찾는다), 운영 중인 집에서 지출을 적는 순간
+   * fire_nags 가 없는 열을 골라 터진다. 검사판에는 열이 있으니 여기서도 안 잡힌다.
+   *
+   * DDL 도 트랜잭션 안이라, 검사가 끝나면 떨어뜨린 열까지 함께 되돌아간다.
+   */
+  const db = await 판세우기();
+  const 마이그레이션 = await readFile(
+    new URL("../supabase/migrations/20260922010000_expense_refund.sql", import.meta.url), "utf8");
+
+  await db.exec("alter table expenses drop column refunded;");
+  await db.exec(마이그레이션);
+
+  await db.로서(가구.우리);
+  const 환급 = (값) => db.막히나(
+    `insert into expenses (household_id, paid_by, spent_on, category, item, amount, refunded, created_by)
+     values ($1, $2, '2026-08-01', 'medical', '병원', 100000, $3, $2)`,
+    [가구.집, 가구.우리, 값],
+  );
+  assert.equal(await 환급(70000), null, "열이 안 생겼거나 멀쩡한 값을 막는다");
+  assert.match(await 환급(100001), /constraint|check/i, "제약 없이 열만 생겼다");
 });
 
 test("항목은 빈칸일 수 없다", async () => {
@@ -275,4 +324,31 @@ test("잔소리는 구간을 넘긴 달에 한 번만 울린다", async () => {
   await 쓰기(10000);
   await db.주인으로();
   assert.equal((await db.query("select count(*)::int c from nag_fires")).rows[0].c, 1, "같은 구간을 두 번 울렸다");
+});
+
+test("잔소리도 실부담으로 센다", async () => {
+  /*
+   * 서버가 결제 금액으로 세면 화면이 3만 원이라 말하는 달에 서버는 10만 원으로 판단해
+   * 혼자 울린다. 그리고 한 번 울리면 그 달 그 구간은 다시 못 울려(nag_fires 의 기본키)
+   * 나중에 환급액을 적어도 되돌릴 수 없다 — 그래서 여기가 가장 아픈 자리다.
+   */
+  const db = await 판세우기();
+  await db.query("update profiles set monthly_goal = 100000 where id = $1", [가구.너와]);
+  await db.로서(가구.우리);
+  await db.query(`insert into nags (household_id, author_id, target_id, percent, body)
+    values ($1, $2, $3, 80, '좀 쓰네')`, [가구.집, 가구.우리, 가구.너와]);
+
+  // current_date 는 DB 에서 받는다. node 의 UTC 와 어긋나면 달이 달라진다.
+  const 오늘 = (await db.query("select current_date::text d")).rows[0].d;
+  const { rows } = await db.query(
+    `insert into expenses (household_id, paid_by, spent_on, category, item, amount, refunded, created_by)
+     values ($1, $2, $3, 'medical', '병원', 90000, 70000, $2) returning id`,
+    [가구.집, 가구.너와, 오늘],
+  );
+  await db.query("select fire_nags($1)", [rows[0].id]);
+
+  await db.주인으로();
+  // 결제 금액 9만(90%)이면 울리고, 실부담 2만(20%)이면 안 울린다.
+  assert.equal((await db.query("select count(*)::int c from nag_fires")).rows[0].c, 0,
+    "돌려받은 돈까지 쓴 것으로 세어 울렸다");
 });
