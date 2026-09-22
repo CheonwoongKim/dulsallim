@@ -5,6 +5,7 @@ import {
   editFixedTemplate,
   handleFixedSubmit,
   openFixedSheet,
+  pickFixedStartMonth,
   removeFixedTemplate,
   showFormView,
   updateFixedHint,
@@ -51,6 +52,13 @@ elements.fixedForm.addEventListener("submit", handleFixedSubmit);
 elements.fixedDay.addEventListener("input", (event) => {
   event.target.value = event.target.value.replace(/\D/g, "").slice(0, 2);
   elements.fixedDayError.textContent = "";
+  updateFixedHint();
+});
+elements.fixedStartMonth.addEventListener("change", pickFixedStartMonth);
+elements.fixedMonths.addEventListener("input", (event) => {
+  // 세 자리면 열 해가 넘는다. 그보다 긴 것은 적을 일이 없고, 안내 문구만 우스워진다.
+  event.target.value = event.target.value.replace(/\D/g, "").slice(0, 3);
+  elements.fixedMonthsError.textContent = "";
   updateFixedHint();
 });
 elements.fixedAmount.addEventListener("input", (event) => {

@@ -728,6 +728,18 @@
           </label>
         </div>
 
+        <div class="form-row">
+          <label class="field-group">
+            <span>시작월</span>
+            <select id="fixed-start-month" name="startMonth"></select>
+          </label>
+          <label class="field-group">
+            <span>몇 개월</span>
+            <input type="text" id="fixed-months" name="months" inputmode="numeric" autocomplete="off" placeholder="무기한" />
+            <small class="field-error" id="fixed-months-error"></small>
+          </label>
+        </div>
+
         <label class="field-group">
           <span>지출 항목</span>
           <input type="text" id="fixed-item" name="item" maxlength="30" autocomplete="off" placeholder="예: 아파트 관리비" />

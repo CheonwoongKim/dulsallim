@@ -45,6 +45,18 @@ const 같나 = (본것, 바란것, 말) => {
 };
 const 맞나 = (참인가, 말) => { if (!참인가) throw new Error(말); };
 
+/**
+ * 고정비 시트를 연다. 그 단추는 설정 화면 안에 있다.
+ *
+ * 페이지 안에서 직접 누른다. 설정으로 들어가는 전환이 자리를 잡기 전에 누르면 검사가
+ * 들쭉날쭉했고(이 파일 머리에 적어 둔 그것이다), 여기서 재려는 것은 화면 전환이 아니라
+ * 할부 폼이다. 전환을 기다리는 값을 여기서 치를 까닭이 없다.
+ */
+async function 고정비열기(page) {
+  await page.evaluate(() => document.querySelector("#open-fixed-sheet").click());
+  await page.waitForSelector("#fixed-sheet:not([hidden])");
+}
+
 /** 목 서버를 띄운다. 이미 떠 있으면 그것을 쓴다. */
 async function 서버띄우기() {
   const 살아있나 = await fetch(주소).then((r) => r.ok).catch(() => false);
@@ -69,6 +81,25 @@ async function 열기(browser) {
   const 콘솔오류 = [];
   page.on("pageerror", (e) => 콘솔오류.push(e.message));
   await page.goto(주소, { waitUntil: "domcontentloaded" });
+  /*
+   * 로그인 화면이 다 자리 잡은 뒤에 적는다. 커서가 첫 칸에 앉은 것이 그 표시다.
+   *
+   * domcontentloaded 는 boot() 이 끝나기 한참 전에 돌아온다. boot() 은 세션을 서버에
+   * 물어본 뒤에야 showLoginScreen() 을 부르고, 그것은 폼을 비운 다음 60ms 뒤에 첫 칸으로
+   * 커서를 옮긴다. 그 사이에 적으면 두 가지로 깨진다 — 적은 것이 reset 으로 지워지거나,
+   * 비밀번호를 적는 도중에 커서가 이메일 칸으로 튀어 거기에 이어 붙는다.
+   *
+   * 뒤엣것이 실제로 났다. 이메일 칸이 "we@example.comswordfish" 가 되고 비밀번호는 빈 채로
+   * 제출되어, "이메일과 비밀번호를 모두 입력해 주세요" 에 막혔다. 두 엔진을 이어 돌릴 때
+   * 뒤엣것이 이 경주에서 자주 졌고, 그 탓에 검사 전체가 들쭉날쭉했다.
+   *
+   * 커서가 앉기를 기다리면 그 뒤로는 폼을 건드리는 것이 없다.
+   */
+  await page.waitForFunction(
+    () => ["login-email", "login-password"].includes(document.activeElement?.id),
+    null,
+    { timeout: 15000 },
+  );
   await page.fill("#login-email", "we@example.com");
   await page.fill("#login-password", "swordfish");
   await page.click("#login-submit");
@@ -161,6 +192,67 @@ try {
       // 393px 은 요즘 아이폰 폭이다. 가로 스크롤이 생기면 한 손으로 못 쓴다.
       const 넘침 = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       맞나(넘침 <= 0, `${넘침}px 넘친다`);
+    });
+
+    await 검사("할부를 등록하면 끝이 보인다", async () => {
+      /*
+       * 흉내 DOM 은 index.html 을 읽지 않아 이 폼을 통째로 못 본다. 시작월 고르개가
+       * 실제로 채워지는지, 고른 달이 안내에 반영되는지, 목록 줄이 회차를 말하는지는
+       * 여기서만 잰다.
+       *
+       * 날짜에 기대지 않게 짰다 — 결제일은 계산값(이번 달 또는 다음 달)에서 시작하므로
+       * 언제 돌려도 아직 한 번도 안 낸 상태, 곧 `0/5회` 다.
+       */
+      await 고정비열기(page);
+      await page.click("#add-fixed");
+      await page.fill("#fixed-day", "25");
+      await page.fill("#fixed-item", "소파");
+      await page.fill("#fixed-amount", "300000");
+      await page.fill("#fixed-months", "5");
+
+      // 시작월은 고를 수 있어야 한다. 계산값이 먼저 들어와 있고, 그다음 달로 바꿔 본다.
+      const 계산값 = await page.inputValue("#fixed-start-month");
+      맞나(/^\d{4}-\d{2}$/.test(계산값), `시작월이 안 채워졌다: ${계산값}`);
+      const [해, 달] = 계산값.split("-").map(Number);
+      const 고른것 = 달 === 12 ? `${해 + 1}-01` : `${해}-${String(달 + 1).padStart(2, "0")}`;
+      await page.selectOption("#fixed-start-month", 고른것);
+
+      // 안내가 고른 달과 끝나는 달을 함께 말한다. 끝이 안 보이면 구독과 구분이 안 된다.
+      const 안내 = await page.textContent("#fixed-hint");
+      const [끝해, 끝달] = [고른것.slice(0, 4), Number(고른것.slice(5))].map(Number);
+      const 끝 = 끝달 + 4 > 12 ? `${끝해 + 1}년 ${끝달 - 8}월` : `${끝해}년 ${끝달 + 4}월`;
+      맞나(안내.includes(`${Number(고른것.slice(5))}월 25일부터 5개월`), `고른 달이 안내에 없다: ${안내}`);
+      맞나(안내.includes(`${끝}까지`), `끝나는 달이 안내에 없다: ${안내} (바란 것 ${끝})`);
+
+      await page.click("#fixed-submit");
+      await page.waitForSelector("#fixed-list-view:not([hidden])");
+      const 줄 = await page.locator(".fixed-item", { hasText: "소파" }).first().textContent();
+      맞나(줄.includes("0/5회"), `목록이 회차를 안 말한다: ${줄.replace(/\s+/g, " ")}`);
+      맞나(줄.includes(`${고른것.slice(2, 4)}.${고른것.slice(5)}`) || 줄.includes("까지"),
+        `목록이 끝나는 달을 안 말한다: ${줄.replace(/\s+/g, " ")}`);
+
+      // 끝을 안 적은 고정비(월세)는 지금까지처럼 다음 반영일만 말한다.
+      const 월세 = await page.locator(".fixed-item", { hasText: "월세" }).first().textContent();
+      맞나(!월세.includes("회"), `구독에 회차가 붙었다: ${월세.replace(/\s+/g, " ")}`);
+
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => document.querySelector("#fixed-sheet").hidden);
+    });
+
+    await 검사("할부 줄이 가로로 안 넘친다", async () => {
+      /*
+       * 회차와 끝나는 달을 한 줄에 넣었다. 393px 에서 넘치면 잘려 읽힌다 —
+       * 글자 폭은 흉내 DOM 이 원리적으로 못 보는 것이라 여기서 잰다.
+       */
+      await 고정비열기(page);
+      const 넘침 = await page.evaluate(() => {
+        const 줄 = [...document.querySelectorAll(".fixed-copy span")]
+          .find((el) => el.textContent.includes("/5회"));
+        return 줄 ? 줄.scrollWidth - 줄.clientWidth : -1;
+      });
+      맞나(넘침 === 0, `할부 줄이 ${넘침}px 넘친다`);
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => document.querySelector("#fixed-sheet").hidden);
     });
 
     await 검사("눌러서 대화를 연다", async () => {

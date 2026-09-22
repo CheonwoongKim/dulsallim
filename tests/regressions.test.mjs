@@ -386,7 +386,15 @@ test("고정비 시트도 다른 시트와 같은 처리를 받는다", () => {
 test("고정비 수정은 id와 시작월을 유지한다", () => {
   const submit = fn("handleFixedSubmit");
   assert.match(submit, /updateFixedCost\(existing\.id, template\)/, "새로 만들면 반영 기록과 연결이 끊긴다");
-  assert.match(submit, /startMonth: existing\?\.startMonth/, "금액만 고쳤는데 반영 일정이 바뀌면 안 된다");
+  /*
+   * 시작월은 이제 고를 수 있다(카드 첫 청구가 한 달 뒤인 경우가 있다). 그래서 지키는
+   * 자리가 옮겨 갔다 — 폼이 원래 시작월을 그대로 담고 열려야, 금액만 고치고 저장해도
+   * 반영 일정이 안 움직인다. 담기지 않으면 저장하는 순간 조용히 다른 달로 바뀐다.
+   */
+  const form = fn("showFormView");
+  assert.match(form, /fixedStartMonth\.value = template\?\.startMonth/);
+  // 창 밖 시작월도 고르개에 남겨 둬야 한다. 없는 값은 select 가 그냥 버린다.
+  assert.match(fn("fillStartMonthOptions"), /unshift\(keep\)/);
 });
 
 test("폼은 등록과 수정 모드를 구분해 보여준다", () => {

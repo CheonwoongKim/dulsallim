@@ -53,6 +53,8 @@ export function toTemplate(row) {
     amount: row.amount,
     day: row.day_of_month,
     startMonth: toMonthKey(row.start_month),
+    // 할부면 몇 달 하고 그만둘지. 구독이면 비어 있다 — 없던 시절의 행도 그래서 그대로 돈다.
+    months: row.months ?? null,
   };
 }
 
@@ -65,6 +67,7 @@ export function fromTemplate(template, { householdId }) {
     amount: template.amount,
     day_of_month: template.day,
     start_month: toDayOne(template.startMonth),
+    months: template.months ?? null,
   };
 }
 

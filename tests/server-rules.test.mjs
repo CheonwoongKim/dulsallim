@@ -109,6 +109,25 @@ test("같은 고정비를 같은 달에 두 번 반영할 수 없다", async () 
   assert.match(await 반영(), /unique|duplicate/i);
 });
 
+test("할부 회수는 비워 두거나 1 이상이다", async () => {
+  /*
+   * 0 이나 음수는 뜻이 없다 — 시작월이 곧 1회차라 0 이면 만들어질 달이 하나도 없다.
+   * 비워 두는 것은 끝이 없다는 뜻(구독)이라 받아야 한다. 화면에도 잣대가 있지만
+   * 마지막 문은 여기다. 목 서버에는 제약이 없어 브라우저로는 이것을 못 본다.
+   */
+  const db = await 판세우기();
+  const 넣기 = (months) => db.막히나(
+    `insert into fixed_costs (household_id, paid_by, category, item, amount, day_of_month, start_month, months)
+     values ($1, $2, 'housing', '소파', 300000, 25, '2026-09-01', $3)`,
+    [가구.집, 가구.우리, months],
+  );
+  assert.equal(await 넣기(null), null, "구독은 끝이 없다");
+  assert.equal(await 넣기(1), null);
+  assert.equal(await 넣기(60), null, "60개월 할부도 있다");
+  assert.match(await 넣기(0), /constraint|check/i);
+  assert.match(await 넣기(-5), /constraint|check/i);
+});
+
 test("잔소리 구간은 1~200 이다", async () => {
   /*
    * 100 을 넘겨 두는 것도 뜻이 있다 — 목표를 두 배로 넘겼을 때 할 말이 따로 있다.
